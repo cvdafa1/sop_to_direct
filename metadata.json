@@ -1,0 +1,6 @@
+{
+  "name": "sop-to-direct",
+  "description": "将用户上传的 SOP / 工艺流程文档，自动转换为 InPlant Direct 主程序（XML → 创建 → 编译）,触发方式 用户上传文档 + 说 帮我建程序 、转成 Direct 程序、根据 SOP 生成主程序",
+  "enabled_by_default": true,
+  "mode": "skill"
+}
