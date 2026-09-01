@@ -563,7 +563,7 @@
     },
 
     {
-      "name": "并行分支（竖向）",
+      "name": "并行分支1",
       "category": "流程控制",
       "purpose": "竖向并行分支步，内部可放置其他元件，构成并行结构，同时执行多个程序单元。分支按垂直方向排列。",
       "usage_scenario": "需要多个分支同时运行，且根据\"所有分支完成\"来结束并行段的场景。分支节点在垂直方向上展开。",
@@ -576,22 +576,57 @@
         "required_children": [
           { "tag": "bpmn2:incoming", "type": "text" },
           { "tag": "bpmn2:outgoing", "type": "text" },
-          { "tag": "flow:parallelStart", "type": "element", "description": "并行起点，内含多个 outgoing" },
-          { "tag": "flow:parallelEnd", "type": "element", "description": "并行终点，内含多个 incoming" }
+          { "tag": "flow:parallelStart", "type": "element", "description": "并行起点，内含 N 个 outgoing（N = 分支数）",
+            "diagram": {
+              "element": "bpmndi:BPMNShape",
+              "bounds": { "width": "container_inner_width", "height": 5 },
+              "position": "container_top_inner_padding",
+              "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"5\"/>\n</bpmndi:BPMNShape>"
+            },
+            "child_schema": {
+              "required_children": [
+                { "tag": "bpmn2:outgoing", "type": "text", "count": "N（=分支数）" }
+              ]
+            }
+          },
+          { "tag": "flow:parallelEnd", "type": "element", "description": "并行终点，内含 M 个 incoming（M = 分支数）",
+            "diagram": {
+              "element": "bpmndi:BPMNShape",
+              "bounds": { "width": "container_inner_width", "height": 5 },
+              "position": "container_bottom_inner_padding",
+              "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"5\"/>\n</bpmndi:BPMNShape>"
+            },
+            "child_schema": {
+              "required_children": [
+                { "tag": "bpmn2:incoming", "type": "text", "count": "M（=分支数）" }
+              ]
+            }
+          }
         ],
         "optional_children": ["内部子元件"],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 800, "height": 600 }
+          "bounds": { "width": "auto", "height": "auto" },
+          "isExpanded": true
         },
-        "template": "<flow:parallel1 id=\"{id}\" layout=\"vertical\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n  <flow:parallelStart id=\"{id}_start\">\n    <bpmn2:outgoing>{branch_flow_a}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_flow_b}</bpmn2:outgoing>\n  </flow:parallelStart>\n  <flow:parallelEnd id=\"{id}_end\">\n    <bpmn2:incoming>{branch_flow_c}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_flow_d}</bpmn2:incoming>\n  </flow:parallelEnd>\n  <!-- 内部子元件 -->\n</flow:parallel1>",
-        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\" isExpanded=\"true\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"800\" height=\"600\"/>\n</bpmndi:BPMNShape>",
+        "template": "<flow:parallel1 id=\"{id}\" layout=\"vertical\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n  <flow:parallelStart id=\"{id}_start\">\n    <bpmn2:outgoing>{branch_flow_a}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_flow_b}</bpmn2:outgoing>\n  </flow:parallelStart>\n  <flow:parallelEnd id=\"{id}_end\">\n    <bpmn2:incoming>{branch_flow_a_end}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_flow_b_end}</bpmn2:incoming>\n  </flow:parallelEnd>\n  <!-- 分支节点放在 parallelStart 和 parallelEnd 之间 -->\n  <!-- 每个分支首节点 incoming = parallelStart 的 outgoing -->\n  <!-- 每个分支末节点 outgoing = parallelEnd 的 incoming -->\n</flow:parallel1>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\" isExpanded=\"true\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"{h}\"/>\n</bpmndi:BPMNShape>",
+        "child_diagram_templates": {
+          "parallelStart": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"5\"/>\n</bpmndi:BPMNShape>",
+          "parallelEnd": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"5\"/>\n</bpmndi:BPMNShape>"
+        },
+        "connection_rules": {
+          "incoming": "外部节点 → flow:parallel1 容器",
+          "pstart_to_branch": "parallelStart → 各分支首节点（N 条 plain 连线）",
+          "branch_to_pend": "各分支末节点 → parallelEnd（N 条 plain 连线）",
+          "outgoing": "flow:parallel1 容器 → 外部节点"
+        },
         "ext_data_schema": null
       }
     },
 
     {
-      "name": "并行分支（横向）",
+      "name": "并行分支2",
       "category": "流程控制",
       "purpose": "横向并行分支步，内部可放置其他元件，构成并行结构，同时执行多个程序单元。分支按水平方向排列。",
       "usage_scenario": "需要多个分支同时运行，且根据\"所有分支完成\"来结束并行段的场景。分支节点在水平方向上展开。",
@@ -604,16 +639,51 @@
         "required_children": [
           { "tag": "bpmn2:incoming", "type": "text" },
           { "tag": "bpmn2:outgoing", "type": "text" },
-          { "tag": "flow:parallelStart", "type": "element", "description": "并行起点，内含 N 个 outgoing（N = 分支数）" },
-          { "tag": "flow:parallelEnd", "type": "element", "description": "并行终点，内含 M 个 incoming（M = 所有分支的退出连线总数）" }
+          { "tag": "flow:parallelStart", "type": "element", "description": "并行起点，内含 N 个 outgoing（N = 分支数）",
+            "diagram": {
+              "element": "bpmndi:BPMNShape",
+              "bounds": { "width": 5, "height": "container_inner_height" },
+              "position": "container_left_inner_padding",
+              "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"5\" height=\"{h}\"/>\n</bpmndi:BPMNShape>"
+            },
+            "child_schema": {
+              "required_children": [
+                { "tag": "bpmn2:outgoing", "type": "text", "count": "N（=分支数）" }
+              ]
+            }
+          },
+          { "tag": "flow:parallelEnd", "type": "element", "description": "并行终点，内含 M 个 incoming（M = 分支数）",
+            "diagram": {
+              "element": "bpmndi:BPMNShape",
+              "bounds": { "width": 5, "height": "container_inner_height" },
+              "position": "container_right_inner_padding",
+              "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"5\" height=\"{h}\"/>\n</bpmndi:BPMNShape>"
+            },
+            "child_schema": {
+              "required_children": [
+                { "tag": "bpmn2:incoming", "type": "text", "count": "M（=分支数）" }
+              ]
+            }
+          }
         ],
         "optional_children": ["内部子元件（按分支水平排列）"],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 1460, "height": 1290 }
+          "bounds": { "width": "auto", "height": "auto" },
+          "isExpanded": true
         },
-        "template": "<flow:parallel2 id=\"{id}\" layout=\"horizontal\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n  <flow:parallelStart id=\"{id}_start\">\n    <bpmn2:outgoing>{branch_a_entry}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_b_entry}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_c_entry}</bpmn2:outgoing>\n  </flow:parallelStart>\n  <flow:parallelEnd id=\"{id}_end\">\n    <bpmn2:incoming>{branch_a_exit_1}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_b_exit_1}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_b_exit_2}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_c_exit_1}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_c_exit_2}</bpmn2:incoming>\n  </flow:parallelEnd>\n  <!-- 内部子元件按分支水平排列 -->\n</flow:parallel2>",
-        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\" isExpanded=\"true\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"1460\" height=\"1290\"/>\n</bpmndi:BPMNShape>",
+        "template": "<flow:parallel2 id=\"{id}\" layout=\"horizontal\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n  <flow:parallelStart id=\"{id}_start\">\n    <bpmn2:outgoing>{branch_a_entry}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_b_entry}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_c_entry}</bpmn2:outgoing>\n  </flow:parallelStart>\n  <flow:parallelEnd id=\"{id}_end\">\n    <bpmn2:incoming>{branch_a_exit}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_b_exit}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_c_exit}</bpmn2:incoming>\n  </flow:parallelEnd>\n  <!-- 内部子元件按分支水平排列 -->\n  <!-- 每个分支首节点 incoming = parallelStart 的 outgoing -->\n  <!-- 每个分支末节点 outgoing = parallelEnd 的 incoming -->\n</flow:parallel2>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\" isExpanded=\"true\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"{h}\"/>\n</bpmndi:BPMNShape>",
+        "child_diagram_templates": {
+          "parallelStart": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"5\" height=\"{h}\"/>\n</bpmndi:BPMNShape>",
+          "parallelEnd": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"5\" height=\"{h}\"/>\n</bpmndi:BPMNShape>"
+        },
+        "connection_rules": {
+          "incoming": "外部节点 → flow:parallel2 容器",
+          "pstart_to_branch": "parallelStart → 各分支首节点（N 条 plain 连线）",
+          "branch_to_pend": "各分支末节点 → parallelEnd（N 条 plain 连线）",
+          "outgoing": "flow:parallel2 容器 → 外部节点"
+        },
         "ext_data_schema": null
       }
     },
@@ -762,6 +832,512 @@
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": null
       }
+    },
+
+    {
+      "name": "上跳变",
+      "category": "信号检测",
+      "purpose": "判断一个或多个位号是否发生过上跳变（从0变为非0）。",
+      "usage_scenario": "需要检测信号从0变为非0的边沿触发后续动作的场合。",
+      "xml": {
+        "status": "confirmed",
+        "element": "flow:risingEdge",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id"],
+        "optional_attributes": ["name"],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<flow:risingEdge id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:risingEdge>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "keep", "relation", "data"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "keep": { "type": "integer", "default": 0 },
+            "relation": { "type": "string", "enum": ["and", "or"], "default": "and" },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "row", "type"],
+                "properties": {
+                  "name": { "type": "string", "description": "位号路径 #(xxx)" },
+                  "desc": { "type": "string", "default": "" },
+                  "row": { "type": "integer" },
+                  "type": { "type": "integer", "description": "3=数字量" }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "下跳变",
+      "category": "信号检测",
+      "purpose": "判断一个或多个位号是否发生过下跳变（从非0变为0）。",
+      "usage_scenario": "需要检测信号从非0变为0的边沿触发后续动作的场合。",
+      "xml": {
+        "status": "confirmed",
+        "element": "flow:fallingEdge",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id"],
+        "optional_attributes": ["name"],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<flow:fallingEdge id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:fallingEdge>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "keep", "relation", "data"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "keep": { "type": "integer", "default": 0 },
+            "relation": { "type": "string", "enum": ["and", "or"], "default": "and" },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["name", "row", "type"],
+                "properties": {
+                  "name": { "type": "string", "description": "位号路径 #(xxx)" },
+                  "desc": { "type": "string", "default": "" },
+                  "row": { "type": "integer" },
+                  "type": { "type": "integer", "description": "3=数字量" }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "字符串操作",
+      "category": "操作执行",
+      "purpose": "按设置拼接字符串并赋值给目标变量/参数。",
+      "usage_scenario": "需要组合多个字符串信息的场合。",
+      "xml": {
+        "status": "confirmed",
+        "element": "io:concat",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<io:concat id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:concat>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "version", "showDetail", "data"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "version": { "type": "integer", "const": 1 },
+            "showDetail": { "type": "boolean", "default": true },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["targetVar", "express"],
+                "properties": {
+                  "targetVar": { "type": "string", "description": "目标变量 $$$(XXX)" },
+                  "express": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": ["value"],
+                      "properties": {
+                        "value": { "type": "string", "description": "拼接值或变量引用" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "文件导出",
+      "category": "操作执行",
+      "purpose": "将参数或变量导出至.csv或.xlsx文件。",
+      "usage_scenario": "需要将程序数据保存到外部文件时。",
+      "xml": {
+        "status": "confirmed",
+        "element": "io:fileExport",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<io:fileExport id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:fileExport>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["version", "showDetail", "fileFormat", "path", "data"],
+          "properties": {
+            "version": { "type": "string", "default": "1" },
+            "showDetail": { "type": "boolean", "default": true },
+            "fileFormat": { "type": "string", "enum": ["csv", "xlsx"] },
+            "path": { "type": "string", "description": "文件路径" },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["col", "rowNumber", "value", "row"],
+                "properties": {
+                  "col": { "type": "string", "description": "列标识" },
+                  "rowNumber": { "type": "string", "description": "行号" },
+                  "value": { "type": "string", "description": "变量引用 $(XXX)" },
+                  "row": { "type": "integer" }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "文件导入",
+      "category": "操作执行",
+      "purpose": "从.csv或.xlsx文件指定单元格导入数值至参数或变量。",
+      "usage_scenario": "需要从外部文件读取配置或数据到程序变量时。",
+      "xml": {
+        "status": "confirmed",
+        "element": "io:fileImport",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<io:fileImport id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:fileImport>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["version", "showDetail", "fileFormat", "path", "data"],
+          "properties": {
+            "version": { "type": "string", "default": "1" },
+            "showDetail": { "type": "boolean", "default": true },
+            "fileFormat": { "type": "string", "enum": ["csv", "xlsx"] },
+            "path": { "type": "string", "description": "文件路径" },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["col", "rowNumber", "value", "row"],
+                "properties": {
+                  "col": { "type": "string", "description": "列标识" },
+                  "rowNumber": { "type": "string", "description": "行号" },
+                  "value": { "type": "string", "description": "变量引用 $(XXX)" },
+                  "row": { "type": "integer" }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "修改标签",
+      "category": "操作执行",
+      "purpose": "按配置修改主程序的标签。",
+      "usage_scenario": "需要在运行中动态更新主程序标签分类时。",
+      "xml": {
+        "status": "confirmed",
+        "element": "io:modifyLabel",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<io:modifyLabel id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:modifyLabel>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "data", "errorHandler"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "data": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["desc", "currentLabelId", "targetLabelId"],
+                "properties": {
+                  "desc": { "type": "string", "description": "修改描述" },
+                  "currentLabelId": { "type": "string", "description": "当前标签ID" },
+                  "targetLabelId": { "type": "string", "description": "目标标签ID" }
+                }
+              }
+            },
+            "errorHandler": { "type": "object", "properties": { "handler": { "type": "integer" } } }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "修改属性",
+      "category": "操作执行",
+      "purpose": "修改当前程序的自定义字段值。",
+      "usage_scenario": "需要动态更新程序自定义属性时。",
+      "xml": {
+        "status": "confirmed",
+        "element": "io:modifyProps",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<io:modifyProps id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:modifyProps>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "customField"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "customField": { "type": "string", "description": "自定义字段值 $(XXX)" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "引用主程序",
+      "category": "流程控制",
+      "purpose": "引用已生效的主程序作为子程序。",
+      "usage_scenario": "在运行程序中引用其他已生效主程序。",
+      "xml": {
+        "status": "confirmed",
+        "element": "flow:otherMainProc",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name", "subId"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<flow:otherMainProc id=\"{id}\" name=\"{name}\" subId=\"{subId}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:otherMainProc>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "subTitle2", "showDetail", "mainProcedure", "showQueue", "interval", "trends"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "subTitle2": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "mainProcedure": { "type": "string", "description": "主程序名称[版本]，如 BXCS[V1.1]" },
+            "showQueue": { "type": "boolean", "default": false },
+            "interval": { "type": "integer", "default": 0 },
+            "trends": { "type": "array", "default": [] }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "请求",
+      "category": "流程控制",
+      "purpose": "拼接请求报文，向指定URL发送HTTP请求并接收响应。",
+      "usage_scenario": "需要与外部系统交互获取数据或触发动作时。",
+      "xml": {
+        "status": "confirmed",
+        "element": "flow:request",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<flow:request id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:request>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "url", "method", "version", "authType", "headerData", "requestData", "responseData", "errorHandler", "retryCount"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "url": { "type": "string", "description": "请求URL" },
+            "method": { "type": "string", "enum": ["get", "post", "put", "delete"] },
+            "version": { "type": "integer", "const": 1 },
+            "authType": { "type": "integer", "description": "1=无认证" },
+            "headerData": { "type": "array", "default": [] },
+            "requestData": { "type": "array", "default": [] },
+            "responseData": { "type": "array", "default": [] },
+            "errorHandler": { "type": "object", "properties": { "handler": { "type": "string", "enum": ["retry", "throw", "ignore"] } } },
+            "retryCount": { "type": "integer", "default": 5 }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "报警消息",
+      "category": "消息交互",
+      "purpose": "配置报警消息提示，程序不暂停，后续可确认。",
+      "usage_scenario": "运行中需要提示异常或注意信息，但不中断流程的场合。",
+      "xml": {
+        "status": "confirmed",
+        "element": "msg:alarm",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": ["tabKey"],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<msg:alarm id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</msg:alarm>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "isMute", "isPersistent", "message", "display", "data", "resourceGroupId", "needPhoto", "needHandWritting"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "isMute": { "type": "boolean", "default": false },
+            "isPersistent": { "type": "boolean", "default": false },
+            "message": { "type": "string", "description": "报警消息文本" },
+            "display": { "type": "string", "default": "yes" },
+            "data": { "type": "array", "default": [] },
+            "resourceGroupId": { "type": "string", "default": "0" },
+            "needPhoto": { "type": "boolean", "default": false },
+            "needHandWritting": { "type": "boolean", "default": false }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "暂停计时器",
+      "category": "时间控制",
+      "purpose": "暂停计时器计时。",
+      "usage_scenario": "需要临时暂停计时时。",
+      "xml": {
+        "status": "confirmed",
+        "element": "timer:pause",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<timer:pause id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:pause>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "timer"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "timer": { "type": "string", "description": "$(计时器ID)" }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+
+    {
+      "name": "时钟",
+      "category": "时间控制",
+      "purpose": "等待到指定的时间点（每日/每时/每分）再继续运行。",
+      "usage_scenario": "需要在特定时刻触发动作的场景。",
+      "xml": {
+        "status": "confirmed",
+        "element": "timer:clock",
+        "id_pattern": "Activity_{7位随机字母数字}",
+        "required_attributes": ["id", "name"],
+        "optional_attributes": [],
+        "required_children": [
+          { "tag": "ext:data", "type": "cdata_json" },
+          { "tag": "bpmn2:incoming", "type": "text" },
+          { "tag": "bpmn2:outgoing", "type": "text" }
+        ],
+        "optional_children": [],
+        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "template": "<timer:clock id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:clock>",
+        "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
+        "ext_data_schema": {
+          "type": "object",
+          "required": ["subTitle", "showDetail", "type", "everyday", "everyHour", "everyMinute"],
+          "properties": {
+            "subTitle": { "type": "string", "default": "" },
+            "showDetail": { "type": "boolean", "default": true },
+            "type": { "type": "string", "enum": ["everyday", "everyHour", "everyMinute"], "description": "触发模式" },
+            "everyday": { "type": "string", "description": "每日触发时间 HH:MM:SS" },
+            "everyHour": { "type": "string", "description": "每小时触发 MM:SS" },
+            "everyMinute": { "type": "string", "description": "每分钟触发（分钟数）" }
+          },
+          "additionalProperties": false
+        }
+      }
     }
 
   ],
@@ -795,7 +1371,7 @@
           "note": "择一分支元件：每个分支使用 branch_option，situation 值对应分支索引（0, 1, 2...）"
         },
         {
-          "source_element": "其他所有元件（flow:start, flow:end, io:*, timer:start, timer:stop, timer:reset, msg:*, timer:wait 等）",
+          "source_element": "其他所有元件（flow:start, flow:end, io:dcs, io:var, io:calc, io:concat, io:fileExport, io:fileImport, io:modifyLabel, io:modifyProps, flow:otherMainProc, flow:request, flow:risingEdge, flow:fallingEdge, timer:start, timer:stop, timer:restart, timer:pause, timer:clock, timer:wait, msg:guide, msg:confirm, msg:alarm 等）",
           "outgoing": "plain",
           "incoming": "plain",
           "note": "非条件判断类元件统一使用 plain 普通连线"

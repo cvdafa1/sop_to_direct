@@ -278,34 +278,161 @@
 </msg:guide>
 ```
 
-### 12. flow:parallel1（并行容器）
+### 12. flow:parallel1（并行容器，竖向）
+
+**结构**：`parallelStart → N 分支 → parallelEnd`。分支节点和连线都在 parallel1 内部。
+
+**连线关系**：
+- 外部节点 → `flow:parallel1`（容器 incoming）
+- `parallelStart` → 各分支首节点（N 条 outgoing）
+- 各分支内部节点间连线
+- 各分支末节点 → `parallelEnd`（N 条 incoming）
+- `flow:parallel1` → 外部节点（容器 outgoing）
+
+#### 12.1 Process XML（以 2 分支为例）
 
 ```xml
-<flow:parallel1 id="Activity_xxx">
-  <bpmn2:incoming>Flow_in</bpmn2:incoming>
-  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
-  <flow:parallelStart id="Activity_start">
-    <bpmn2:outgoing>Flow_branch1</bpmn2:outgoing>
-    <bpmn2:outgoing>Flow_branch2</bpmn2:outgoing>
-    <bpmn2:outgoing>Flow_branch3</bpmn2:outgoing>
+<!-- 外部节点（容器前） -->
+<io:dcs id="Activity_prev" name="前序操作" tabKey="basic">
+  <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.MOT.MOT_P707A_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
+  <bpmn2:incoming>Flow_prev_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_to_parallel</bpmn2:outgoing>
+</io:dcs>
+
+<!-- 并行容器 -->
+<flow:parallel1 id="Activity_par1" layout="vertical">
+  <bpmn2:incoming>Flow_to_parallel</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_from_parallel</bpmn2:outgoing>
+  <flow:parallelStart id="Activity_par1_start">
+    <bpmn2:outgoing>Flow_branch_a</bpmn2:outgoing>
+    <bpmn2:outgoing>Flow_branch_b</bpmn2:outgoing>
   </flow:parallelStart>
-  <flow:parallelEnd id="Activity_end">
-    <bpmn2:incoming>Flow_branch1_end</bpmn2:incoming>
-    <bpmn2:incoming>Flow_branch2_end</bpmn2:incoming>
-    <bpmn2:incoming>Flow_branch3_end</bpmn2:incoming>
+  <flow:parallelEnd id="Activity_par1_end">
+    <bpmn2:incoming>Flow_branch_a_end</bpmn2:incoming>
+    <bpmn2:incoming>Flow_branch_b_end</bpmn2:incoming>
   </flow:parallelEnd>
-  <!-- 分支节点放在 parallelStart 和 parallelEnd 之间 -->
-  <io:dcs id="Activity_branch1_node">...</io:dcs>
-  <io:dcs id="Activity_branch2_node">...</io:dcs>
-  <io:dcs id="Activity_branch3_node">...</io:dcs>
-  <!-- 分支连线 -->
-  <bpmn2:sequenceFlow id="Flow_branch1" sourceRef="Activity_start" targetRef="Activity_branch1_node" />
-  <bpmn2:sequenceFlow id="Flow_branch1_end" sourceRef="Activity_branch1_node" targetRef="Activity_end" />
-  ...
+  <!-- 分支 A 节点 -->
+  <io:dcs id="Activity_pump_a" name="启动泵A" tabKey="basic">
+    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.MOT.MOT_P707A_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
+    <bpmn2:incoming>Flow_branch_a</bpmn2:incoming>
+    <bpmn2:outgoing>Flow_branch_a_end</bpmn2:outgoing>
+  </io:dcs>
+  <!-- 分支 B 节点 -->
+  <io:dcs id="Activity_pump_b" name="启动泵B" tabKey="basic">
+    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.MOT.MOT_P707B_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
+    <bpmn2:incoming>Flow_branch_b</bpmn2:incoming>
+    <bpmn2:outgoing>Flow_branch_b_end</bpmn2:outgoing>
+  </io:dcs>
 </flow:parallel1>
+
+<!-- 外部节点（容器后） -->
+<io:dcs id="Activity_next" name="后续操作" tabKey="basic">
+  <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.VAL.EV_0707A_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
+  <bpmn2:incoming>Flow_from_parallel</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_next_out</bpmn2:outgoing>
+</io:dcs>
+
+<!-- 连线 -->
+<!-- 外部 → 容器 -->
+<bpmn2:sequenceFlow id="Flow_to_parallel" sourceRef="Activity_prev" targetRef="Activity_par1" />
+<!-- parallelStart → 分支首节点 -->
+<bpmn2:sequenceFlow id="Flow_branch_a" sourceRef="Activity_par1_start" targetRef="Activity_pump_a" />
+<bpmn2:sequenceFlow id="Flow_branch_b" sourceRef="Activity_par1_start" targetRef="Activity_pump_b" />
+<!-- 分支末节点 → parallelEnd -->
+<bpmn2:sequenceFlow id="Flow_branch_a_end" sourceRef="Activity_pump_a" targetRef="Activity_par1_end" />
+<bpmn2:sequenceFlow id="Flow_branch_b_end" sourceRef="Activity_pump_b" targetRef="Activity_par1_end" />
+<!-- 容器 → 外部 -->
+<bpmn2:sequenceFlow id="Flow_from_parallel" sourceRef="Activity_par1" targetRef="Activity_next" />
 ```
 
-**结构**：parallelStart → N 分支 → parallelEnd。分支节点和连线都在 parallel1 内部。
+#### 12.2 BPMNDiagram XML（对应上方 Process）
+
+```xml
+<bpmndi:BPMNDiagram id="BPMNDiagram_1">
+  <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+    <!-- ── BPMNShape（先节点后连线）── -->
+    <!-- 前序节点 -->
+    <bpmndi:BPMNShape id="Activity_prev_di" bpmnElement="Activity_prev">
+      <dc:Bounds x="400" y="60" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <!-- 并行容器（isExpanded="true" 必须设置） -->
+    <bpmndi:BPMNShape id="Activity_par1_di" bpmnElement="Activity_par1" isExpanded="true">
+      <dc:Bounds x="60" y="195" width="780" height="230" />
+    </bpmndi:BPMNShape>
+    <!-- parallelStart（横条，宽=容器内宽，高=5） -->
+    <bpmndi:BPMNShape id="Activity_par1_start_di" bpmnElement="Activity_par1_start">
+      <dc:Bounds x="100" y="235" width="700" height="5" />
+    </bpmndi:BPMNShape>
+    <!-- 分支 A 节点 -->
+    <bpmndi:BPMNShape id="Activity_pump_a_di" bpmnElement="Activity_pump_a">
+      <dc:Bounds x="100" y="280" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <!-- 分支 B 节点 -->
+    <bpmndi:BPMNShape id="Activity_pump_b_di" bpmnElement="Activity_pump_b">
+      <dc:Bounds x="600" y="280" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <!-- parallelEnd（横条，宽=容器内宽，高=5） -->
+    <bpmndi:BPMNShape id="Activity_par1_end_di" bpmnElement="Activity_par1_end">
+      <dc:Bounds x="100" y="380" width="700" height="5" />
+    </bpmndi:BPMNShape>
+    <!-- 后续节点 -->
+    <bpmndi:BPMNShape id="Activity_next_di" bpmnElement="Activity_next">
+      <dc:Bounds x="400" y="480" width="200" height="60" />
+    </bpmndi:BPMNShape>
+
+    <!-- ── BPMNEdge（每条 sequenceFlow 一条 Edge）── -->
+    <!-- 外部 → 容器（情况5 incoming） -->
+    <bpmndi:BPMNEdge id="Flow_to_parallel_di" bpmnElement="Flow_to_parallel">
+      <di:waypoint x="500" y="120" />
+      <di:waypoint x="500" y="145" />
+      <di:waypoint x="450" y="145" />
+      <di:waypoint x="450" y="235" />
+    </bpmndi:BPMNEdge>
+    <!-- parallelStart → 分支 A（情况3） -->
+    <bpmndi:BPMNEdge id="Flow_branch_a_di" bpmnElement="Flow_branch_a">
+      <di:waypoint x="200" y="240" />
+      <di:waypoint x="200" y="280" />
+    </bpmndi:BPMNEdge>
+    <!-- parallelStart → 分支 B（情况3） -->
+    <bpmndi:BPMNEdge id="Flow_branch_b_di" bpmnElement="Flow_branch_b">
+      <di:waypoint x="700" y="240" />
+      <di:waypoint x="700" y="280" />
+    </bpmndi:BPMNEdge>
+    <!-- 分支 A → parallelEnd（情况4） -->
+    <bpmndi:BPMNEdge id="Flow_branch_a_end_di" bpmnElement="Flow_branch_a_end">
+      <di:waypoint x="200" y="340" />
+      <di:waypoint x="200" y="380" />
+    </bpmndi:BPMNEdge>
+    <!-- 分支 B → parallelEnd（情况4） -->
+    <bpmndi:BPMNEdge id="Flow_branch_b_end_di" bpmnElement="Flow_branch_b_end">
+      <di:waypoint x="700" y="340" />
+      <di:waypoint x="700" y="380" />
+    </bpmndi:BPMNEdge>
+    <!-- 容器 → 外部（情况5 outgoing） -->
+    <bpmndi:BPMNEdge id="Flow_from_parallel_di" bpmnElement="Flow_from_parallel">
+      <di:waypoint x="450" y="385" />
+      <di:waypoint x="450" y="475" />
+      <di:waypoint x="500" y="475" />
+      <di:waypoint x="500" y="480" />
+    </bpmndi:BPMNEdge>
+  </bpmndi:BPMNPlane>
+</bpmndi:BPMNDiagram>
+```
+
+#### 12.3 坐标规则要点
+
+| 元件 | 定位规则 |
+|------|----------|
+| `flow:parallel1` 容器 | 包围所有子节点，四周 padding ≥ 40px |
+| `parallelStart` | 容器顶部内 padding 后，横条（宽=容器内宽，高=5） |
+| `parallelEnd` | 容器底部内 padding 前，横条（宽=容器内宽，高=5） |
+| 分支节点 | 在 pstart 和 pend 之间，分支间水平间距 ≥ 300px |
+| 外部→容器连线 | 从外部底部→容器上方弯折→pstart 顶部 |
+| pstart→分支连线 | 从 pstart 底部对齐到分支 x 中心→分支顶部 |
+| 分支→pend 连线 | 从分支底部→对齐到 pend 顶部 |
+| 容器→外部连线 | 从 pend 底部→穿出容器边界→弯折→外部顶部 |
+
+> 使用 `layout_parallel1()` 自动生成以上所有坐标，无需手动计算。
 
 ### 13. util:text（文本注释）
 
@@ -320,6 +447,288 @@
 ```
 
 **用途**：在流程图中添加红色备注文本。`desc` 属性存放文本内容，`&#10;` 为换行符。
+
+### 14. flow:risingEdge（上跳变）
+
+```xml
+<flow:risingEdge id="Activity_xxx" name="上跳变">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "keep": 0,
+    "relation": "and",
+    "data": [
+      {"name":"#(HIC_V1001A_1.AOF)","desc":"","row":0,"type":3}
+    ]
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</flow:risingEdge>
+```
+
+**字段说明**：
+- `keep`：0（固定）
+- `relation`：`"and"`（多条件关系）
+- `data[]`：检测位号数组
+  - `name`：位号路径 `#(xxx)`
+  - `desc`：描述（可空）
+  - `type`：3=数字量
+- 出边 1 条：plain 连线
+
+### 15. flow:fallingEdge（下跳变）
+
+```xml
+<flow:fallingEdge id="Activity_xxx" name="下跳变">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "keep": 0,
+    "relation": "and",
+    "data": [
+      {"name":"#(HIC_V1001A_1.AOF)","desc":"","row":0,"type":3}
+    ]
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</flow:fallingEdge>
+```
+
+**与 flow:risingEdge 区别**：检测信号从非0→0的下跳变。字段结构完全相同。
+
+### 16. io:concat（字符串操作）
+
+```xml
+<io:concat id="Activity_xxx" name="字符串操作">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "version": 1,
+    "showDetail": true,
+    "data": [
+      {"targetVar":"$$$(YF_ST13)","express":[{"value":"$$$(KC_GY)"}]}
+    ]
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</io:concat>
+```
+
+**字段说明**：
+- `version`：1（固定）
+- `data[]`：拼接数组
+  - `targetVar`：目标变量 `$$$(XXX)`
+  - `express[]`：拼接值数组，每项 `{"value":"xxx"}`
+- 出边 1 条：plain 连线
+
+### 17. io:fileExport（文件导出）
+
+```xml
+<io:fileExport id="Activity_xxx" name="文件导出">
+  <ext:data><![CDATA[{
+    "version": "1",
+    "showDetail": true,
+    "fileFormat": "csv",
+    "path": "22.csv",
+    "data": [
+      {"col":"SS","rowNumber":"1","value":"$(dy)","row":0}
+    ]
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</io:fileExport>
+```
+
+**字段说明**：
+- `fileFormat`：`"csv"` 或 `"xlsx"`
+- `path`：文件路径
+- `data[]`：导出数据数组
+  - `col`：列标识
+  - `rowNumber`：行号
+  - `value`：变量引用 `$(XXX)`
+- 出边 1 条：plain 连线
+
+### 18. io:fileImport（文件导入）
+
+```xml
+<io:fileImport id="Activity_xxx" name="文件导入">
+  <ext:data><![CDATA[{
+    "version": "1",
+    "showDetail": true,
+    "fileFormat": "csv",
+    "path": "1.csv",
+    "data": [
+      {"col":"","rowNumber":"","value":"$(dy)","row":0}
+    ]
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</io:fileImport>
+```
+
+**与 io:fileExport 区别**：从文件读取数据到变量。字段结构相同，`value` 为接收导入值的变量引用。
+
+### 19. io:modifyLabel（修改标签）
+
+```xml
+<io:modifyLabel id="Activity_xxx" name="修改标签">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "data": [
+      {"desc":"修改标签","currentLabelId":"0","targetLabelId":"0"}
+    ],
+    "errorHandler": {"handler":0}
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</io:modifyLabel>
+```
+
+**字段说明**：
+- `data[]`：标签修改数组
+  - `desc`：修改描述
+  - `currentLabelId`：当前标签ID
+  - `targetLabelId`：目标标签ID
+- `errorHandler`：`{"handler":0}`
+
+### 20. io:modifyProps（修改属性）
+
+```xml
+<io:modifyProps id="Activity_xxx" name="修改属性">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "customField": "$(dy)"
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</io:modifyProps>
+```
+
+**字段说明**：
+- `customField`：自定义字段值，变量引用 `$(XXX)`
+
+### 21. flow:otherMainProc（引用主程序）
+
+```xml
+<flow:otherMainProc id="Activity_xxx" name="BXCS_copy" subId="1343271715200010000">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "subTitle2": "",
+    "showDetail": true,
+    "mainProcedure": "BXCS[V1.1]",
+    "showQueue": false,
+    "interval": 0,
+    "trends": []
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</flow:otherMainProc>
+```
+
+**字段说明**：
+- `subId`（属性）：子程序ID
+- `mainProcedure`：主程序名称[版本]，如 `"BXCS[V1.1]"`
+- `showQueue`：是否显示队列
+- `interval`：间隔（0=默认）
+- `trends`：趋势数据数组（通常为空）
+
+### 22. flow:request（请求）
+
+```xml
+<flow:request id="Activity_xxx" name="请求">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "url": "https://example.com/api",
+    "method": "get",
+    "version": 1,
+    "authType": 1,
+    "headerData": [],
+    "requestData": [],
+    "responseData": [],
+    "errorHandler": {"handler":"retry"},
+    "retryCount": 5
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</flow:request>
+```
+
+**字段说明**：
+- `url`：请求URL
+- `method`：`"get"` / `"post"` / `"put"` / `"delete"`
+- `authType`：1=无认证
+- `headerData`/`requestData`/`responseData`：数组（通常为空）
+- `errorHandler.handler`：`"retry"` / `"throw"` / `"ignore"`
+- `retryCount`：重试次数
+
+### 23. msg:alarm（报警消息）
+
+```xml
+<msg:alarm id="Activity_xxx" name="报警消息" tabKey="basic">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "isMute": false,
+    "isPersistent": false,
+    "message": "设备异常报警",
+    "display": "yes",
+    "data": [],
+    "resourceGroupId": "0",
+    "needPhoto": false,
+    "needHandWritting": false
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</msg:alarm>
+```
+
+**字段说明**：
+- `isMute`：是否静音
+- `isPersistent`：是否持久报警
+- `message`：报警消息文本
+- `display`：`"yes"`（显示）
+- 与 msg:guide 区别：报警消息不暂停程序，但可后续确认；msg:guide 仅提示
+
+### 24. timer:pause（暂停计时器）
+
+```xml
+<timer:pause id="Activity_xxx" name="暂停计时器">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "timer": "$(ds)"
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</timer:pause>
+```
+
+**字段说明**：
+- `timer`：引用 `timer:start` 中定义的变量 `$(XXX)`
+
+### 25. timer:clock（时钟）
+
+```xml
+<timer:clock id="Activity_xxx" name="时钟">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "type": "everyday",
+    "everyday": "01:00:00",
+    "everyHour": "00:00",
+    "everyMinute": "10"
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</timer:clock>
+```
+
+**字段说明**：
+- `type`：`"everyday"`（每日）/ `"everyHour"`（每小时）/ `"everyMinute"`（每分钟）
+- `everyday`：每日触发时间 `"HH:MM:SS"`
+- `everyHour`：每小时触发 `"MM:SS"`
+- `everyMinute`：每分钟触发（分钟数）
 
 ---
 
@@ -388,6 +797,18 @@
 | 仅提示（不暂停） | msg:guide | - | - |
 | 多设备同时操作 | flow:parallel1 | - | - |
 | 添加备注 | util:text | - | - |
+| 检测信号 0→非0 | flow:risingEdge | 3 | - |
+| 检测信号 非0→0 | flow:fallingEdge | 3 | - |
+| 拼接字符串 | io:concat | - | - |
+| 导出数据到文件 | io:fileExport | - | - |
+| 从文件读取数据 | io:fileImport | - | - |
+| 修改程序标签 | io:modifyLabel | - | - |
+| 修改程序属性 | io:modifyProps | - | - |
+| 引用其他主程序 | flow:otherMainProc | - | - |
+| 发送HTTP请求 | flow:request | - | - |
+| 报警提示（不暂停） | msg:alarm | - | - |
+| 暂停计时器 | timer:pause | - | - |
+| 等待到指定时刻 | timer:clock | - | - |
 
 ---
 
