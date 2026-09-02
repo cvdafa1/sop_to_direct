@@ -71,6 +71,35 @@ class DirectPlatformClient:
         _check_response_code(response, "查询程序分组")
         return response.get("result", {}).get("data", {}).get("dataGroups", [])
 
+    # 查询位号信息列表
+    def get_tags(self, current_page: int = 1, page_size: int = 10,
+                 tag_data_types: str = "") -> dict:
+        """查询位号信息列表，返回 {list: [{name, type, remark}, ...], pagination: {...}}
+
+        tag_data_types: 按类型过滤，type 1=浮点 2=整型 3=字符串
+        """
+        url = BASE_URL + f"/vxdirect/tag?currentPage={current_page}&pageSize={page_size}&tagDataTypes={tag_data_types}"
+        response = make_request("GET", url)
+        _check_response_code(response, "查询位号信息")
+        return response.get("result", {}).get("data", {})
+
+    # 按名称关键词搜索位号
+    def search_tags_by_name(self, keyword: str, max_pages: int = 100) -> list:
+        """按关键词搜索位号名称（遍历分页，返回所有匹配项）"""
+        results = []
+        for page in range(1, max_pages + 1):
+            data = self.get_tags(current_page=page, page_size=100)
+            tag_list = data.get("list", [])
+            if not tag_list:
+                break
+            for tag in tag_list:
+                if keyword.upper() in tag.get("name", "").upper():
+                    results.append(tag)
+            pagination = data.get("pagination", {})
+            if not pagination.get("hasMore", False):
+                break
+        return results
+
     # 新增主程序
     def create_program(self, program_name: str = "", version: str = "v1.0",
                        description: str = "", group_id: str = "1001",
