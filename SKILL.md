@@ -428,6 +428,65 @@ sequenceFlow 的 ext:data 格式**取决于源节点类型**，situation 连线*
 
 - 每条 sequenceFlow 必须有对应的 BPMNEdge（含 di:waypoint 坐标）
 
+##### 3.4.1 连线生成流程（使用 layout_generator.py 自动生成）
+
+**禁止手写连线 XML**，必须使用 `layout_generator.py` 的方法自动生成，避免遗漏：
+
+```python
+from layout_generator import LayoutGenerator
+
+gen = LayoutGenerator()
+
+# 1. 添加节点
+gen.add_node("Event_start", "start", "开始")
+gen.add_node("Activity_1", "dcs", "操作1")
+gen.add_node("Activity_2", "or", "条件判断")
+
+# 2. 添加连线（指定 situation 参数）
+gen.add_flow("Flow_1", "Event_start", "Activity_1")                          # plain
+gen.add_flow("Flow_2", "Activity_1", "Activity_2")                           # plain
+gen.add_flow("Flow_yes", "Activity_2", "Activity_3", situation="yes")       # situation_yes
+gen.add_flow("Flow_no", "Activity_2", "Activity_4", situation="no")         # situation_no
+
+# 3. 布局
+gen.layout_vertical(["Event_start", "Activity_1", "Activity_2"], center_x=500, start_y=60)
+
+# 4. 自动生成 XML（三部分缺一不可）
+node_io = gen.get_incoming_outgoing_xml("Activity_1")    # 节点的 incoming/outgoing 引用
+flows   = gen.get_sequence_flow_xml()                   # 所有 <bpmn2:sequenceFlow> 元素
+diagram = gen.get_diagram_xml()                         # 完整 <bpmndi:BPMNDiagram> 节
+
+# 5. 完整性校验（生成 XML 前必须执行）
+issues = gen.check_connection_integrity()
+if issues:
+    for issue in issues:
+        print(f"连线问题: {issue}")
+```
+
+**三部分 XML 必须同时生成**：
+
+| XML 部分 | 方法 | 放置位置 | 作用 |
+|---------|------|---------|------|
+| 节点 incoming/outgoing | `get_incoming_outgoing_xml(node_id)` | 节点元素内部 | 声明节点的入边和出边 |
+| sequenceFlow | `get_sequence_flow_xml()` | `<bpmn2:process>` 内、节点之后 | 定义连线本身（含变体和 ext:data） |
+| BPMNEdge | `get_diagram_xml()` 内含 | `<bpmndi:BPMNDiagram>` 内 | 定义连线的图形路径（坐标） |
+
+##### 3.4.2 连线完整性检查清单
+
+生成 XML 前必须逐项确认：
+
+- [ ] 每条 sequenceFlow 的 `id` 与 BPMNEdge 的 `bpmnElement` 完全一致
+- [ ] 每个节点的 `incoming`/`outgoing` 文本与对应的 sequenceFlow `id` 完全一致
+- [ ] plain 连线包含 `<ext:data>{"lineType":1}</ext:data>`（非自闭合标签）
+- [ ] situation_yes 连线包含 `<ext:data>{"situation":"yes"}</ext:data>`，`name="条件成立"`
+- [ ] situation_no 连线包含 `<ext:data>{"situation":"no"}</ext:data>`，`name="条件不成立"`
+- [ ] situation 连线的 ext:data **不含 lineType 字段**
+- [ ] 条件节点（and/or/cond）有且仅有 2 条 outgoing（yes + no）
+- [ ] 起始节点只有 outgoing，无 incoming
+- [ ] 结束节点只有 incoming，无 outgoing
+- [ ] 中间节点同时有 incoming 和 outgoing
+- [ ] 调用 `check_connection_integrity()` 返回空列表（无问题）
+
 #### 3.5 布局坐标生成（禁止重叠 + 连线可见）
 
 **核心原则：元件不允许重叠，连线必须明显并可见。**

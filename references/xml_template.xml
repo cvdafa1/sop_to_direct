@@ -29,16 +29,24 @@
     <bpmn2:incoming>Flow_4</bpmn2:incoming>
   </flow:end>
   <!-- 连线定义 -->
-  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1" />
-  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Activity_2" />
-  <bpmn2:sequenceFlow id="Flow_yes" name="是" sourceRef="Activity_2" targetRef="Activity_3">
+  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1">
+    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+  </bpmn2:sequenceFlow>
+  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Activity_2">
+    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+  </bpmn2:sequenceFlow>
+  <bpmn2:sequenceFlow id="Flow_yes" name="条件成立" sourceRef="Activity_2" targetRef="Activity_3">
     <ext:data><![CDATA[{"situation":"yes"}]]></ext:data>
   </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_no" name="否" sourceRef="Activity_2" targetRef="Activity_4">
+  <bpmn2:sequenceFlow id="Flow_no" name="条件不成立" sourceRef="Activity_2" targetRef="Activity_4">
     <ext:data><![CDATA[{"situation":"no"}]]></ext:data>
   </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_3" sourceRef="Activity_3" targetRef="Event_end" />
-  <bpmn2:sequenceFlow id="Flow_4" sourceRef="Activity_4" targetRef="Event_end" />
+  <bpmn2:sequenceFlow id="Flow_3" sourceRef="Activity_3" targetRef="Event_end">
+    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+  </bpmn2:sequenceFlow>
+  <bpmn2:sequenceFlow id="Flow_4" sourceRef="Activity_4" targetRef="Event_end">
+    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+  </bpmn2:sequenceFlow>
 </bpmn2:process>
 <bpmndi:BPMNDiagram id="BPMNDiagram_1">
   <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">

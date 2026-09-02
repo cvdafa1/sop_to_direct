@@ -607,6 +607,121 @@ class LayoutGenerator:
             lines.append(f'    </bpmndi:BPMNEdge>')
         return "\n".join(lines)
 
+    def get_sequence_flow_xml(self):
+        """生成 <bpmn2:sequenceFlow> 元素（流程层连线定义）
+
+        自动根据 situation 字段选择正确的连线变体：
+        - None → plain (普通连线, ext:data={"lineType":1})
+        - "yes" → situation_yes (条件成立, ext:data={"situation":"yes"})
+        - "no" → situation_no (条件不成立, ext:data={"situation":"no"})
+        - "0"/"1"/"2"... → branch_option (择一分支, ext:data={"situation":"{索引}"})
+        """
+        lines = []
+        for flow in self.flows:
+            if flow.situation == "yes":
+                lines.append(
+                    f'    <bpmn2:sequenceFlow id="{flow.id}" name="条件成立" '
+                    f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
+                    f'      <ext:data><![CDATA[{{"situation":"yes"}}]]></ext:data>\n'
+                    f'    </bpmn2:sequenceFlow>'
+                )
+            elif flow.situation == "no":
+                lines.append(
+                    f'    <bpmn2:sequenceFlow id="{flow.id}" name="条件不成立" '
+                    f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
+                    f'      <ext:data><![CDATA[{{"situation":"no"}}]]></ext:data>\n'
+                    f'    </bpmn2:sequenceFlow>'
+                )
+            elif flow.situation is not None and str(flow.situation).isdigit():
+                name = flow.name or f"选项{flow.situation}"
+                lines.append(
+                    f'    <bpmn2:sequenceFlow id="{flow.id}" name="{name}" '
+                    f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
+                    f'      <ext:data><![CDATA[{{"situation":"{flow.situation}"}}]]></ext:data>\n'
+                    f'    </bpmn2:sequenceFlow>'
+                )
+            else:
+                lines.append(
+                    f'    <bpmn2:sequenceFlow id="{flow.id}" '
+                    f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
+                    f'      <ext:data><![CDATA[{{"lineType":1}}]]></ext:data>\n'
+                    f'    </bpmn2:sequenceFlow>'
+                )
+        return "\n".join(lines)
+
+    def get_incoming_outgoing_xml(self, node_id):
+        """生成节点的 <bpmn2:incoming> 和 <bpmn2:outgoing> XML
+
+        按流程顺序自动收集该节点的所有入边和出边 ID。
+        """
+        incoming_ids = []
+        outgoing_ids = []
+        for flow in self.flows:
+            if flow.target == node_id:
+                incoming_ids.append(flow.id)
+            if flow.source == node_id:
+                outgoing_ids.append(flow.id)
+
+        lines = []
+        for fid in incoming_ids:
+            lines.append(f'  <bpmn2:incoming>{fid}</bpmn2:incoming>')
+        for fid in outgoing_ids:
+            lines.append(f'  <bpmn2:outgoing>{fid}</bpmn2:outgoing>')
+        return "\n".join(lines)
+
+    def check_connection_integrity(self):
+        """验证连线完整性
+
+        检查：
+        1. 每条 flow 的 source 和 target 节点是否存在
+        2. 起始节点必须有且只有 outgoing
+        3. 结束节点必须有 incoming
+        4. 中间节点必须同时有 incoming 和 outgoing
+        5. 条件节点(and/or/cond)必须有 2 条 outgoing
+        6. flow 的 source/target 不能是同一节点（禁止自环）
+        """
+        issues = []
+
+        incoming_map = {}
+        outgoing_map = {}
+        for flow in self.flows:
+            outgoing_map.setdefault(flow.source, []).append(flow.id)
+            incoming_map.setdefault(flow.target, []).append(flow.id)
+
+        for flow in self.flows:
+            if flow.source not in self.nodes:
+                issues.append(f"连线 {flow.id} 的 source 节点 {flow.source} 不存在")
+            if flow.target not in self.nodes:
+                issues.append(f"连线 {flow.id} 的 target 节点 {flow.target} 不存在")
+            if flow.source == flow.target:
+                issues.append(f"连线 {flow.id} 存在自环（source 和 target 相同）")
+
+        for nid in self.node_order:
+            node = self.nodes[nid]
+            inc = incoming_map.get(nid, [])
+            out = outgoing_map.get(nid, [])
+
+            if node.type == "start":
+                if not out:
+                    issues.append(f"起始节点 {nid} 缺少 outgoing 连线")
+                if inc:
+                    issues.append(f"起始节点 {nid} 不应有 incoming 连线")
+            elif node.type == "end":
+                if not inc:
+                    issues.append(f"结束节点 {nid} 缺少 incoming 连线")
+            else:
+                if not inc:
+                    issues.append(f"中间节点 {nid}({node.type}) 缺少 incoming 连线")
+                if not out:
+                    issues.append(f"中间节点 {nid}({node.type}) 缺少 outgoing 连线")
+
+            if node.type in ("and", "or", "cond") and len(out) != 2:
+                issues.append(
+                    f"条件节点 {nid}({node.type}) 应有 2 条 outgoing，实际 {len(out)} 条"
+                )
+
+        return issues
+
     def get_diagram_xml(self):
         shapes = self.get_shape_xml()
         edges = self.get_edge_xml()
