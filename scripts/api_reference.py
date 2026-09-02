@@ -75,7 +75,7 @@ class DirectPlatformClient:
     def create_program(self, program_name: str = "", version: str = "v1.0",
                        description: str = "", group_id: str = "1001",
                        label_id: str = "0", product_id: str = "0",
-                       created_by: str = "direct_skill") -> str:
+                       created_by: str = "admin") -> str:
         payload = {
             "procedureHead": {
                 "name": program_name,

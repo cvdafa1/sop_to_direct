@@ -191,15 +191,37 @@ HEADERS = {
 
 **创建前必须与用户交互，用户同意后才可创建，严格按流程执行，不得跳过**：
 
-使用 AskUserQuestion 向用户展示以下字段（AI 根据 SOP 文档自动填充建议值，用户可修改）：
+##### 2.2.1 获取分组列表
 
-| 字段                  | 说明       | 命名规则                      | 示例                         |
-| ------------------- | -------- | ------------------------- | -------------------------- |
-| 程序名称(program\_name) | 主程序名称    | 仅支持字母、数字、下划线，必须字母开头，不允许中文 | sop\_shutdown\_circ\_water |
-| 描述                  | 程序功能描述   | 无限制                       | 循环水系统停车流程程序                |
-| 被指                  | 指派对象/负责人 | 无限制                       | 张三                         |
-| 版本                  | 程序版本号    | 无限制                       | 1.0                        |
-| 分组                  | 程序分组/分类  | 无限制                       | 停车程序                       |
+创建程序前，**必须先调用 `get_data_groups` API** 获取平台分组列表，建立 `groupId → groupName` 映射，供用户选择。完整实现详见 `scripts/api_reference.py` 的 `DirectPlatformClient.get_data_groups()`：
+
+```python
+from api_reference import DirectPlatformClient
+
+client = DirectPlatformClient()
+groups = client.get_data_groups()  # 返回 [{groupId, groupName}, ...]
+```
+
+**返回格式**：`[{groupId: "1001", groupName: "默认分组"}, {groupId: "1002", groupName: "停车程序"}, ...]`
+
+**分组选择流程**：
+
+1. 调用 `get_data_groups()` 获取分组列表
+2. 从返回结果中找到 `groupId == "1001"` 的分组，其 `groupName` 作为**默认选中项**
+3. 使用 AskUserQuestion 向用户展示所有分组的 `groupName` 列表供选择，默认选中 id 为 "1001" 对应的分组名称
+4. 用户选择后，记录对应的 `groupId` 用于后续 `create_program` 调用
+
+##### 2.2.2 参数确认
+
+分组选定后，使用 AskUserQuestion 向用户展示以下字段（AI 根据 SOP 文档自动填充建议值，用户可修改）：
+
+| 字段                  | 说明       | 命名规则                      | 默认值                | 示例                         |
+| ------------------- | -------- | ------------------------- | ------------------ | -------------------------- |
+| 程序名称(program\_name) | 主程序名称    | 仅支持字母、数字、下划线，必须字母开头，不允许中文 | 无（必填）              | sop\_shutdown\_circ\_water |
+| 描述(description)     | 程序功能描述   | 无限制                       | 无（必填）              | 循环水系统停车流程程序                |
+| 被指(created\_by)     | 指派对象/负责人 | 无限制                       | admin              | admin                      |
+| 版本(version)         | 程序版本号    | 无限制                       | v1.0               | v1.0                       |
+| 分组(group\_id)       | 程序分组/分类  | 从 get\_data\_groups 返回列表选择 | 1001 对应的 groupName | 默认分组                       |
 
 **program\_name 校验规则**：
 
@@ -213,30 +235,20 @@ HEADERS = {
 
 - 用户修改时也必须校验，不符合规则时提示用户重新输入
 
-**流程**：展示建议值 → 用户确认或修改 → 用户明确同意后才调用 API。用户未同意前禁止调用 create\_program。
+**流程**：获取分组列表 → 展示分组选择（默认 1001 对应名称）→ 用户选择分组 → 展示程序参数建议值 → 用户确认或修改 → 用户明确同意后才调用 API。用户未同意前禁止调用 create\_program。
 
 ```python
-import requests
+from api_reference import DirectPlatformClient
 
-def create_program(name: str, description: str = "", assignee: str = "", version: str = "1.0", group: str = "") -> str:
-    """创建主程序，返回 appid"""
-    url = f"{BASE_URL}/api/model/app/create"
-    payload = {
-        "name": name,
-        "description": description,
-        "assignee": assignee,
-        "version": version,
-        "group": group
-    }
-    resp = requests.post(url, json=payload, headers=HEADERS, timeout=REQUEST_TIMEOUT)
-    resp.raise_for_status()
-    data = resp.json()
-    if data.get("code") != 200:
-        raise RuntimeError(f"创建失败: {data}")
-    return data["data"]["appid"]
+client = DirectPlatformClient()
+appid = client.create_program(
+    program_name="sop_shutdown_circ_water",
+    description="循环水系统停车流程程序",
+    group_id=selected_group_id  # 用户从分组列表中选择的 groupId
+)
 ```
 
-**调用时机**：文档解析 + 缺失信息交互完成后，生成 XML 之前调用。**必须等用户确认程序信息后才可调用。**
+**调用时机**：文档解析 + 缺失信息交互完成后，生成 XML 之前调用。**必须等用户确认程序信息（含分组选择）后才可调用。**
 
 ### Step 3: 生成 BPMN XML
 
@@ -828,6 +840,8 @@ SOP 文档输入
   │         └─ 描述模糊? → 交互澄清
   │
   ├─ Step 2: 生成主程序 (API)
+  │    ├─ get_data_groups → 获取分组列表（默认选 1001）
+  │    ├─ 用户选择分组 + 确认程序参数
   │    └─ create_program → 返回 appid
   │
   ├─ Step 3: 生成 BPMN XML
