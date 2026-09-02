@@ -63,6 +63,14 @@ def make_request(method: str, url: str, **kwargs):
 class DirectPlatformClient:
     """Direct 平台 API 客户端"""
 
+    # 查询程序分组列表
+    def get_data_groups(self) -> list:
+        """查询程序分组列表，返回 [{groupId, groupName}, ...]"""
+        url = BASE_URL + "/vxdirect/auth/dataGroups?"
+        response = make_request("GET", url)
+        _check_response_code(response, "查询程序分组")
+        return response.get("result", {}).get("data", {}).get("dataGroups", [])
+
     # 新增主程序
     def create_program(self, program_name: str = "", version: str = "v1.0",
                        description: str = "", group_id: str = "1001",
