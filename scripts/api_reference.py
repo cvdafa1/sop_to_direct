@@ -63,6 +63,17 @@ def make_request(method: str, url: str, **kwargs):
 class DirectPlatformClient:
     """Direct 平台 API 客户端"""
 
+    # 获取下一个ID
+    def get_next_id(self, id_type: int = 0) -> str:
+        """获取下一个ID，返回 nextId 字符串
+
+        id_type: ID类型，0=默认
+        """
+        url = BASE_URL + f"/vxdirect/nextId?idType={id_type}"
+        response = make_request("GET", url)
+        _check_response_code(response, "获取下一个ID")
+        return response.get("result", {}).get("data", {}).get("nextId", "")
+
     # 查询程序分组列表
     def get_data_groups(self) -> list:
         """查询程序分组列表，返回 [{groupId, groupName}, ...]"""
