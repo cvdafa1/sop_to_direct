@@ -23,10 +23,12 @@ description: "Converts chemical industry SOP documents into Direct platform BPMN
 **必须严格按以下顺序执行，不得跳过或调换步骤：**
 
 ```
-Step 1: 解析文档 → Step 2: 创建程序 → Step 2.5: 缺失信息交互 → Step 3: 生成XML → Step 4: 保存程序 → Step 5: 编译程序
+Step 1: 解析文档 → Step 1.5: 复杂度评估与子程序拆分 → Step 2: 创建程序 → Step 2.5: 缺失信息交互 → Step 3: 生成XML → Step 4: 保存程序 → Step 5: 编译程序
 ```
 
-- Step 1 未完成不得执行 Step 2
+- Step 1 未完成不得执行 Step 1.5
+
+- Step 1.5 未完成不得执行 Step 2
 
 - Step 2 未完成（用户未确认）不得执行 Step 2.5
 
@@ -114,6 +116,188 @@ SOP 文档没有标准格式，需要灵活解析。采用 **AI 语义理解 + �
   ]
 }
 ```
+
+### Step 1.5: 复杂度评估与子程序拆分
+
+**目标**：评估 SOP 文档复杂度，判断是否需要拆分为子程序。
+
+#### 1.5.1 评估维度
+
+| 维度 | 说明 | 阈值 |
+|------|------|------|
+| 步骤总数 | SOP 中的操作步骤数量 | >10 |
+| 独立子系统 | 关联性弱的独立操作单元数量 | ≥2 |
+| 节点预估数 | 映射为 BPMN 节点后的预估数量 | >25 |
+| 阶段数 | SOP 中明确的阶段划分数量 | >5 |
+| 并行场景 | 存在并行操作的场景数量 | >3 |
+
+#### 1.5.2 触发子程序拆分的条件
+
+**关联性分析是拆分判断的首要条件，数量维度仅作辅助确认。**
+
+##### 关联性分析（首要判断）
+
+AI 从以下 4 个维度分析步骤间关联性：
+
+| 关联维度 | 说明 | 强关联示例 | 弱关联示例 |
+|----------|------|------------|------------|
+| **操作对象** | 涉及的设备和管路是否相同/相关 | 同一泵系统的变频+停泵+关阀 | 泵系统操作 vs 风机系统操作 |
+| **控制逻辑** | 是否共享控制回路、条件判断、数据依赖 | 切回路→调变频→判断温度→关阀（连续控制链） | 降负荷控制 vs 设备停车操作 |
+| **触发条件** | 是否依赖同一信号或前置步骤完成 | 都依赖"风机液偶归0反馈"触发 | 一个依赖温度达标，一个依赖液位到90% |
+| **功能目标** | 是否服务于同一功能目标 | 都是"降负荷"这一件事 | 降负荷 vs 停风机是两个不同功能 |
+
+##### 关联性判断规则
+
+1. **强关联**：4 个维度中 ≥2 个维度一致 → 归为同一子系统
+2. **弱关联**：4 个维度中 ≥3 个维度不同 → 可拆分为不同子程序
+3. **边界情况**：有时序依赖但操作对象/控制逻辑/功能目标均不同 → 仍应拆分（如降负荷完成后才停风机，但两者操作对象和控制逻辑完全不同）
+
+##### 拆分决策流程
+
+```
+Step 1: 关联性分析（首要）
+  ├─ 4 维度逐一分析步骤间关联性
+  ├─ 识别强关联步骤组 → 归为同一子系统
+  └─ 识别弱关联边界 → 标记为拆分候选
+
+Step 2: 数量维度确认（辅助）
+  ├─ 独立子系统 ≥2 且步骤总数 >10 → 拆分
+  ├─ 仅有 1 个子系统（串联流水线）→ 不拆分
+  └─ 步骤总数 ≤10 → 不拆分
+
+Step 3: 用户确认
+  └─ AI 提出拆分建议，用户决定最终方案
+```
+
+##### 示例：降负荷 + 停风机关阀
+
+| 步骤 | 操作对象 | 控制逻辑 | 触发条件 | 功能目标 |
+|------|----------|----------|----------|----------|
+| ①切自控回路 | TIC-306/FIC-202 串级 | 切除控制回路 | 降负荷启动 | 降负荷 |
+| ②三种情况降负荷 | 精硫泵变频、风机液偶 | 调变频→调液偶→判断温度 | ①完成 | 降负荷 |
+| ③关蒸喷 | FV-910 | 关阀操作 | ②完成 | 降负荷 |
+| ④停风机+关阀 | 主风机C301电机、磺枪阀 | 停电机+延时关阀 | 降负荷完成 | 设备停车 |
+
+→ ①②③ 强关联（4 维度一致），归为"降负荷"子系统；④ 与①②③ 弱关联（操作对象/控制逻辑/功能目标均不同），归为"停风机"子系统 → **拆分为 2 个子程序**
+
+#### 1.5.3 拆分原则
+
+- **步骤守恒**：各子程序步骤数之和 = 原始 SOP 步骤总数
+- **阶段不跨程序**：一个阶段不能拆散到多个子程序中
+- **每个子程序步骤数控制在 3-8 步**，节点数控制在 10-20 个
+- **主程序仅包含**：开始 → `flow:otherMainProc`（引用子程序）→ 结束，不包含具体操作节点
+- **子程序间关联性弱**：子程序之间通过主程序串联，无直接数据依赖
+
+#### 1.5.4 子程序方案的完整流程
+
+```
+1. create_program          → 创建主程序，返回主 appid
+2. get_next_id × N        → 预生成 N 个子程序 ID
+3. Step 2.5 位号确认       → 先主程序位号（通常无）→ 再逐个子程序位号
+4. 生成主程序 XML          → flow:otherMainProc 的 subId = 子程序预生成 ID
+5. 逐个生成子程序 XML      → 结构同主程序（bpmn2:process + bpmndi:BPMNDiagram）
+6. save_program 统一保存   → updateProcedures 数组包含主程序 + 所有子程序
+7. compile_program        → 用主程序 appid 统一编译
+```
+
+#### 1.5.5 save_program payload 结构（子程序场景）
+
+主程序和子程序拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中：
+
+```json
+{
+  "addProcedures": [],
+  "updateProcedures": [
+    {
+      "sfc": {
+        "params": {"list": []},
+        "refServerVariables": {"list": []},
+        "variables": {"list": []},
+        "timers": {"list": []},
+        "aliases": {"list": []},
+        "sfcRunning": {"value": "<主程序XML>"},
+        "sfcPausing": {"value": ""},
+        "sfcResuming": {"value": ""},
+        "sfcStopping": {"value": ""}
+      },
+      "description": {"value": "主程序描述"},
+      "id": "主appid",
+      "deviceId": "0",
+      "parentId": "0",
+      "rootId": "主appid",
+      "name": "主程序名称",
+      "resourceGroupId": "0",
+      "customOrder": 1,
+      "branchSignPathId": "0",
+      "formulaGroupId": "0",
+      "schedulePeriod": 1000
+    },
+    {
+      "sfc": {
+        "params": {"list": []},
+        "refServerVariables": {"list": []},
+        "variables": {"list": []},
+        "timers": {"list": []},
+        "aliases": {"list": []},
+        "sfcRunning": {"value": "<子程序1 XML>"},
+        "sfcPausing": {"value": ""},
+        "sfcResuming": {"value": ""},
+        "sfcStopping": {"value": ""}
+      },
+      "description": {"value": "子程序1描述"},
+      "id": "子程序1预生成ID",
+      "deviceId": "0",
+      "parentId": "主appid",
+      "rootId": "主appid",
+      "name": "子程序1名称",
+      "resourceGroupId": "0",
+      "customOrder": 2,
+      "branchSignPathId": "0",
+      "formulaGroupId": "0",
+      "schedulePeriod": 1000
+    }
+  ],
+  "deleteProcedureIds": "",
+  "rootId": "主appid"
+}
+```
+
+**关键字段说明**：
+
+| 字段 | 主程序 | 子程序 |
+|------|--------|--------|
+| `id` | 主 appid | 预生成 ID |
+| `rootId` | 主 appid | 主 appid |
+| `parentId` | "0" | 主 appid |
+| `customOrder` | 1 | 2, 3, 4...（按顺序递增） |
+| `sfcRunning.value` | 主程序 XML | 子程序 XML |
+
+#### 1.5.6 子程序 ID 预生成
+
+主程序创建后，使用 `get_next_id` API 预生成子程序 ID：
+
+```python
+from api_reference import DirectPlatformClient
+
+client = DirectPlatformClient()
+main_appid = client.create_program(
+    program_name="sop_shutdown_circ_water",
+    description="循环水系统停车流程程序",
+    group_id=selected_group_id
+)
+
+# 预生成 N 个子程序 ID
+sub_ids = [client.get_next_id(id_type=0) for _ in range(N)]
+# sub_ids[0] = "1343289941900010000", sub_ids[1] = ...
+```
+
+预生成的子程序 ID 用于：
+- 主程序 XML 中 `flow:otherMainProc` 的 `subId` 属性
+- `save_program` 时 `updateProcedures` 中子程序的 `id` 字段
+
+#### 1.5.7 不拆分时的流程
+
+当评估结果为不拆分时，执行标准单程序流程：Step 2 → Step 2.5 → Step 3 → Step 4 → Step 5，与现有流程一致。
 
 ### Step 2: 生成主程序（API 调用）
 
@@ -204,6 +388,10 @@ appid = client.create_program(
 
 **此步骤为强制执行步骤，无论 SOP 中是否包含明确位号信息，都必须汇总所有位号并展示给用户逐条确认。**
 
+**子程序场景**：当 Step 1.5 评估为拆分时，位号确认按以下顺序执行：
+1. 先展示主程序位号（主程序仅含 `flow:otherMainProc` 引用节点，通常无位号，可跳过）
+2. 再逐个展示子程序位号（每个子程序的所有位号汇总展示给用户确认）
+
 1. **位号信息确认**：SOP 文档中所有涉及位号的地方，均需汇总展示给用户逐条确认
 
    - 解析 SOP 时，提取所有需要位号的元件（io:dcs 操作位号、flow:or/flow:and/flow:branch 条件位号、timer 变量等），汇总为位号确认清单
@@ -259,6 +447,11 @@ appid = client.create_program(
 ### Step 3: 生成 BPMN XML
 
 **目标**：根据结构化中间表示，生成符合 Direct 平台格式的 BPMN XML。
+
+**子程序场景**：当 Step 1.5 评估为拆分时，需要生成多份 XML：
+- 1 份主程序 XML（包含 `flow:otherMainProc` 引用各子程序，`subId` = 预生成的子程序 ID）
+- N 份子程序 XML（每个子程序独立一份，结构同主程序：`bpmn2:process` + `bpmndi:BPMNDiagram`）
+- 主程序 XML 中 `flow:otherMainProc` 的 `subId` 属性必须与 `save_program` 时子程序的 `id` 字段一致
 
 #### 3.0 前置读取（强制执行）
 
@@ -793,6 +986,8 @@ gen.layout_parallel2(
 
 **目标**：将生成的 BPMN XML 通过 API 保存到 Step 2 创建的主程序。
 
+**子程序场景**：当 Step 1.5 评估为拆分时，主程序和所有子程序的 XML 拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中。具体 payload 结构详见 Step 1.5.5 节。
+
 #### 4.1 保存程序 (save\_program)
 
 **接口**：`POST {BASE_URL}/vxdirect/procedure/all`
@@ -842,6 +1037,8 @@ gen.layout_parallel2(
 ### Step 5: 编译（API 调用）
 
 **目标**：编译已保存的程序，验证流程逻辑正确性。
+
+**子程序场景**：使用主程序 appid 统一编译，平台会自动编译关联的所有子程序。无需逐个编译子程序。
 
 #### 5.1 编译程序 (compile\_program)
 
@@ -928,6 +1125,19 @@ SOP 文档输入
   │
   │    └─ 构建结构化中间表示 (JSON)
   │
+  ├─ Step 1.5: 复杂度评估与子程序拆分
+  │    ├─ 评估步骤数、关联性、独立子系统数
+  │    ├─ 关联性弱且步骤多?
+  │    │    ├─ 是 → 拆分为子程序（与用户讨论确认方案）
+  │    │    │    ├─ create_program → 主程序 appid
+  │    │    │    ├─ get_next_id × N → 子程序 ID
+  │    │    │    ├─ 位号确认（主程序 → 逐个子程序）
+  │    │    │    ├─ 生成主程序 XML（flow:otherMainProc subId=子程序ID）
+  │    │    │    ├─ 逐个生成子程序 XML
+  │    │    │    ├─ save_program（统一保存主+子）
+  │    │    │    └─ compile_program（主程序 appid 统一编译）
+  │    │    └─ 否 → 走标准单程序流程
+  │    │
   ├─ Step 2: 创建主程序 (API)
   │    ├─ get_data_groups → 获取分组列表（默认选 1001）
   │    ├─ 用户选择分组 + 确认程序名称/版本/描述
@@ -940,6 +1150,7 @@ SOP 文档输入
   │    └─ 描述模糊? → 交互澄清
   │
   ├─ Step 3: 生成 BPMN XML
+  │    ├─ 读取 references/ 参考文件（强制）
   │    ├─ 映射节点类型
   │    ├─ 生成 ext:data JSON
   │    ├─ 生成 sequenceFlow 连线
@@ -947,9 +1158,10 @@ SOP 文档输入
   │
   ├─ Step 4: 保存 (API)
   │    └─ save_program → 将 XML 保存到 appid
+  │         （子程序场景：主+子拼接到 updateProcedures 数组）
   │
   ├─ Step 5: 编译 (API)
-  │    └─ compile_program → 编译验证
+  │    └─ compile_program → 编译验证（子程序用主程序 appid 统一编译）
   │         ├─ 成功 → Step 6
   │         └─ 失败 → 修正 XML → 回到 Step 3
   │
