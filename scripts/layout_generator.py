@@ -694,7 +694,12 @@ class LayoutGenerator:
             if flow.target not in self.nodes:
                 issues.append(f"连线 {flow.id} 的 target 节点 {flow.target} 不存在")
             if flow.source == flow.target:
-                issues.append(f"连线 {flow.id} 存在自环（source 和 target 相同）")
+                # 豁免：条件节点(and/or/cond)的 no 分支自环是合法的等待模式
+                src_node = self.nodes.get(flow.source)
+                if src_node and src_node.type in ("and", "or", "cond") and flow.situation == "no":
+                    pass
+                else:
+                    issues.append(f"连线 {flow.id} 存在自环（source 和 target 相同）")
 
         for nid in self.node_order:
             node = self.nodes[nid]
@@ -709,6 +714,17 @@ class LayoutGenerator:
             elif node.type == "end":
                 if not inc:
                     issues.append(f"结束节点 {nid} 缺少 incoming 连线")
+            elif node.type == "pstart":
+                # parallelStart：只有 outgoing，incoming 通过容器边界隐式连接
+                if not out:
+                    issues.append(f"并行起始节点 {nid} 缺少 outgoing 连线")
+            elif node.type == "pend":
+                # parallelEnd：只有 incoming，outgoing 通过容器边界隐式连接
+                if not inc:
+                    issues.append(f"并行结束节点 {nid} 缺少 incoming 连线")
+            elif node.type in self.CONTAINER_TYPES:
+                # 容器节点：incoming/outgoing 通过内部 pstart/pend 转发
+                pass
             else:
                 if not inc:
                     issues.append(f"中间节点 {nid}({node.type}) 缺少 incoming 连线")
