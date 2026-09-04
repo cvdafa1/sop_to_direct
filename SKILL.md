@@ -185,7 +185,7 @@ Step 3: 用户确认
 - **步骤守恒**：各子程序步骤数之和 = 原始 SOP 步骤总数
 - **阶段不跨程序**：一个阶段不能拆散到多个子程序中
 - **每个子程序步骤数控制在 3-8 步**，节点数控制在 10-20 个
-- **主程序仅包含**：开始 → `flow:otherMainProc`（引用子程序）→ 结束，不包含具体操作节点
+- **主程序仅包含**：开始 → `flow:subproc`（引用子程序）→ 结束，不包含具体操作节点
 - **子程序间关联性弱**：子程序之间通过主程序串联，无直接数据依赖
 
 #### 1.5.4 子程序方案的完整流程
@@ -194,7 +194,7 @@ Step 3: 用户确认
 1. create_program          → 创建主程序，返回主 appid
 2. get_next_id × N        → 预生成 N 个子程序 ID
 3. Step 2.5 位号确认       → 先主程序位号（通常无）→ 再逐个子程序位号
-4. 生成主程序 XML          → flow:otherMainProc 的 subId = 子程序预生成 ID
+4. 生成主程序 XML          → flow:subproc 的 subId = 子程序预生成 ID
 5. 逐个生成子程序 XML      → 结构同主程序（bpmn2:process + bpmndi:BPMNDiagram）
 6. save_program 统一保存   → updateProcedures 数组包含主程序 + 所有子程序
 7. compile_program        → 用主程序 appid 统一编译
@@ -202,7 +202,7 @@ Step 3: 用户确认
 
 #### 1.5.5 save_program payload 结构（子程序场景）
 
-主程序和子程序拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中：
+主程序和子程序拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中，**主程序和子程序字段结构不同**：
 
 ```json
 {
@@ -228,33 +228,28 @@ Step 3: 用户确认
       "name": "主程序名称",
       "resourceGroupId": "0",
       "customOrder": 1,
+      "schedulePeriod": 1000,
+      "signPathId": "0",
       "branchSignPathId": "0",
-      "formulaGroupId": "0",
-      "schedulePeriod": 1000
+      "formulaGroupId": "0"
     },
     {
       "sfc": {
         "params": {"list": []},
-        "refServerVariables": {"list": []},
+        "refServerVariables": {},
         "variables": {"list": []},
         "timers": {"list": []},
         "aliases": {"list": []},
-        "sfcRunning": {"value": "<子程序1 XML>"},
+        "sfcRunning": {"value": "<子程序XML>"},
         "sfcPausing": {"value": ""},
         "sfcResuming": {"value": ""},
         "sfcStopping": {"value": ""}
       },
-      "description": {"value": "子程序1描述"},
-      "id": "子程序1预生成ID",
-      "deviceId": "0",
+      "id": "子程序预生成ID",
       "parentId": "主appid",
       "rootId": "主appid",
-      "name": "子程序1名称",
-      "resourceGroupId": "0",
-      "customOrder": 2,
-      "branchSignPathId": "0",
-      "formulaGroupId": "0",
-      "schedulePeriod": 1000
+      "name": "子程序名称",
+      "customOrder": 1
     }
   ],
   "deleteProcedureIds": "",
@@ -262,15 +257,23 @@ Step 3: 用户确认
 }
 ```
 
-**关键字段说明**：
+**主程序 vs 子程序字段对比**：
 
-| 字段 | 主程序 | 子程序 |
-|------|--------|--------|
-| `id` | 主 appid | 预生成 ID |
-| `rootId` | 主 appid | 主 appid |
-| `parentId` | "0" | 主 appid |
-| `customOrder` | 1 | 2, 3, 4...（按顺序递增） |
-| `sfcRunning.value` | 主程序 XML | 子程序 XML |
+| 字段 | 主程序 | 子程序 | 说明 |
+|------|--------|--------|------|
+| `sfc.refServerVariables` | `{"list": []}` | `{}` | 子程序用空对象 |
+| `description` | ✅ 有 | ❌ 无 | 子程序无描述字段 |
+| `id` | 主 appid | 预生成 ID | 子程序 ID = 主程序 XML 中 `flow:subproc` 的 `subId` |
+| `deviceId` | ✅ "0" | ❌ 无 | — |
+| `parentId` | "0" | 主 appid | — |
+| `rootId` | 主 appid | 主 appid | — |
+| `name` | ✅ 有 | ✅ 有 | — |
+| `resourceGroupId` | ✅ "0" | ❌ 无 | — |
+| `customOrder` | 1 | 1 | 各自从 1 开始 |
+| `schedulePeriod` | ✅ 1000 | ❌ 无 | — |
+| `signPathId` | ✅ "0" | ❌ 无 | — |
+| `branchSignPathId` | ✅ "0" | ❌ 无 | — |
+| `formulaGroupId` | ✅ "0" | ❌ 无 | — |
 
 #### 1.5.6 子程序 ID 预生成
 
@@ -292,12 +295,166 @@ sub_ids = [client.get_next_id(id_type=0) for _ in range(N)]
 ```
 
 预生成的子程序 ID 用于：
-- 主程序 XML 中 `flow:otherMainProc` 的 `subId` 属性
+- 主程序 XML 中 `flow:subproc` 的 `subId` 属性
 - `save_program` 时 `updateProcedures` 中子程序的 `id` 字段
 
-#### 1.5.7 不拆分时的流程
+#### 1.5.7 `flow:subproc` 元素结构与 ext:data
+
+主程序 XML 中引用子程序使用 `flow:subproc` 元素（非 `flow:otherMainProc`）：
+
+```xml
+<flow:subproc id="Activity_0s8r446" name="XHS" subId="1343295989000010000">
+  <ext:data><![CDATA[{
+    "subTitle": "",
+    "showDetail": true,
+    "showQueue": false,
+    "subTitle2": "",
+    "data": [],
+    "interval": 0,
+    "trends": [],
+    "resourceGroupId": "0",
+    "conditions": [],
+    "deviceId": ""
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</flow:subproc>
+```
+
+**ext:data 字段说明**：
+
+| 字段 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| subTitle | string | "" | 子标题 |
+| showDetail | boolean | true | 是否显示详情 |
+| showQueue | boolean | false | 是否显示队列 |
+| subTitle2 | string | "" | 子标题2 |
+| data | array | [] | 数据数组 |
+| interval | integer | 0 | 间隔（0=默认） |
+| trends | array | [] | 趋势数据数组 |
+| resourceGroupId | string | "0" | 资源组ID |
+| conditions | array | [] | 条件数组 |
+| deviceId | string | "" | 设备ID |
+
+**`flow:subproc` 与 `flow:otherMainProc` 的区别**：
+
+| 对比项 | `flow:subproc` | `flow:otherMainProc` |
+|--------|----------------|---------------------|
+| 用途 | 新建从属子程序，与主程序一起保存 | 引用已生效的独立主程序 |
+| ext:data | 含 resourceGroupId、conditions、deviceId | 含 mainProcedure（主程序名称[版本]） |
+| 使用场景 | SOP 拆分子程序（我们的场景） | 引用平台上已有的程序 |
+| 保存方式 | 子程序在同一个 save_program 中保存 | 引用的程序已存在，无需再保存 |
+
+#### 1.5.8 不拆分时的流程
 
 当评估结果为不拆分时，执行标准单程序流程：Step 2 → Step 2.5 → Step 3 → Step 4 → Step 5，与现有流程一致。
+
+#### 1.5.9 真实示例参考（save_program payload）
+
+以下为平台真实保存示例，供学习参考：
+
+**示例 1：不含子程序（单程序保存）**
+
+```json
+{
+  "addProcedures": [],
+  "updateProcedures": [
+    {
+      "sfc": {
+        "params": {"list": []},
+        "refServerVariables": {"list": []},
+        "variables": {"list": []},
+        "timers": {"list": []},
+        "aliases": {"list": []},
+        "sfcRunning": {"value": "<bpmn2:process>...</bpmn2:process>\n<bpmndi:BPMNDiagram>...</bpmndi:BPMNDiagram>"},
+        "sfcPausing": {"value": ""},
+        "sfcResuming": {"value": ""},
+        "sfcStopping": {"value": ""}
+      },
+      "description": {"value": "程序描述"},
+      "id": "1343289709700000000",
+      "deviceId": "0",
+      "parentId": "0",
+      "rootId": "1343289709700000000",
+      "name": "t123",
+      "resourceGroupId": "0",
+      "customOrder": 1,
+      "signPathId": "0",
+      "branchSignPathId": "0",
+      "formulaGroupId": "0",
+      "schedulePeriod": 1000
+    }
+  ],
+  "deleteProcedureIds": "",
+  "rootId": "1343289709700000000"
+}
+```
+
+**关键点**：单程序时 `parentId: "0"`、`rootId` = `id`、`updateProcedures` 仅 1 个条目。
+
+**示例 2：含子程序（主程序 + 子程序一起保存）**
+
+主程序 XML 中使用 `<flow:subproc subId="1343295989000010000">` 引用子程序，子程序也在同一个 `updateProcedures` 中：
+
+```json
+{
+  "addProcedures": [],
+  "updateProcedures": [
+    {
+      "sfc": {
+        "params": {"list": []},
+        "refServerVariables": {"list": []},
+        "variables": {"list": []},
+        "timers": {"list": []},
+        "aliases": {"list": []},
+        "sfcRunning": {"value": "<主程序XML，含flow:subproc引用>"},
+        "sfcPausing": {"value": ""},
+        "sfcResuming": {"value": ""},
+        "sfcStopping": {"value": ""}
+      },
+      "description": {"value": "主程序描述"},
+      "id": "1343289709700000000",
+      "deviceId": "0",
+      "parentId": "0",
+      "rootId": "1343289709700000000",
+      "name": "t123",
+      "resourceGroupId": "0",
+      "customOrder": 1,
+      "schedulePeriod": 1000,
+      "signPathId": "0",
+      "branchSignPathId": "0",
+      "formulaGroupId": "0"
+    },
+    {
+      "sfc": {
+        "params": {"list": []},
+        "refServerVariables": {},
+        "variables": {"list": []},
+        "timers": {"list": []},
+        "aliases": {"list": []},
+        "sfcRunning": {"value": "<子程序XML>"},
+        "sfcPausing": {"value": ""},
+        "sfcResuming": {"value": ""},
+        "sfcStopping": {"value": ""}
+      },
+      "id": "1343295989000010000",
+      "parentId": "1343289709700000000",
+      "rootId": "1343289709700000000",
+      "name": "XHS",
+      "customOrder": 1
+    }
+  ],
+  "deleteProcedureIds": "",
+  "rootId": "1343289709700000000"
+}
+```
+
+**关键点**：
+- 子程序字段比主程序少：无 `description`、`deviceId`、`resourceGroupId`、`schedulePeriod`、`signPathId`、`branchSignPathId`、`formulaGroupId`
+- 子程序 `sfc.refServerVariables` 是 `{}`（空对象），不是 `{"list": []}`
+- 子程序的 `customOrder` 从 1 开始（各自独立计数）
+- 子程序的 `id` = 主程序 XML 中 `flow:subproc` 的 `subId` 值
+- 子程序的 `parentId` = 主程序 `id`，`rootId` = 主程序 `id`
 
 ### Step 2: 生成主程序（API 调用）
 
@@ -389,7 +546,7 @@ appid = client.create_program(
 **此步骤为强制执行步骤，无论 SOP 中是否包含明确位号信息，都必须汇总所有位号并展示给用户逐条确认。**
 
 **子程序场景**：当 Step 1.5 评估为拆分时，位号确认按以下顺序执行：
-1. 先展示主程序位号（主程序仅含 `flow:otherMainProc` 引用节点，通常无位号，可跳过）
+1. 先展示主程序位号（主程序仅含 `flow:subproc` 引用节点，通常无位号，可跳过）
 2. 再逐个展示子程序位号（每个子程序的所有位号汇总展示给用户确认）
 
 1. **位号信息确认**：SOP 文档中所有涉及位号的地方，均需汇总展示给用户逐条确认
@@ -449,9 +606,9 @@ appid = client.create_program(
 **目标**：根据结构化中间表示，生成符合 Direct 平台格式的 BPMN XML。
 
 **子程序场景**：当 Step 1.5 评估为拆分时，需要生成多份 XML：
-- 1 份主程序 XML（包含 `flow:otherMainProc` 引用各子程序，`subId` = 预生成的子程序 ID）
+- 1 份主程序 XML（包含 `flow:subproc` 引用各子程序，`subId` = 预生成的子程序 ID）
 - N 份子程序 XML（每个子程序独立一份，结构同主程序：`bpmn2:process` + `bpmndi:BPMNDiagram`）
-- 主程序 XML 中 `flow:otherMainProc` 的 `subId` 属性必须与 `save_program` 时子程序的 `id` 字段一致
+- 主程序 XML 中 `flow:subproc` 的 `subId` 属性必须与 `save_program` 时子程序的 `id` 字段一致
 
 #### 3.0 前置读取（强制执行）
 
@@ -541,7 +698,7 @@ appid = client.create_program(
 | 文件导入         | `<io:fileImport>`      | 从csv/xlsx导入数据        |
 | 修改标签         | `<io:modifyLabel>`     | 动态修改主程序标签            |
 | 修改属性         | `<io:modifyProps>`     | 修改程序自定义字段            |
-| 引用主程序        | `<flow:otherMainProc>` | 引用已生效主程序             |
+| 引用主程序        | `<flow:subproc>` | 引用已生效主程序             |
 | HTTP请求       | `<flow:request>`       | 向外部URL发送请求           |
 | 报警消息         | `<msg:alarm>`          | 报警提示，程序不暂停           |
 | 暂停计时器        | `<timer:pause>`        | 暂停计时器计时              |
@@ -630,7 +787,7 @@ sequenceFlow 的 ext:data 格式**取决于源节点类型**，situation 连线*
 
 | 源节点类型                                                                                                                                                                                             | 连线变体               | name 属性        | ext:data               |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | -------------- | ---------------------- |
-| flow:start, flow:end, flow:risingEdge, flow:fallingEdge, flow:otherMainProc, flow:request, io:*, timer:wait, timer:start, timer:restart, timer:stop, timer:pause, timer:clock, msg:*（含 msg:alarm） | **plain**          | 无              | `{"lineType":1}`       |
+| flow:start, flow:end, flow:risingEdge, flow:fallingEdge, flow:subproc, flow:request, io:*, timer:wait, timer:start, timer:restart, timer:stop, timer:pause, timer:clock, msg:*（含 msg:alarm） | **plain**          | 无              | `{"lineType":1}`       |
 | flow:and, flow:or, timer:cond 的"是"分支                                                                                                                                                              | **situation\_yes** | `name="条件成立"`  | `{"situation":"yes"}`  |
 | flow:and, flow:or, timer:cond 的"否"分支                                                                                                                                                              | **situation\_no**  | `name="条件不成立"` | `{"situation":"no"}`   |
 | flow:branch 的每个分支                                                                                                                                                                                 | **branch\_option** | `name="{选项名}"` | `{"situation":"{索引}"}` |
@@ -717,7 +874,7 @@ if issues:
 | flow:and / flow:or / flow:branch                                            | 200×60      |
 | flow:risingEdge / flow:fallingEdge                                          | 200×60      |
 | io:concat / io:fileExport / io:fileImport / io:modifyLabel / io:modifyProps | 200×60      |
-| flow:otherMainProc / flow:request                                           | 200×60      |
+| flow:subproc / flow:request                                           | 200×60      |
 | timer:\* / msg:\*（含 timer:pause / timer:clock / msg:alarm）                  | 200×60      |
 | flow:parallel1                                                              | 800×600     |
 | flow:parallel2                                                              | 1460×1290   |
@@ -1132,7 +1289,7 @@ SOP 文档输入
   │    │    │    ├─ create_program → 主程序 appid
   │    │    │    ├─ get_next_id × N → 子程序 ID
   │    │    │    ├─ 位号确认（主程序 → 逐个子程序）
-  │    │    │    ├─ 生成主程序 XML（flow:otherMainProc subId=子程序ID）
+  │    │    │    ├─ 生成主程序 XML（flow:subproc subId=子程序ID）
   │    │    │    ├─ 逐个生成子程序 XML
   │    │    │    ├─ save_program（统一保存主+子）
   │    │    │    └─ compile_program（主程序 appid 统一编译）

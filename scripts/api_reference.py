@@ -3,8 +3,21 @@
 用法:
     from api_reference import DirectPlatformClient
     client = DirectPlatformClient()
+
+    # 不含子程序
     appid = client.create_program(program_name="测试程序", description="描述")
     client.save_program(appid=appid, xml_content=xml_string, description="描述", program_name="测试程序")
+    client.compile_program(appid=appid)
+
+    # 含子程序
+    appid = client.create_program(program_name="主程序", description="描述")
+    sub_ids = [client.get_next_id(id_type=0) for _ in range(2)]
+    subprograms = [
+        {"id": sub_ids[0], "xml_content": sub1_xml, "description": "子程序1", "name": "sub1"},
+        {"id": sub_ids[1], "xml_content": sub2_xml, "description": "子程序2", "name": "sub2"},
+    ]
+    client.save_program(appid=appid, xml_content=main_xml, description="描述",
+                        program_name="主程序", subprograms=subprograms)
     client.compile_program(appid=appid)
 """
 
@@ -144,37 +157,80 @@ class DirectPlatformClient:
         appid = response.get('result', {}).get("data", {}).get("procedureHeadId", "")
         return appid
 
-    # 保存主程序（XML内容）
+    # 保存主程序（XML内容）—— 支持子程序
     def save_program(self, appid: str, xml_content: str,
-                     description: str = "", program_name: str = "") -> dict:
+                     description: str = "", program_name: str = "",
+                     subprograms: list = None) -> dict:
+        """保存主程序，可选同时保存子程序。
+
+        :param appid: 主程序ID
+        :param xml_content: 主程序XML（含 flow:subproc 引用）
+        :param description: 程序描述
+        :param program_name: 程序名称
+        :param subprograms: 子程序列表，每项为 dict：
+            {
+                "id": "子程序预生成ID",
+                "xml_content": "<子程序XML>",
+                "name": "子程序名称"
+            }
+        """
+        def _make_main(appid, xml_content, description, name):
+            return {
+                "sfc": {
+                    "params": {"list": []},
+                    "refServerVariables": {"list": []},
+                    "variables": {"list": []},
+                    "timers": {"list": []},
+                    "aliases": {"list": []},
+                    "sfcRunning": {"value": xml_content},
+                    "sfcPausing": {"value": ""},
+                    "sfcResuming": {"value": ""},
+                    "sfcStopping": {"value": ""}
+                },
+                "description": {"value": description},
+                "id": appid,
+                "deviceId": "0",
+                "parentId": "0",
+                "rootId": appid,
+                "name": name,
+                "resourceGroupId": "0",
+                "customOrder": 1,
+                "schedulePeriod": 1000,
+                "signPathId": "0",
+                "branchSignPathId": "0",
+                "formulaGroupId": "0"
+            }
+
+        def _make_sub(sub_id, sub_xml, sub_name, parent_id, root_id):
+            return {
+                "sfc": {
+                    "params": {"list": []},
+                    "refServerVariables": {},
+                    "variables": {"list": []},
+                    "timers": {"list": []},
+                    "aliases": {"list": []},
+                    "sfcRunning": {"value": sub_xml},
+                    "sfcPausing": {"value": ""},
+                    "sfcResuming": {"value": ""},
+                    "sfcStopping": {"value": ""}
+                },
+                "id": sub_id,
+                "parentId": parent_id,
+                "rootId": root_id,
+                "name": sub_name,
+                "customOrder": 1
+            }
+
+        update_list = [_make_main(appid, xml_content, description, program_name)]
+        if subprograms:
+            for sub in subprograms:
+                update_list.append(_make_sub(
+                    sub["id"], sub["xml_content"], sub["name"], appid, appid
+                ))
+
         payload = {
             "addProcedures": [],
-            "updateProcedures": [
-                {
-                    "sfc": {
-                        "params": {"list": []},
-                        "refServerVariables": {"list": []},
-                        "variables": {"list": []},
-                        "timers": {"list": []},
-                        "aliases": {"list": []},
-                        "sfcRunning": {"value": xml_content},
-                        "sfcPausing": {"value": ""},
-                        "sfcResuming": {"value": ""},
-                        "sfcStopping": {"value": ""}
-                    },
-                    "description": {"value": description},
-                    "id": appid,
-                    "deviceId": "0",
-                    "parentId": "0",
-                    "rootId": appid,
-                    "name": program_name,
-                    "resourceGroupId": "0",
-                    "customOrder": 1,
-                    "branchSignPathId": "0",
-                    "formulaGroupId": "0",
-                    "schedulePeriod": 1000
-                }
-            ],
+            "updateProcedures": update_list,
             "deleteProcedureIds": "",
             "rootId": appid
         }
@@ -198,9 +254,10 @@ class DirectPlatformClient:
         _check_response_code(response, "获取主程序信息")
         return response
 
-    # 一键创建并部署完整流程
+    # 一键创建并部署完整流程（支持子程序）
     def deploy_program(self, program_name: str, xml_content: str,
-                       description: str = "", version: str = "v1.0") -> dict:
+                       description: str = "", version: str = "v1.0",
+                       subprograms: list = None) -> dict:
         results = {}
         appid = self.create_program(
             program_name=program_name,
@@ -214,7 +271,8 @@ class DirectPlatformClient:
             appid=appid,
             xml_content=xml_content,
             description=description,
-            program_name=program_name
+            program_name=program_name,
+            subprograms=subprograms
         )
         results["save"] = "success"
 
