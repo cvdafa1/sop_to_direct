@@ -201,7 +201,7 @@ class DirectPlatformClient:
                 "formulaGroupId": "0"
             }
 
-        def _make_sub(sub_id, sub_xml, sub_name, parent_id, root_id):
+        def _make_sub(sub_id, sub_xml, sub_name, parent_id, root_id, order):
             return {
                 "sfc": {
                     "params": {"list": []},
@@ -218,18 +218,19 @@ class DirectPlatformClient:
                 "parentId": parent_id,
                 "rootId": root_id,
                 "name": sub_name,
-                "customOrder": 1
+                "customOrder": order
             }
 
         update_list = [_make_main(appid, xml_content, description, program_name)]
+        add_list = []
         if subprograms:
-            for sub in subprograms:
-                update_list.append(_make_sub(
-                    sub["id"], sub["xml_content"], sub["name"], appid, appid
+            for idx, sub in enumerate(subprograms, start=1):
+                add_list.append(_make_sub(
+                    sub["id"], sub["xml_content"], sub["name"], appid, appid, idx
                 ))
 
         payload = {
-            "addProcedures": [],
+            "addProcedures": add_list,
             "updateProcedures": update_list,
             "deleteProcedureIds": "",
             "rootId": appid

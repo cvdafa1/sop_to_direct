@@ -254,7 +254,7 @@ Step 3: 用户确认
 
 #### 1.5.5 save_program payload 结构（子程序场景）
 
-主程序和子程序拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中，**主程序和子程序字段结构不同**。完整 payload 示例详见 1.5.9 节。
+主程序放在 `updateProcedures` 数组中，子程序放在 `addProcedures` 数组中，**主程序和子程序字段结构不同**。完整 payload 示例详见 1.5.9 节。
 
 **主程序 vs 子程序字段对比**：
 
@@ -268,7 +268,7 @@ Step 3: 用户确认
 | `rootId` | 主 appid | 主 appid | — |
 | `name` | ✅ 有 | ✅ 有 | — |
 | `resourceGroupId` | ✅ "0" | ❌ 无 | — |
-| `customOrder` | 1 | 1 | 各自从 1 开始 |
+| `customOrder` | 固定 1 | 从 1 累计 | 主程序始终 1，子程序按顺序 1,2,3... |
 | `schedulePeriod` | ✅ 1000 | ❌ 无 | — |
 | `signPathId` | ✅ "0" | ❌ 无 | — |
 | `branchSignPathId` | ✅ "0" | ❌ 无 | — |
@@ -395,11 +395,30 @@ sub_ids = [client.get_next_id(id_type=0) for _ in range(N)]
 
 **示例 2：含子程序（主程序 + 子程序一起保存）**
 
-主程序 XML 中使用 `<flow:subproc subId="1343295989000010000">` 引用子程序，子程序也在同一个 `updateProcedures` 中：
+主程序 XML 中使用 `<flow:subproc subId="1343295989000010000">` 引用子程序。**主程序在 `updateProcedures`，子程序在 `addProcedures`**：
 
 ```json
 {
-  "addProcedures": [],
+  "addProcedures": [
+    {
+      "sfc": {
+        "params": {"list": []},
+        "refServerVariables": {},
+        "variables": {"list": []},
+        "timers": {"list": []},
+        "aliases": {"list": []},
+        "sfcRunning": {"value": "<子程序XML>"},
+        "sfcPausing": {"value": ""},
+        "sfcResuming": {"value": ""},
+        "sfcStopping": {"value": ""}
+      },
+      "id": "1343295989000010000",
+      "parentId": "1343289709700000000",
+      "rootId": "1343289709700000000",
+      "name": "XHS",
+      "customOrder": 1
+    }
+  ],
   "updateProcedures": [
     {
       "sfc": {
@@ -425,24 +444,6 @@ sub_ids = [client.get_next_id(id_type=0) for _ in range(N)]
       "signPathId": "0",
       "branchSignPathId": "0",
       "formulaGroupId": "0"
-    },
-    {
-      "sfc": {
-        "params": {"list": []},
-        "refServerVariables": {},
-        "variables": {"list": []},
-        "timers": {"list": []},
-        "aliases": {"list": []},
-        "sfcRunning": {"value": "<子程序XML>"},
-        "sfcPausing": {"value": ""},
-        "sfcResuming": {"value": ""},
-        "sfcStopping": {"value": ""}
-      },
-      "id": "1343295989000010000",
-      "parentId": "1343289709700000000",
-      "rootId": "1343289709700000000",
-      "name": "XHS",
-      "customOrder": 1
     }
   ],
   "deleteProcedureIds": "",
@@ -1140,7 +1141,7 @@ gen.layout_parallel2(
 
 **目标**：编译已保存的程序，验证流程逻辑正确性。
 
-**保存后不自动编译，必须先列出已生成的 XML 文件信息，询问用户是否编译。**
+**⚠️ 硬性要求（必须严格执行）：保存成功后禁止自动编译。无论单程序还是包含子程序，必须先列出已生成的 XML 文件信息，经用户确认后才可执行编译。违反此规则属于严重错误。**
 
 #### 5.0 保存后确认
 
