@@ -40,9 +40,9 @@ Step 1: 解析文档 → Step 1.5: 复杂度评估与子程序拆分 → Step 2:
 
 ### Step 1: 解析文档
 
-**目标**：从 SOP 文档中提取所有结构化信息。
+**目标**：从 SOP 文档中提取所有结构化信息，**解析时即区分主程序与子程序内容**。
 
-SOP 文档没有标准格式，需要灵活解析。采用 **AI 语义理解 + 技能辅助读取** 策略：
+SOP 文档没有标准格式，需要灵活解析。采用 **AI 语义理解 + 技能辅助读取** 策略。解析过程中根据步骤间关联性识别主程序与子程序边界，将弱关联的步骤组标记为独立子程序，主程序仅串联各子程序引用。
 
 #### 1.1 读取文档内容
 
@@ -58,7 +58,7 @@ SOP 文档没有标准格式，需要灵活解析。采用 **AI 语义理解 + �
 
 #### 1.2 提取的信息维度
 
-从 SOP 文档中提取以下 **五大信息维度**：
+从 SOP 文档中提取以下 **五大信息维度**，同时**识别主程序与子程序边界**：
 
 | 维度        | 说明              | 示例                                       |
 | --------- | --------------- | ---------------------------------------- |
@@ -70,52 +70,99 @@ SOP 文档没有标准格式，需要灵活解析。采用 **AI 语义理解 + �
 
 #### 1.3 结构化中间表示
 
-将提取的信息组织为以下 JSON 结构（中间表示）：
+将提取的信息组织为以下 JSON 结构（中间表示）。**解析时即区分主程序与子程序内容**：
 
 ```json
 {
   "program_name": "从 SOP 标题提取",
   "description": "从 SOP 概述提取",
   "version": "v1.0",
-  "phases": [
-    {
-      "phase_name": "阶段名称",
-      "is_parallel": false,
-      "steps": [
-        {
-          "step_no": 1,
-          "action": "操作动作描述",
-          "node_type": "io:dcs | flow:or | timer:wait | msg:guide",
-          "equipment": {
-            "name": "设备名称",
-            "tag": "位号(如有)",
-            "action_type": "MANON | MANOF | AUTOOPT | ..."
-          },
-          "parameters": [
-            {
-              "name": "标签引用",
-              "targetValue": "目标值",
-              "type": "1 | 3"
-            }
-          ],
-          "condition": {
-            "tag": "条件标签",
-            "judge": "== | != | > | <",
-            "targetValue": "条件值",
-            "branch_yes": "满足时跳转",
-            "branch_no": "不满足时跳转"
-          },
-          "safety": {
-            "threshold_tag": "监控标签",
-            "threshold_value": "阈值",
-            "action": "联锁动作"
+  "main_program": {
+    "description": "主程序",
+    "steps": [
+      {
+        "step_no": 1,
+        "action": "操作动作描述（主程序自身的步骤）",
+        "node_type": "io:dcs | flow:or | timer:wait | msg:guide | flow:subproc",
+        "subprogram_name": "子程序名称（仅 flow:subproc 时有）",
+        "equipment": {
+          "name": "设备名称",
+          "tag": "位号(如有)",
+          "action_type": "MANON | MANOF | AUTOOPT | ..."
+        },
+        "parameters": [
+          {
+            "name": "标签引用",
+            "targetValue": "目标值",
+            "type": "1 | 3"
           }
+        ],
+        "condition": {
+          "tag": "条件标签",
+          "judge": "== | != | > | <",
+          "targetValue": "条件值",
+          "branch_yes": "满足时跳转",
+          "branch_no": "不满足时跳转"
+        },
+        "safety": {
+          "threshold_tag": "监控标签",
+          "threshold_value": "阈值",
+          "action": "联锁动作"
+        }
+      }
+    ]
+  },
+  "subprograms": [
+    {
+      "name": "降负荷",
+      "description": "切除自控回路→三情况降负荷→关蒸喷",
+      "phases": [
+        {
+          "phase_name": "阶段名称",
+          "is_parallel": false,
+          "steps": [
+            {
+              "step_no": 1,
+              "action": "操作动作描述",
+              "node_type": "io:dcs | flow:or | timer:wait | msg:guide",
+              "equipment": {
+                "name": "设备名称",
+                "tag": "位号(如有)",
+                "action_type": "MANON | MANOF | AUTOOPT | ..."
+              },
+              "parameters": [
+                {
+                  "name": "标签引用",
+                  "targetValue": "目标值",
+                  "type": "1 | 3"
+                }
+              ],
+              "condition": {
+                "tag": "条件标签",
+                "judge": "== | != | > | <",
+                "targetValue": "条件值",
+                "branch_yes": "满足时跳转",
+                "branch_no": "不满足时跳转"
+              },
+              "safety": {
+                "threshold_tag": "监控标签",
+                "threshold_value": "阈值",
+                "action": "联锁动作"
+              }
+            }
+          ]
         }
       ]
     }
   ]
 }
 ```
+
+**主程序步骤的两种情况**：
+- **纯子程序引用**：主程序仅含 `flow:subproc` 步骤，所有操作在子程序中
+- **混合模式**：主程序既有自身操作步骤（如条件判断、弹窗提示），也有 `flow:subproc` 引用步骤
+
+**单程序模式**（不拆分时）：`main_program.steps` 中直接包含全部操作步骤，`subprograms` 为空数组。
 
 ### Step 1.5: 复杂度评估与子程序拆分
 
@@ -185,8 +232,13 @@ Step 3: 用户确认
 - **步骤守恒**：各子程序步骤数之和 = 原始 SOP 步骤总数
 - **阶段不跨程序**：一个阶段不能拆散到多个子程序中
 - **每个子程序步骤数控制在 3-8 步**，节点数控制在 10-20 个
-- **主程序仅包含**：开始 → `flow:subproc`（引用子程序）→ 结束，不包含具体操作节点
+- **主程序可混合**：主程序既可以包含 `flow:subproc`（引用子程序），也可以包含自身操作步骤（如条件判断、弹窗提示等），不强求仅含引用
 - **子程序间关联性弱**：子程序之间通过主程序串联，无直接数据依赖
+- **子程序命名规则与主程序一致**：仅支持字母、数字、下划线，必须字母开头，不允许中文
+- **完整流程约束**：主程序和每个子程序都必须是完整流程，即包含 `flow:start`（开始节点）和 `flow:end`（结束节点），中间通过连线串联
+  - 主程序：`开始 → [自身操作步骤] → flow:subproc(子程序1) → [自身操作步骤] → flow:subproc(子程序2) → ... → 结束`
+  - 子程序：`开始 → 具体操作节点 → 结束`
+  - 禁止生成只有开始没有结束、或只有操作节点没有开始/结束的不完整流程
 
 #### 1.5.4 子程序方案的完整流程
 
@@ -202,60 +254,7 @@ Step 3: 用户确认
 
 #### 1.5.5 save_program payload 结构（子程序场景）
 
-主程序和子程序拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中，**主程序和子程序字段结构不同**：
-
-```json
-{
-  "addProcedures": [],
-  "updateProcedures": [
-    {
-      "sfc": {
-        "params": {"list": []},
-        "refServerVariables": {"list": []},
-        "variables": {"list": []},
-        "timers": {"list": []},
-        "aliases": {"list": []},
-        "sfcRunning": {"value": "<主程序XML>"},
-        "sfcPausing": {"value": ""},
-        "sfcResuming": {"value": ""},
-        "sfcStopping": {"value": ""}
-      },
-      "description": {"value": "主程序描述"},
-      "id": "主appid",
-      "deviceId": "0",
-      "parentId": "0",
-      "rootId": "主appid",
-      "name": "主程序名称",
-      "resourceGroupId": "0",
-      "customOrder": 1,
-      "schedulePeriod": 1000,
-      "signPathId": "0",
-      "branchSignPathId": "0",
-      "formulaGroupId": "0"
-    },
-    {
-      "sfc": {
-        "params": {"list": []},
-        "refServerVariables": {},
-        "variables": {"list": []},
-        "timers": {"list": []},
-        "aliases": {"list": []},
-        "sfcRunning": {"value": "<子程序XML>"},
-        "sfcPausing": {"value": ""},
-        "sfcResuming": {"value": ""},
-        "sfcStopping": {"value": ""}
-      },
-      "id": "子程序预生成ID",
-      "parentId": "主appid",
-      "rootId": "主appid",
-      "name": "子程序名称",
-      "customOrder": 1
-    }
-  ],
-  "deleteProcedureIds": "",
-  "rootId": "主appid"
-}
-```
+主程序和子程序拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中，**主程序和子程序字段结构不同**。完整 payload 示例详见 1.5.9 节。
 
 **主程序 vs 子程序字段对比**：
 
@@ -297,6 +296,8 @@ sub_ids = [client.get_next_id(id_type=0) for _ in range(N)]
 预生成的子程序 ID 用于：
 - 主程序 XML 中 `flow:subproc` 的 `subId` 属性
 - `save_program` 时 `updateProcedures` 中子程序的 `id` 字段
+
+**⚠️ 强制约束：子程序 ID 必须由 `get_next_id` API 实际调用返回，严禁凭空捏造或使用示例中的 ID 值。** 生成 XML 前必须先完成 API 调用拿到真实 ID，再填入 `subId` 和 `save_program` 的 `id` 字段。
 
 #### 1.5.7 `flow:subproc` 元素结构与 ext:data
 
@@ -449,12 +450,7 @@ sub_ids = [client.get_next_id(id_type=0) for _ in range(N)]
 }
 ```
 
-**关键点**：
-- 子程序字段比主程序少：无 `description`、`deviceId`、`resourceGroupId`、`schedulePeriod`、`signPathId`、`branchSignPathId`、`formulaGroupId`
-- 子程序 `sfc.refServerVariables` 是 `{}`（空对象），不是 `{"list": []}`
-- 子程序的 `customOrder` 从 1 开始（各自独立计数）
-- 子程序的 `id` = 主程序 XML 中 `flow:subproc` 的 `subId` 值
-- 子程序的 `parentId` = 主程序 `id`，`rootId` = 主程序 `id`
+**关键点**：详见 1.5.5 节字段对比表。
 
 ### Step 2: 生成主程序（API 调用）
 
@@ -464,16 +460,7 @@ sub_ids = [client.get_next_id(id_type=0) for _ in range(N)]
 
 #### 2.1 API 配置
 
-```python
-BASE_URL = "http://direct-proxy/"
-AUTH_TOKEN = ""
-REQUEST_TIMEOUT = 60
-HEADERS = {
-    "Accept-Language": "zh-CN",
-    "Authorization": AUTH_TOKEN,
-    "Content-Type": "application/json",
-}
-```
+API 客户端配置（BASE_URL、HEADERS 等）详见 `scripts/api_reference.py`。
 
 #### 2.2 创建主程序 (create\_program)
 
@@ -561,7 +548,7 @@ appid = client.create_program(
 
    - 用户也可以直接在输入框中自己填写位号信息
 
-   - 以上所有方式填入的位号，写入 XML 时均须用 `#()` 包裹
+   - 以上所有方式填入的位号，写入 XML 时均须用 `#()` 包裹（如 `HIC_V1001A_1.MANON` → `#(HIC_V1001A_1.MANON)`），编译失败修复时新位号也须遵循此规则
 
      **位号选择器 UI 布局**（点击「搜索」按钮后弹出）：
 
@@ -577,7 +564,7 @@ appid = client.create_program(
      | 2      | 整型  | 次数、计数等整型量           |
      | 3      | 字符串 | 开关、运行/停止、阀位等数字量     |
 
-   - 用户通过选择器选中位号或手动填写后，记录对应的位号信息，写入 XML 时须用 `#()` 包裹（如 `HIC_V1001A_1.MANON` → `#(HIC_V1001A_1.MANON)`）
+   - 用户通过选择器选中位号或手动填写后，记录对应的位号信息
 
 2. **参数值缺失补充**：SOP 描述了操作但缺少具体参数值（如"加热至适当温度"）
 
@@ -612,7 +599,7 @@ appid = client.create_program(
 
 #### 3.0 前置读取（强制执行）
 
-**生成 XML 前，必须使用 Read 工具读取 `references/` 目录下的所有参考文件，将其内容加入上下文，作为后续生成 XML 的唯一规则来源。**
+**生成 XML 前，必须使用 Read 工具读取 `references/` 目录下的 `element_schema.json`, `node_reference.md`, `xml_template.xml` 参考文件，将其内容加入上下文，作为后续生成 XML 的唯一规则来源。**
 
 必须读取的文件：
 
@@ -698,7 +685,7 @@ appid = client.create_program(
 | 文件导入         | `<io:fileImport>`      | 从csv/xlsx导入数据        |
 | 修改标签         | `<io:modifyLabel>`     | 动态修改主程序标签            |
 | 修改属性         | `<io:modifyProps>`     | 修改程序自定义字段            |
-| 引用主程序        | `<flow:subproc>` | 引用已生效主程序             |
+| 引用子程序        | `<flow:subproc>` | 新建从属子程序，与主程序一起保存 |
 | HTTP请求       | `<flow:request>`       | 向外部URL发送请求           |
 | 报警消息         | `<msg:alarm>`          | 报警提示，程序不暂停           |
 | 暂停计时器        | `<timer:pause>`        | 暂停计时器计时              |
@@ -772,14 +759,6 @@ Direct 平台有两种引用格式：
 - 自定义变量：`$(VAR_001)` — 用于 io:var 写值
 
 - 计算目标：`$(TOTAL_FLOW)` — 用于 io:calc 赋值
-
-动作后缀规律：
-
-- `_MANON` — 手动开
-
-- `_MANOF` — 手动关
-
-- `_AUTOOPT` — 自动优化
 
 #### 3.4 连线规则（关键修正）
 
@@ -1143,49 +1122,15 @@ gen.layout_parallel2(
 
 **目标**：将生成的 BPMN XML 通过 API 保存到 Step 2 创建的主程序。
 
+**⚠️ 保存前置条件（强制）**：`save_program` 必须在全部 XML 生成完毕后才可调用。子程序场景下，主程序 XML + 所有子程序 XML 必须全部生成完毕，一次性拼接到同一个 `save_program` 调用中保存。禁止先保存部分 XML 再补存。
+
 **子程序场景**：当 Step 1.5 评估为拆分时，主程序和所有子程序的 XML 拼接到同一个 `save_program` 调用的 `updateProcedures` 数组中。具体 payload 结构详见 Step 1.5.5 节。
 
 #### 4.1 保存程序 (save\_program)
 
 **接口**：`POST {BASE_URL}/vxdirect/procedure/all`
 
-请求体：
-
-```json
-{
-  "addProcedures": [],
-  "updateProcedures": [
-    {
-      "sfc": {
-        "params": {"list": []},
-        "refServerVariables": {"list": []},
-        "variables": {"list": []},
-        "timers": {"list": []},
-        "aliases": {"list": []},
-        "sfcRunning": {"value": "<BPMN_XML字符串>"},
-        "sfcPausing": {"value": ""},
-        "sfcResuming": {"value": ""},
-        "sfcStopping": {"value": ""}
-      },
-      "description": {"value": "程序描述"},
-      "id": "appid",
-      "deviceId": "0",
-      "parentId": "0",
-      "rootId": "appid",
-      "name": "程序名称",
-      "resourceGroupId": "0",
-      "customOrder": 1,
-      "branchSignPathId": "0",
-      "formulaGroupId": "0",
-      "schedulePeriod": 1000
-    }
-  ],
-  "deleteProcedureIds": "",
-  "rootId": "appid"
-}
-```
-
-**关键**：`sfcRunning.value` 存放 Step 3 生成的完整 BPMN XML 字符串。`id` 和 `rootId` 使用 Step 2 返回的 appid。
+请求体结构详见 1.5.9 节示例。`sfcRunning.value` 存放 Step 3 生成的完整 BPMN XML 字符串。`id` 和 `rootId` 使用 Step 2 返回的 appid。
 
 #### 4.2 API 客户端参考代码
 
@@ -1216,9 +1161,7 @@ gen.layout_parallel2(
 
 - 根据错误信息修正 XML 后重新执行 Step 4→5（仅 save → compile，不回退到 Step 3）
 
-- **严格限制：禁止创建任何新程序（包括测试程序）** — 只允许在本次已创建的程序（同一 appid）上修正 XML，重新 save\_program → compile\_program
-
-- create\_program 在整个流程中只允许调用一次
+- **严格限制：禁止创建任何新程序（包括测试程序）** — `create_program` 在整个流程中只允许调用一次，只允许在本次已创建的程序（同一 appid）上修正 XML，重新 save\_program → compile\_program
 
 **重试时核心约束（必须遵守）**：
 
@@ -1239,7 +1182,7 @@ gen.layout_parallel2(
      - **手动输入新位号** — 用户直接填写正确位号
      - **调用 `get_tags` 接口搜索** — 按名称/类型查询位号列表，弹框展示候选列表供用户选择
      - **从 SOP 重新提取** — 回到 SOP 原文确认设备对应位号
-   - 用户确认后，修正 XML 中对应位号（新位号也须 `#()` 包裹），重新 save\_program → compile\_program
+   - 用户确认后，修正 XML 中对应位号，重新 save\_program → compile\_program
 3. **其他缺数据/参数**（如参数值为空）→ 使用 AskUserQuestion 与用户交互补充
 4. **不缺数据**（如 XML 格式错误、ID 不匹配等）→ 自行修复，不打扰用户
 5. 修正后重新 save\_program → compile\_program
