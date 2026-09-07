@@ -77,9 +77,54 @@ def _check_file(path: Path) -> list[str]:
     missing_edges = flow_ids - edge_refs
     orphan_edges = edge_refs - flow_ids
     if missing_edges:
-        errors.append(f"sequenceFlow without Edge: {sorted(missing_edges)[:5]}")
+        errors.append(
+            f"sequenceFlow without Edge (lines will NOT show): {sorted(missing_edges)[:8]}"
+        )
     if orphan_edges:
-        errors.append(f"Edge without sequenceFlow: {sorted(orphan_edges)[:5]}")
+        errors.append(f"Edge without sequenceFlow: {sorted(orphan_edges)[:8]}")
+    if not flow_ids:
+        errors.append("no sequenceFlow elements (lines will NOT show)")
+    if flow_ids and not edge_refs:
+        errors.append("has sequenceFlow but zero BPMNEdge (lines will NOT show)")
+
+    # 自闭合 sequenceFlow / 缺少 ext:data → 平台经常不画线
+    for m in re.finditer(r"<bpmn2:sequenceFlow\b([^>]*)/?\s*>", text):
+        attrs = m.group(1)
+        fid_m = re.search(r'\bid="([^"]+)"', attrs)
+        fid = fid_m.group(1) if fid_m else "?"
+        # self-closing: .../>
+        if m.group(0).rstrip().endswith("/>"):
+            errors.append(f"self-closing sequenceFlow (need ext:data): {fid}")
+            continue
+        # find block until </bpmn2:sequenceFlow>
+        start = m.end()
+        end = text.find("</bpmn2:sequenceFlow>", start)
+        if end == -1:
+            errors.append(f"unclosed sequenceFlow: {fid}")
+            continue
+        body = text[start:end]
+        if "<ext:data" not in body:
+            errors.append(f"sequenceFlow missing ext:data (lines may NOT show): {fid}")
+        elif '"lineType"' not in body and '"situation"' not in body:
+            errors.append(f"sequenceFlow ext:data needs lineType or situation: {fid}")
+
+    # Edge 至少 2 个 waypoint
+    for m in re.finditer(
+        r'<bpmndi:BPMNEdge\b[^>]*\bbpmnElement="([^"]+)"[^>]*>(.*?)</bpmndi:BPMNEdge>',
+        text,
+        re.DOTALL,
+    ):
+        wps = re.findall(r"<di:waypoint\b", m.group(2))
+        if len(wps) < 2:
+            errors.append(f"BPMNEdge needs >=2 waypoints: {m.group(1)}")
+
+    # incoming/outgoing 引用的 Flow 必须存在
+    for ref in re.findall(r"<bpmn2:incoming>([^<]+)</bpmn2:incoming>", text):
+        if ref not in flow_ids:
+            errors.append(f"incoming refs unknown flow: {ref}")
+    for ref in re.findall(r"<bpmn2:outgoing>([^<]+)</bpmn2:outgoing>", text):
+        if ref not in flow_ids:
+            errors.append(f"outgoing refs unknown flow: {ref}")
 
     node_ids = set()
     for tag in (

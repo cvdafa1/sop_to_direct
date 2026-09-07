@@ -18,15 +18,16 @@
 - [ ] type（1/3）与模拟量/数字量匹配
 - [ ] 无占位符 `PLACEHOLDER` 残留
 
-## C. XML 结构
+## C. XML 结构与连线（连线不显示重点查这里）
 
-- [ ] 已 Read `element_schema.json` / `node_reference.md` / `xml_template.xml`
-- [ ] 无 xml 声明 / definitions / xmlns
-- [ ] 每个程序含且仅含一套 start→…→end
-- [ ] Shape 全部在 Edge 之前
-- [ ] 连线由 `layout_generator` 生成，非手写
+- [ ] 使用 `assemble_full_xml`，未手写 Edge/sequenceFlow
+- [ ] 每条 sequenceFlow 都有同 id 的 BPMNEdge
+- [ ] 无自闭合 `<sequenceFlow ... />`；plain 含 `{"lineType":1}`
+- [ ] 已 Read schema/模板；无 xml 声明 / definitions / xmlns
+- [ ] 每个程序含 start→…→end；Shape 全部在 Edge 之前
 - [ ] `check_overlaps` / `check_connection_integrity` 通过
 - [ ] 条件节点恰有 yes/no 两条出边
+- [ ] `validate_bpmn.py` 退出码 0
 - [ ] 子程序：`subId` = `get_next_id` 真值；save 时主在 update、子在 add
 
 ## D. 保存与编译门禁

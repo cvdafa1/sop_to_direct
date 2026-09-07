@@ -21,12 +21,12 @@ description: >-
 1. **步骤门禁**：不得跳步；改平台状态的 API 必须先获用户明确同意
 2. **原子拆分**：一个元件 = 一个原子操作或独立判断（详见 `references/element_split.md`）
 3. **XML 唯源**：生成/修正 XML 前必须 Read `element_schema.json`、`node_reference.md`、`xml_template.xml`；禁止凭记忆
-4. **连线自动生成**：禁止手写 sequenceFlow/Edge；必须用 `scripts/layout_generator.py` 并跑完整性检查
+4. **连线必须用 `assemble_full_xml`**：禁止手写 sequenceFlow/Edge；漏 Edge 或 id 不一致会导致平台「有节点无连线」
 5. **位号格式**：DCS 用 `#(…)`，变量用 `$(…)`；全部位号经用户确认
 6. **子程序保存**：主程序 ∈ `updateProcedures`，子程序 ∈ `addProcedures`；`subId` 必须来自 `get_next_id`（详见 `references/subprocess.md`）
 7. **禁止自动编译**：保存后必须询问；禁止调用 `deploy_program`
 8. **编译重试**：同一 appid，最多 3 次；只修数据/格式，不改拓扑；位号问题必须再问用户
-9. **保存前清单**：逐项完成 `references/accuracy_checklist.md`，建议跑 `scripts/validate_bpmn.py`
+9. **保存前清单**：逐项完成 `references/accuracy_checklist.md`，必须跑 `scripts/validate_bpmn.py`（失败不得 save）
 
 ## 工作流（严格顺序）
 
@@ -86,8 +86,9 @@ description: >-
 
 - 单程序：1 份 XML
 - 拆分：1 份主（含 `flow:subproc`）+ N 份子；`subId` = 预生成 ID
-- 布局与连线：`LayoutGenerator`；`check_overlaps` / `check_connection_integrity`（并行加 `check_parallel_integrity`）必须通过
-- 写盘后运行：`python scripts/validate_bpmn.py <xml文件...>`
+- **布局与连线（强制）**：`LayoutGenerator` → `layout_*` → `assemble_full_xml(node_xml_by_id)`；禁止手拼 diagram
+- `check_overlaps` / `check_connection_integrity`（并行加 `check_parallel_integrity`）必须通过
+- 写盘后 **必须** 通过：`python scripts/validate_bpmn.py <xml文件...>`（含连线/Edge/ext:data 检查）
 
 ### Step 3.7 — 流程图确认
 

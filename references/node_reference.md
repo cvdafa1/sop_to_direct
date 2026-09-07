@@ -332,17 +332,25 @@
   <bpmn2:outgoing>Flow_next_out</bpmn2:outgoing>
 </io:dcs>
 
-<!-- 连线 -->
-<!-- 外部 → 容器 -->
-<bpmn2:sequenceFlow id="Flow_to_parallel" sourceRef="Activity_prev" targetRef="Activity_par1" />
-<!-- parallelStart → 分支首节点 -->
-<bpmn2:sequenceFlow id="Flow_branch_a" sourceRef="Activity_par1_start" targetRef="Activity_pump_a" />
-<bpmn2:sequenceFlow id="Flow_branch_b" sourceRef="Activity_par1_start" targetRef="Activity_pump_b" />
-<!-- 分支末节点 → parallelEnd -->
-<bpmn2:sequenceFlow id="Flow_branch_a_end" sourceRef="Activity_pump_a" targetRef="Activity_par1_end" />
-<bpmn2:sequenceFlow id="Flow_branch_b_end" sourceRef="Activity_pump_b" targetRef="Activity_par1_end" />
-<!-- 容器 → 外部 -->
-<bpmn2:sequenceFlow id="Flow_from_parallel" sourceRef="Activity_par1" targetRef="Activity_next" />
+<!-- 连线：每条都必须有 ext:data；禁止 </sequenceFlow> 自闭合无 body -->
+<bpmn2:sequenceFlow id="Flow_to_parallel" sourceRef="Activity_prev" targetRef="Activity_par1">
+  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+</bpmn2:sequenceFlow>
+<bpmn2:sequenceFlow id="Flow_branch_a" sourceRef="Activity_par1_start" targetRef="Activity_pump_a">
+  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+</bpmn2:sequenceFlow>
+<bpmn2:sequenceFlow id="Flow_branch_b" sourceRef="Activity_par1_start" targetRef="Activity_pump_b">
+  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+</bpmn2:sequenceFlow>
+<bpmn2:sequenceFlow id="Flow_branch_a_end" sourceRef="Activity_pump_a" targetRef="Activity_par1_end">
+  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+</bpmn2:sequenceFlow>
+<bpmn2:sequenceFlow id="Flow_branch_b_end" sourceRef="Activity_pump_b" targetRef="Activity_par1_end">
+  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+</bpmn2:sequenceFlow>
+<bpmn2:sequenceFlow id="Flow_from_parallel" sourceRef="Activity_par1" targetRef="Activity_next">
+  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+</bpmn2:sequenceFlow>
 ```
 
 #### 12.2 BPMNDiagram XML（对应上方 Process）
@@ -904,9 +912,13 @@
   <flow:end id="Event_end">
     <bpmn2:incoming>Flow_2</bpmn2:incoming>
   </flow:end>
-  <!-- 连线定义 -->
-  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1" />
-  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Event_end" />
+  <!-- 连线定义：禁止自闭合；plain 必须含 ext:data lineType，否则平台不画线 -->
+  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1">
+    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+  </bpmn2:sequenceFlow>
+  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Event_end">
+    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
+  </bpmn2:sequenceFlow>
 </bpmn2:process>
 <bpmndi:BPMNDiagram id="BPMNDiagram_1">
   <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">

@@ -738,7 +738,87 @@ class LayoutGenerator:
 
         return issues
 
-    def get_diagram_xml(self):
+    def get_diagram_xml(self, process_id="Process_1"):
+        """生成完整 BPMNDiagram（先 Shape 后 Edge）。根元素无前导缩进，与 xml_template 一致。"""
         shapes = self.get_shape_xml()
         edges = self.get_edge_xml()
-        return f'  <bpmndi:BPMNDiagram id="BPMNDiagram_1">\n    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">\n{shapes}\n{edges}\n    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>'
+        return (
+            f'<bpmndi:BPMNDiagram id="BPMNDiagram_1">\n'
+            f'  <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="{process_id}">\n'
+            f'{shapes}\n'
+            f'{edges}\n'
+            f'  </bpmndi:BPMNPlane>\n'
+            f'</bpmndi:BPMNDiagram>'
+        )
+
+    @staticmethod
+    def _strip_io_refs(node_xml: str) -> str:
+        """去掉节点内已有的 incoming/outgoing，避免与 layout 结果不一致。"""
+        import re
+        node_xml = re.sub(
+            r"\s*<bpmn2:incoming>[^<]*</bpmn2:incoming>\s*",
+            "\n",
+            node_xml,
+        )
+        node_xml = re.sub(
+            r"\s*<bpmn2:outgoing>[^<]*</bpmn2:outgoing>\s*",
+            "\n",
+            node_xml,
+        )
+        return node_xml
+
+    def _inject_io_refs(self, node_xml: str, node_id: str) -> str:
+        """在节点结束标签前插入 incoming/outgoing（来自 self.flows）。"""
+        import re
+        io_xml = self.get_incoming_outgoing_xml(node_id)
+        if not io_xml:
+            return node_xml.strip()
+        # 匹配最后一个结束标签
+        m = re.search(r"(</[^>]+>)\s*$", node_xml.strip())
+        if not m:
+            raise ValueError(f"节点 XML 缺少结束标签: {node_id}")
+        body = node_xml.strip()[: m.start()].rstrip()
+        return f"{body}\n{io_xml}\n{m.group(1)}"
+
+    def assemble_full_xml(self, node_xml_by_id: dict, process_id="Process_1") -> str:
+        """组装可保存的完整 XML（process + diagram）。
+
+        这是防止「节点有、连线不显示」的推荐入口：
+        - sequenceFlow 与 BPMNEdge 使用同一套 flow id
+        - Shape 在前、Edge 在后
+        - 每条 plain 连线带 ext:data lineType
+        - 节点 incoming/outgoing 与 flow 一致
+
+        Args:
+            node_xml_by_id: {node_id: 节点完整 XML}。可含或不含 incoming/outgoing，
+                            本方法会剥离后按 flows 重写。
+            process_id: process 元素 id，默认 Process_1
+        """
+        missing = [nid for nid in self.node_order if nid not in node_xml_by_id]
+        if missing:
+            raise ValueError(f"缺少节点 XML: {missing}")
+
+        issues = self.check_connection_integrity()
+        if issues:
+            raise ValueError("连线完整性失败: " + "; ".join(issues))
+        overlaps = self.check_overlaps()
+        if overlaps:
+            raise ValueError(f"节点重叠: {overlaps}")
+
+        # 未布局（仍在 0,0）会导致 Edge 叠在一起，平台上看起来像没连线
+        unset = [
+            nid for nid in self.node_order
+            if self.nodes[nid].x == 0 and self.nodes[nid].y == 0
+            and self.nodes[nid].type not in ("pstart", "pend")
+        ]
+        if len(unset) == len(self.node_order):
+            raise ValueError("尚未调用 layout_vertical/layout_parallel*，禁止组装")
+
+        lines = [f'<bpmn2:process id="{process_id}" isExecutable="true">']
+        for nid in self.node_order:
+            cleaned = self._strip_io_refs(node_xml_by_id[nid])
+            lines.append(self._inject_io_refs(cleaned, nid))
+        lines.append(self.get_sequence_flow_xml())
+        lines.append("</bpmn2:process>")
+        lines.append(self.get_diagram_xml(process_id=process_id))
+        return "\n".join(lines)
