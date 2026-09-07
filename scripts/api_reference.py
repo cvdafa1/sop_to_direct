@@ -22,6 +22,7 @@
 """
 
 # 标准库导入
+import os
 import time
 from functools import wraps
 
@@ -30,9 +31,9 @@ import requests
 from requests.exceptions import Timeout, ConnectionError, RequestException
 
 
-# 集中配置
-BASE_URL = "http://direct-proxy/"
-AUTH_TOKEN = ""
+# 集中配置（可通过环境变量覆盖，勿把真实 token 写入仓库）
+BASE_URL = os.environ.get("DIRECT_BASE_URL", "http://direct-proxy/").rstrip("/") + "/"
+AUTH_TOKEN = os.environ.get("DIRECT_AUTH_TOKEN", "")
 REQUEST_TIMEOUT = 60
 HEADERS = {
     "Accept-Language": "zh-CN",
@@ -82,7 +83,7 @@ class DirectPlatformClient:
 
         id_type: ID类型，0=默认
         """
-        url = BASE_URL + f"/vxdirect/nextId?idType={id_type}"
+        url = BASE_URL + f"vxdirect/nextId?idType={id_type}"
         response = make_request("GET", url)
         _check_response_code(response, "获取下一个ID")
         return response.get("result", {}).get("data", {}).get("nextId", "")
@@ -90,7 +91,7 @@ class DirectPlatformClient:
     # 查询程序分组列表
     def get_data_groups(self) -> list:
         """查询程序分组列表，返回 [{groupId, groupName}, ...]"""
-        url = BASE_URL + "/vxdirect/auth/dataGroups?"
+        url = BASE_URL + "vxdirect/auth/dataGroups?"
         response = make_request("GET", url)
         _check_response_code(response, "查询程序分组")
         return response.get("result", {}).get("data", {}).get("dataGroups", [])
@@ -102,7 +103,7 @@ class DirectPlatformClient:
 
         tag_data_types: 按类型过滤，type 1=浮点 2=整型 3=字符串
         """
-        url = BASE_URL + f"/vxdirect/tag?currentPage={current_page}&pageSize={page_size}&tagDataTypes={tag_data_types}"
+        url = BASE_URL + f"vxdirect/tag?currentPage={current_page}&pageSize={page_size}&tagDataTypes={tag_data_types}"
         response = make_request("GET", url)
         _check_response_code(response, "查询位号信息")
         return response.get("result", {}).get("data", {})
@@ -235,7 +236,7 @@ class DirectPlatformClient:
             "deleteProcedureIds": "",
             "rootId": appid
         }
-        url = BASE_URL + "/vxdirect/procedure/all"
+        url = BASE_URL + "vxdirect/procedure/all"
         response = make_request("POST", url, json=payload)
         _check_response_code(response, "主程序保存")
         return response
@@ -243,41 +244,21 @@ class DirectPlatformClient:
     # 编译主程序
     def compile_program(self, appid: str) -> dict:
         payload = {"ids": appid, "cmd": 1}
-        url = BASE_URL + "/vxdirect/procedureHead/cmd"
+        url = BASE_URL + "vxdirect/procedureHead/cmd"
         response = make_request("POST", url, json=payload)
         _check_response_code(response, "主程序编译")
         return response
 
     # 获取主程序列表
     def get_program_info(self) -> dict:
-        url = BASE_URL + "/vxdirect/procedureHead?currentPage=1&pageSize=20"
+        url = BASE_URL + "vxdirect/procedureHead?currentPage=1&pageSize=20"
         response = make_request("GET", url)
         _check_response_code(response, "获取主程序信息")
         return response
 
-    # 一键创建并部署完整流程（支持子程序）
-    def deploy_program(self, program_name: str, xml_content: str,
-                       description: str = "", version: str = "v1.0",
-                       subprograms: list = None) -> dict:
-        results = {}
-        appid = self.create_program(
-            program_name=program_name,
-            version=version,
-            description=description
+    # 已禁用：会跳过用户确认并自动编译，与 skill 门禁冲突
+    def deploy_program(self, *args, **kwargs) -> dict:
+        raise RuntimeError(
+            "deploy_program 已禁用。请按 skill 流程分步调用："
+            "create_program → save_program →（用户确认后）compile_program"
         )
-        results["appid"] = appid
-        results["create"] = "success"
-
-        self.save_program(
-            appid=appid,
-            xml_content=xml_content,
-            description=description,
-            program_name=program_name,
-            subprograms=subprograms
-        )
-        results["save"] = "success"
-
-        self.compile_program(appid=appid)
-        results["compile"] = "success"
-
-        return results
