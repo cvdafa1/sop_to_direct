@@ -24,22 +24,23 @@ description: >-
 4. **连线**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边 `是`/`否`）
 5. **位号**：DCS `#()`、变量 `$()`；须用户确认
 6. **子程序**：主 ∈ `updateProcedures`，子 ∈ `addProcedures`；`subId` 来自 `get_next_id`（见 `subprocess.md`）
-7. **禁止** `deploy_program`；保存后询问才编译
+7. **禁止** `deploy_program`；是否编译**始终用二选一**（确认编译 / 暂不编译），禁止开放式询问
 8. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
 9. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过
 
 ## 工作流
 
 ```
-1 解析 → 1.5 拆分评估 → 2 创建程序 → 2.5 位号确认
+1 解析 → 1.5 是否拆分 → 2 创建主程序 → [拆分则 2.1 确认子程序信息] → 2.5 位号确认
   → 3 生成 XML → 3.7 确认流程图 → 4 保存 → 4.5 询问编译 → 5 编译 → 6 报告
 ```
 
 | 未完成 | 不得进入 |
 |--------|----------|
 | Step 1 | 1.5 |
-| 1.5 用户确认方案 | 2 |
-| 2 用户同意创建 | 2.5 |
+| 1.5 用户选择拆/不拆 | 2 |
+| 2 用户同意创建 | 2.1 或 2.5 |
+| 2.1（仅拆分）子程序信息确认 | 2.5 |
 | 2.5 位号确认 | 3 |
 | 3 + 3.7 确认图 | 4 |
 | 4 保存成功 | 4.5 |
@@ -49,18 +50,29 @@ description: >-
 
 **Read** `element_split.md`。提取阶段/步骤/设备/参数/联锁 → IR。展示摘要，歧义先澄清。
 
-### Step 1.5 — 子程序
+### Step 1.5 — 是否拆分
 
-**Read** `subprocess.md`。关联性优先；可拆分则 A/B 方案（B 推荐）。命名：`[A-Za-z][A-Za-z0-9_]*`。
+**Read** `subprocess.md`。AI 做关联性评估后，**只询问用户：拆分 / 不拆分**（可标注推荐，但勿展开子程序明细）。
 
-### Step 2 — 创建
+- 选**不拆分** → 进入 Step 2，之后跳过 2.1  
+- 选**拆分** → 进入 Step 2，创建成功后再做 2.1  
+
+### Step 2 — 创建主程序
 
 **Read** `interaction.md`；用 `DirectPlatformClient`。  
-`get_data_groups` → 选分组 → 确认 name/version/description → **同意后** `create_program`。拆分则 `get_next_id` × N。
+`get_data_groups` → 选分组 → 确认主程序 name/version/description → **同意后** `create_program`。
+
+### Step 2.1 — 子程序信息（仅当 1.5 选择拆分）
+
+创建主程序成功后执行。AI 生成子程序列表（name、描述/职责、对应 SOP 步骤范围），**展示给用户并可修改**。命名：`[A-Za-z][A-Za-z0-9_]*`。  
+用户确认后：`get_next_id` × N，再进入 2.5。
+
+不拆分时**不进入本步**，创建后直接 2.5。
 
 ### Step 2.5 — 位号
 
-**Read** `interaction.md`。强制确认表；可用 `get_tags` / `search_tags_by_name`。补参数与阈值。
+**Read** `interaction.md`。强制确认表；可用 `get_tags` / `search_tags_by_name`。补参数与阈值。  
+拆分时：先主后子。
 
 ### Step 3 — 生成 XML
 
@@ -79,7 +91,14 @@ description: >-
 
 ### Step 4.5 / 5 — 编译
 
-询问后 `compile_program(主 appid)`。失败：问用户（位号）或自修格式 → 同 appid save→compile，≤3 次。禁止新建程序、禁止改拓扑。
+保存成功后，**必须用选项方式**询问（禁止开放式「要不要编译？」）：
+
+- **选项 1：确认编译** — 执行 `compile_program(主 appid)`
+- **选项 2：暂不编译** — 跳过编译，进入 Step 6 报告（用户可稍后在平台手动编译）
+
+用户未明确选择上述选项之一前，不得调用 `compile_program`。
+
+编译失败：位号类错误必须再问用户；格式类可自修 → 同 appid save→compile，≤3 次。禁止新建程序、禁止改拓扑。
 
 ### Step 6 — 报告
 
@@ -90,8 +109,8 @@ description: >-
 | 文件 | 职责（唯一） |
 |------|----------------|
 | `element_split.md` | SOP 拆分 / IR |
-| `subprocess.md` | 子程序与 save payload |
-| `interaction.md` | 分组/位号交互 |
+| `subprocess.md` | 是否拆分评估与 save payload |
+| `interaction.md` | 拆分选择 / 创建 / 子程序信息 / 位号 |
 | `golden_xml_rules.md` | XML 结构与连线 |
 | `xml_template.xml` | 最小骨架 |
 | `element_schema.json` | 节点 ext:data schema |
