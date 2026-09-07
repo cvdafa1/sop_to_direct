@@ -23,7 +23,7 @@ description: "Converts chemical industry SOP documents into Direct platform BPMN
 **必须严格按以下顺序执行，不得跳过或调换步骤：**
 
 ```
-Step 1: 解析文档 → Step 1.5: 复杂度评估与子程序拆分 → Step 2: 创建程序 → Step 2.5: 缺失信息交互 → Step 3: 生成XML → Step 4: 保存程序 → Step 5: 编译程序
+Step 1: 解析文档 → Step 1.5: 复杂度评估与子程序拆分 → Step 2: 创建程序 → Step 2.5: 缺失信息交互 → Step 3: 生成XML → Step 4: 保存程序 → Step 4.5: 保存后确认（询问是否编译） → Step 5: 编译程序
 ```
 
 - Step 1 未完成不得执行 Step 1.5
@@ -36,7 +36,9 @@ Step 1: 解析文档 → Step 1.5: 复杂度评估与子程序拆分 → Step 2:
 
 - Step 3 未完成不得执行 Step 4
 
-- Step 4 未完成不得执行 Step 5
+- Step 4 未完成不得执行 Step 4.5
+
+- Step 4.5 用户未确认编译不得执行 Step 5
 
 ### Step 1: 解析文档
 
