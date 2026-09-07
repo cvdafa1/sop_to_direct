@@ -21,12 +21,13 @@ description: >-
 1. **步骤门禁**：不得跳步；create/save/compile 前须用户明确同意
 2. **原子拆分**：见 `references/element_split.md`
 3. **XML 唯源**：结构以 `golden_xml_rules.md` 为准；生成前 Read 它 + `xml_template.xml` + `element_schema.json`；节点示例按需 Read `node_reference.md`
-4. **连线**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边 `是`/`否`）
-5. **位号**：DCS `#()`、变量 `$()`；须用户确认
-6. **子程序**：主 ∈ `updateProcedures`，子 ∈ `addProcedures`；`subId` 来自 `get_next_id`（见 `subprocess.md`）
-7. **禁止** `deploy_program`；是否编译**始终用二选一**（确认编译 / 暂不编译），禁止开放式询问
-8. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
-9. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过
+4. **元件白名单**：生成 XML 只用 `element_schema.json` 已定义元件；`validate_bpmn.py` **必须**校验，未定义元件禁止 save
+5. **连线**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边 `是`/`否`）
+6. **位号**：DCS `#()`、变量 `$()`；须用户确认
+7. **子程序**：主 ∈ `updateProcedures`，子 ∈ `addProcedures`；`subId` 来自 `get_next_id`（见 `subprocess.md`）
+8. **禁止** `deploy_program`；是否编译**始终用二选一**（确认编译 / 暂不编译），禁止开放式询问
+9. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
+10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过（含未定义元件检查）
 
 ## 工作流
 
@@ -79,7 +80,7 @@ description: >-
 **Read** `golden_xml_rules.md` + `xml_template.xml` + `element_schema.json`（按需 `node_reference.md`）。
 
 - `LayoutGenerator` → `layout_*` → `assemble_full_xml`
-- `python scripts/validate_bpmn.py <xml...>` 必须通过
+- `python scripts/validate_bpmn.py <xml...>` **必须通过**（含：仅允许 `element_schema.json` 已定义元件；未定义元件 → 失败、禁止 save）
 
 ### Step 3.7 — 确认图
 

@@ -4,12 +4,17 @@
 用法:
     python scripts/validate_bpmn.py path/to/main.xml [path/to/sub.xml ...]
 退出码: 0=通过, 1=存在错误
+
+元件白名单来自 references/element_schema.json（另含并行内嵌的
+flow:parallelStart / flow:parallelEnd）。未定义元件一律报错。
 """
 
 from __future__ import annotations
 
+import json
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 
@@ -19,10 +24,55 @@ FORBIDDEN_PATTERNS = [
     (r"\sxmlns[:=]", "forbidden xmlns declaration"),
 ]
 
+# 并行容器内嵌元件（在 schema 的 parallel 子结构中定义，非独立 components）
+NESTED_ALLOWED = frozenset({"flow:parallelStart", "flow:parallelEnd"})
+
+
+@lru_cache(maxsize=1)
+def _load_allowed_elements() -> frozenset[str]:
+    schema_path = (
+        Path(__file__).resolve().parent.parent / "references" / "element_schema.json"
+    )
+    data = json.loads(schema_path.read_text(encoding="utf-8"))
+    elems = set()
+    for comp in data.get("components", []):
+        xml = comp.get("xml") or {}
+        el = xml.get("element")
+        if el:
+            elems.add(el)
+    elems |= NESTED_ALLOWED
+    return frozenset(elems)
+
+
+def _check_undefined_elements(text: str, allowed: frozenset[str]) -> list[str]:
+    """校验 process 内业务元件均在 element_schema 白名单中。"""
+    errors: list[str] = []
+    process_m = re.search(
+        r"<bpmn2:process\b[^>]*>(.*?)</bpmn2:process>",
+        text,
+        re.DOTALL,
+    )
+    body = process_m.group(1) if process_m else text
+
+    found = set()
+    for m in re.finditer(
+        r"<(flow|io|msg|timer|util):([A-Za-z][A-Za-z0-9]*)\b",
+        body,
+    ):
+        tag = f"{m.group(1)}:{m.group(2)}"
+        found.add(tag)
+        if tag not in allowed:
+            errors.append(f"undefined element (not in element_schema.json): {tag}")
+
+    if not errors and not found:
+        errors.append("no defined flow/io/msg/timer elements found in process")
+    return errors
+
 
 def _check_file(path: Path) -> list[str]:
     errors: list[str] = []
     text = path.read_text(encoding="utf-8")
+    allowed = _load_allowed_elements()
 
     if not text.strip().startswith("<bpmn2:process"):
         errors.append("must start with <bpmn2:process")
@@ -39,6 +89,9 @@ def _check_file(path: Path) -> list[str]:
     for pat, msg in FORBIDDEN_PATTERNS:
         if re.search(pat, text):
             errors.append(msg)
+
+    # 强制：仅允许 schema 已定义元件
+    errors.extend(_check_undefined_elements(text, allowed))
 
     # PLACEHOLDER is OK only in the skill template file
     if "PLACEHOLDER" in text and path.name != "xml_template.xml":
@@ -147,16 +200,7 @@ def _check_file(path: Path) -> list[str]:
             errors.append(f"outgoing refs unknown flow: {ref}")
 
     node_ids = set()
-    for tag in (
-        "flow:start", "flow:end", "io:dcs", "io:var", "io:calc",
-        "flow:or", "flow:and", "flow:branch", "flow:subproc",
-        "flow:parallel1", "flow:parallel2", "flow:parallelStart", "flow:parallelEnd",
-        "timer:wait", "timer:cond", "timer:start", "timer:restart", "timer:stop",
-        "timer:pause", "timer:clock", "msg:guide", "msg:confirm", "msg:alarm",
-        "flow:risingEdge", "flow:fallingEdge", "flow:request",
-        "io:concat", "io:fileExport", "io:fileImport", "io:modifyLabel", "io:modifyProps",
-        "util:text",
-    ):
+    for tag in sorted(allowed):
         node_ids.update(re.findall(rf'<{re.escape(tag)}\s+[^>]*\bid="([^"]+)"', text))
 
     shape_refs = set(re.findall(r'<bpmndi:BPMNShape\s+[^>]*\bbpmnElement="([^"]+)"', text))

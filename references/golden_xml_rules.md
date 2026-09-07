@@ -1,6 +1,9 @@
-# 黄金 XML 规则（权威结构）
+## 0. 元件白名单（强制校验）
 
-生成/修正 XML 时以本文为准；节点字段见 `element_schema.json` / `node_reference.md`；骨架见 `xml_template.xml`。
+- 业务元件**只能**使用 `element_schema.json` → `components[].xml.element` 中列出的标签
+- 并行内嵌另允许：`flow:parallelStart`、`flow:parallelEnd`
+- 禁止臆造元件（如未入库的 `util:*` / 自造 `flow:*`）
+- 保存前必须：`python scripts/validate_bpmn.py <xml>`；出现 `undefined element` 不得 save
 
 ---
 
