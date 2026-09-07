@@ -1,6 +1,7 @@
-# Direct 平台节点参考（基于真实 XML 样例）
+# Direct 平台节点参考
 
-生成 XML 时必须严格遵循此参考。
+按节点类型提供 Process 片段与关键字段。  
+**连线 / Diagram 顺序 / ID → `golden_xml_rules.md`；ext:data 完整 schema → `element_schema.json`。**
 
 ---
 
@@ -332,7 +333,7 @@
   <bpmn2:outgoing>Flow_next_out</bpmn2:outgoing>
 </io:dcs>
 
-<!-- 连线：对齐 test/1.xml — plain 自闭合 -->
+<!-- 连线：plain 自闭合（见 golden_xml_rules.md） -->
 <bpmn2:sequenceFlow id="Flow_to_parallel" sourceRef="Activity_prev" targetRef="Activity_par1" />
 <bpmn2:sequenceFlow id="Flow_branch_a" sourceRef="Activity_par1_start" targetRef="Activity_pump_a" />
 <bpmn2:sequenceFlow id="Flow_branch_b" sourceRef="Activity_par1_start" targetRef="Activity_pump_b" />
@@ -341,80 +342,9 @@
 <bpmn2:sequenceFlow id="Flow_from_parallel" sourceRef="Activity_par1" targetRef="Activity_next" />
 ```
 
-#### 12.2 BPMNDiagram XML（对应上方 Process）
+#### 12.2 Diagram / 坐标
 
-```xml
-<bpmndi:BPMNDiagram id="BPMNDiagram_1">
-  <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-    <!-- ── BPMNEdge 在前（对齐 test/1.xml）── -->
-    <bpmndi:BPMNEdge id="Flow_to_parallel_di" bpmnElement="Flow_to_parallel">
-      <di:waypoint x="500" y="120" />
-      <di:waypoint x="500" y="145" />
-      <di:waypoint x="450" y="145" />
-      <di:waypoint x="450" y="235" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_branch_a_di" bpmnElement="Flow_branch_a">
-      <di:waypoint x="200" y="240" />
-      <di:waypoint x="200" y="280" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_branch_b_di" bpmnElement="Flow_branch_b">
-      <di:waypoint x="700" y="240" />
-      <di:waypoint x="700" y="280" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_branch_a_end_di" bpmnElement="Flow_branch_a_end">
-      <di:waypoint x="200" y="340" />
-      <di:waypoint x="200" y="380" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_branch_b_end_di" bpmnElement="Flow_branch_b_end">
-      <di:waypoint x="700" y="340" />
-      <di:waypoint x="700" y="380" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_from_parallel_di" bpmnElement="Flow_from_parallel">
-      <di:waypoint x="450" y="385" />
-      <di:waypoint x="450" y="475" />
-      <di:waypoint x="500" y="475" />
-      <di:waypoint x="500" y="480" />
-    </bpmndi:BPMNEdge>
-    <!-- ── BPMNShape 在后 ── -->
-    <bpmndi:BPMNShape id="Activity_prev_di" bpmnElement="Activity_prev">
-      <dc:Bounds x="400" y="60" width="200" height="60" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Activity_par1_di" bpmnElement="Activity_par1" isExpanded="true">
-      <dc:Bounds x="60" y="195" width="780" height="230" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Activity_par1_start_di" bpmnElement="Activity_par1_start">
-      <dc:Bounds x="100" y="235" width="700" height="5" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Activity_pump_a_di" bpmnElement="Activity_pump_a">
-      <dc:Bounds x="100" y="280" width="200" height="60" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Activity_pump_b_di" bpmnElement="Activity_pump_b">
-      <dc:Bounds x="600" y="280" width="200" height="60" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Activity_par1_end_di" bpmnElement="Activity_par1_end">
-      <dc:Bounds x="100" y="380" width="700" height="5" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Activity_next_di" bpmnElement="Activity_next">
-      <dc:Bounds x="400" y="480" width="200" height="60" />
-    </bpmndi:BPMNShape>
-  </bpmndi:BPMNPlane>
-</bpmndi:BPMNDiagram>
-```
-
-#### 12.3 坐标规则要点
-
-| 元件 | 定位规则 |
-|------|----------|
-| `flow:parallel1` 容器 | 包围所有子节点，四周 padding ≥ 40px |
-| `parallelStart` | 容器顶部内 padding 后，横条（宽=容器内宽，高=5） |
-| `parallelEnd` | 容器底部内 padding 前，横条（宽=容器内宽，高=5） |
-| 分支节点 | 在 pstart 和 pend 之间，分支间水平间距 ≥ 300px |
-| 外部→容器连线 | 从外部底部→容器上方弯折→pstart 顶部 |
-| pstart→分支连线 | 从 pstart 底部对齐到分支 x 中心→分支顶部 |
-| 分支→pend 连线 | 从分支底部→对齐到 pend 顶部 |
-| 容器→外部连线 | 从 pend 底部→穿出容器边界→弯折→外部顶部 |
-
-> 使用 `layout_parallel1()` 自动生成以上所有坐标，无需手动计算。
+并行布局与 Edge/Shape 顺序见 golden_xml_rules.md；坐标用 layout_generator.layout_parallel1()，勿手写。
 
 ### 13. util:text（文本注释）
 
@@ -714,201 +644,13 @@
 
 ---
 
-## 四、连线 (sequenceFlow) 规则
+## 其它规则（勿在此重复）
 
-### 4.1 普通连线（无条件）
-
-```xml
-<bpmn2:sequenceFlow id="Flow_xxx" sourceRef="Activity_A" targetRef="Activity_B" />
-```
-
-无 `name` 属性，无 `ext:data`。
-
-### 4.2 条件连线（yes/no）
-
-```xml
-<bpmn2:sequenceFlow id="Flow_xxx" name="是" sourceRef="Activity_or" targetRef="Activity_B">
-  <ext:data><![CDATA[{"situation":"yes"}]]></ext:data>
-</bpmn2:sequenceFlow>
-```
-
-- `name`：`"是"` 或 `"否"`
-- `ext:data`：`{"situation":"yes"}` 或 `{"situation":"no"}`
-- **注意**：不要包含 `lineType` 字段
-
-### 4.3 分支连线（多选一）
-
-```xml
-<bpmn2:sequenceFlow id="Flow_xxx" name="A、B有运行信号" sourceRef="Activity_branch" targetRef="Activity_B">
-  <ext:data><![CDATA[{"situation":"0"}]]></ext:data>
-</bpmn2:sequenceFlow>
-```
-
-- `name`：分支描述文本
-- `ext:data`：`{"situation":"0"}`, `{"situation":"1"}`, ... `{"situation":"N-1"}`
-
-### 4.4 连线 ext:data 汇总
-
-| 场景 | ext:data |
+| 主题 | 权威文件 |
 |------|----------|
-| 普通连线 | 无 ext:data |
-| 条件为真 | `{"situation":"yes"}` |
-| 条件为否 | `{"situation":"no"}` |
-| 分支 0 | `{"situation":"0"}` |
-| 分支 1 | `{"situation":"1"}` |
-| 分支 N | `{"situation":"N"}` |
+| 连线 / Edge-Shape 顺序 / ID | `golden_xml_rules.md` |
+| 最小 XML 骨架 | `xml_template.xml` |
+| ext:data schema | `element_schema.json` |
+| SOP→节点选择 | `element_split.md` |
+| 布局坐标 | `scripts/layout_generator.py` |
 
----
-
-## 五、节点选择规则
-
-| SOP 描述 | 节点类型 | type | 判断 |
-|----------|----------|------|------|
-| 启动/停止/开关阀门 | io:dcs | 3 | - |
-| 设变频频率/设开度 | io:dcs | 1 | - |
-| 置手动模式 | io:dcs | 1 | - |
-| 判断运行信号=1 | flow:or | 3 | `==` |
-| 判断阀位反馈=1 | flow:or | 3 | `==` |
-| 压力≥X 且 振动≤Y | flow:and | 1 | `>=` `<=` |
-| 流量≥X 且 振动≤Y | flow:and | 1 | `>=` `<=` |
-| 3台泵中选2台运行 | flow:branch | 3 | `==` |
-| 等待N秒 | timer:wait | - | - |
-| 开始计时 | timer:start | - | - |
-| 超时判断 | timer:cond | - | - |
-| 弹窗确认（暂停） | msg:confirm | - | - |
-| 仅提示（不暂停） | msg:guide | - | - |
-| 多设备同时操作 | flow:parallel1 | - | - |
-| 添加备注 | util:text | - | - |
-| 检测信号 0→非0 | flow:risingEdge | 3 | - |
-| 检测信号 非0→0 | flow:fallingEdge | 3 | - |
-| 拼接字符串 | io:concat | - | - |
-| 导出数据到文件 | io:fileExport | - | - |
-| 从文件读取数据 | io:fileImport | - | - |
-| 修改程序标签 | io:modifyLabel | - | - |
-| 修改程序属性 | io:modifyProps | - | - |
-| 引用其他主程序 | flow:otherMainProc | - | - |
-| 发送HTTP请求 | flow:request | - | - |
-| 报警提示（不暂停） | msg:alarm | - | - |
-| 暂停计时器 | timer:pause | - | - |
-| 等待到指定时刻 | timer:clock | - | - |
-
----
-
-## 六、BPMN Diagram 坐标规则
-
-### 6.1 元素顺序
-
-**BPMNPlane 中 BPMNEdge 在前、BPMNShape 在后**（对齐 `test/1.xml` 黄金样例）：
-
-```xml
-<bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-  <!-- 1. 先输出所有 BPMNEdge -->
-  <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">...</bpmndi:BPMNEdge>
-  <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">...</bpmndi:BPMNEdge>
-  <!-- 2. 再输出所有 BPMNShape -->
-  <bpmndi:BPMNShape id="Event_start_di" bpmnElement="Event_start">...</bpmndi:BPMNShape>
-  <bpmndi:BPMNShape id="Activity_1_di" bpmnElement="Activity_1">...</bpmndi:BPMNShape>
-</bpmndi:BPMNPlane>
-```
-
-### 6.2 BPMNShape（每个节点对应一条 Shape）
-
-**基本格式**：
-```xml
-<bpmndi:BPMNShape id="Event_start_di" bpmnElement="Event_start">
-  <dc:Bounds x="500" y="60" width="54" height="54" />
-</bpmndi:BPMNShape>
-```
-
-**Shape id 格式**：`{node_id}_di`（如 `Event_start_di`）
-
-### 6.3 BPMNEdge（每条 sequenceFlow 对应一条 Edge）
-
-**格式（严格按模板）**：
-```xml
-<bpmndi:BPMNEdge id="Flow_xxx_di" bpmnElement="Flow_xxx">
-  <di:waypoint x="600" y="120" />
-  <di:waypoint x="600" y="160" />
-</bpmndi:BPMNEdge>
-```
-
-**Edge id 格式**：`{flow_id}_di`（如 `Flow_1_di`）
-
-**waypoint 规则**：
-- 起点：源节点底部中心 (x+width/2, y+height)
-- 终点：目标节点顶部中心 (x+width/2, y)
-- 直连：2 个 waypoint
-- L 形：3 个 waypoint（中点转折）
-
-### 6.4 ID 匹配规则（关键！）
-
-**节点 ID 匹配**：
-- 节点定义中的 `id`（如 `Event_start`）必须与 BPMNShape 的 `bpmnElement` 完全一致
-- 例：`<flow:start id="Event_start">` ↔ `<bpmndi:BPMNShape bpmnElement="Event_start">`
-
-**连线 ID 匹配**：
-- sequenceFlow 的 `id`（如 `Flow_01`）必须与 BPMNEdge 的 `bpmnElement` 完全一致
-- 例：`<bpmn2:sequenceFlow id="Flow_01">` ↔ `<bpmndi:BPMNEdge bpmnElement="Flow_01">`
-- **ID 不匹配 = 连线不显示**（最常见 bug）
-
-### 6.5 坐标规则
-
-- 垂直间距：100px
-- 水平间距：300px
-- 元件不允许重叠
-- 连线不得穿过节点矩形
-- 使用 `scripts/layout_generator.py` 自动生成
-
----
-
-## 七、完整 XML 模板
-
-**严格遵循以下格式，禁止任何额外的包装层：**
-- 禁止 `<?xml version="1.0"?>` 声明
-- 禁止 `<bpmn2:definitions>` 根元素
-- 禁止 `xmlns` 命名空间声明
-- 禁止任何模板中不存在的元素
-- 直接以 `<bpmn2:process>` 开头，以 `</bpmndi:BPMNDiagram>` 结尾
-
-此内容存入 API 的 `sfcRunning.value` 字段。
-
-```xml
-<bpmn2:process id="Process_1" isExecutable="true">
-  <!-- 节点定义 -->
-  <flow:start id="Event_start">
-    <bpmn2:outgoing>Flow_1</bpmn2:outgoing>
-  </flow:start>
-  <io:dcs id="Activity_1" name="操作名称" tabKey="basic">
-    <ext:data><![CDATA[...]]></ext:data>
-    <bpmn2:incoming>Flow_1</bpmn2:incoming>
-    <bpmn2:outgoing>Flow_2</bpmn2:outgoing>
-  </io:dcs>
-  <flow:end id="Event_end">
-    <bpmn2:incoming>Flow_2</bpmn2:incoming>
-  </flow:end>
-  <!-- 连线定义：对齐 test/1.xml — plain 自闭合无 ext:data -->
-  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1" />
-  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Event_end" />
-</bpmn2:process>
-<bpmndi:BPMNDiagram id="BPMNDiagram_1">
-  <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-    <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-      <di:waypoint x="527" y="114" />
-      <di:waypoint x="527" y="154" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-      <di:waypoint x="527" y="214" />
-      <di:waypoint x="527" y="254" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNShape id="Event_start_di" bpmnElement="Event_start">
-      <dc:Bounds x="500" y="60" width="54" height="54" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Activity_1_di" bpmnElement="Activity_1">
-      <dc:Bounds x="427" y="154" width="200" height="60" />
-    </bpmndi:BPMNShape>
-    <bpmndi:BPMNShape id="Event_end_di" bpmnElement="Event_end">
-      <dc:Bounds x="500" y="254" width="54" height="54" />
-    </bpmndi:BPMNShape>
-  </bpmndi:BPMNPlane>
-</bpmndi:BPMNDiagram>
-```

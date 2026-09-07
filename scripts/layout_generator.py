@@ -604,7 +604,7 @@ class LayoutGenerator:
             )
             for wp in waypoints:
                 lines.append(f'      <di:waypoint x="{wp[0]}" y="{wp[1]}" />')
-            # 带 name 的条件/分支连线：平台黄金样例含 BPMNLabel
+            # 带 name 的条件/分支连线：含 BPMNLabel
             if flow.situation is not None or flow.name:
                 label_name = flow.name
                 if not label_name:
@@ -626,7 +626,7 @@ class LayoutGenerator:
         return "\n".join(lines)
 
     def get_sequence_flow_xml(self):
-        """生成 <bpmn2:sequenceFlow>（对齐 test/1.xml 黄金样例）
+        """生成 <bpmn2:sequenceFlow>（见 golden_xml_rules）
 
         - plain：自闭合，无 ext:data
         - yes/no：name=\"是\"/\"否\"，ext:data 仅 situation
@@ -657,7 +657,7 @@ class LayoutGenerator:
                     f'  </bpmn2:sequenceFlow>'
                 )
             else:
-                # 黄金样例：普通连线自闭合、无 ext:data
+                # 普通连线：自闭合、无 ext:data
                 lines.append(
                     f'  <bpmn2:sequenceFlow id="{flow.id}" '
                     f'sourceRef="{flow.source}" targetRef="{flow.target}" />'
@@ -756,7 +756,7 @@ class LayoutGenerator:
     def get_diagram_xml(self, process_id="Process_1"):
         """生成完整 BPMNDiagram。
 
-        对齐 test/1.xml：Plane 内先全部 BPMNEdge，再全部 BPMNShape。
+        Plane 内先全部 BPMNEdge，再全部 BPMNShape。
         """
         edges = self.get_edge_xml()
         shapes = self.get_shape_xml()
@@ -801,7 +801,6 @@ class LayoutGenerator:
     def assemble_full_xml(self, node_xml_by_id: dict, process_id="Process_1") -> str:
         """组装可保存的完整 XML（process + diagram）。
 
-        对齐 test/1.xml：
         - sequenceFlow 与 BPMNEdge 同一套 flow id
         - Diagram 内先 Edge 后 Shape
         - plain 连线自闭合无 ext:data；条件边 name=是/否

@@ -1,5 +1,5 @@
 <bpmn2:process id="Process_1" isExecutable="true">
-  <!-- 节点与连线可交错；以下对齐 test/1.xml 黄金样例风格 -->
+  <!-- 节点与连线可交错；风格见 golden_xml_rules.md -->
   <flow:start id="Event_start">
     <bpmn2:outgoing>Flow_1</bpmn2:outgoing>
   </flow:start>

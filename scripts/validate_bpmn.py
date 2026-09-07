@@ -44,7 +44,7 @@ def _check_file(path: Path) -> list[str]:
     if "PLACEHOLDER" in text and path.name != "xml_template.xml":
         errors.append("PLACEHOLDER leftover in generated XML")
 
-    # 黄金样例 test/1.xml：Plane 内先全部 Edge，再全部 Shape
+    # Plane 内先全部 Edge，再全部 Shape（见 golden_xml_rules）
     plane_m = re.search(
         r"<bpmndi:BPMNPlane\b[^>]*>(.*?)</bpmndi:BPMNPlane>",
         text,
@@ -95,9 +95,9 @@ def _check_file(path: Path) -> list[str]:
     if flow_ids and not edge_refs:
         errors.append("has sequenceFlow but zero BPMNEdge (lines will NOT show)")
 
-    # 连线规则（对齐 test/1.xml）：
+    # 连线规则：
     # - plain：可自闭合，无 ext:data
-    # - 条件：name 为 是/否，必须有 situation；禁止只用「条件成立」类旧命名（警告级改为错误以强制对齐）
+    # - 条件：name 为 是/否，必须有 situation；禁止「条件成立/条件不成立」
     for m in re.finditer(r"<bpmn2:sequenceFlow\b([^>]*)(/?)\s*>", text):
         attrs = m.group(1)
         self_closing = m.group(2) == "/" or m.group(0).rstrip().endswith("/>")
@@ -122,7 +122,7 @@ def _check_file(path: Path) -> list[str]:
                 errors.append(f"condition sequenceFlow missing situation: {fid}")
             if flow_name in ("条件成立", "条件不成立"):
                 errors.append(
-                    f"use name 是/否 not 条件成立/条件不成立 (golden test/1.xml): {fid}"
+                    f"use name 是/否 not 条件成立/条件不成立: {fid}"
                 )
         elif flow_name is not None and re.fullmatch(r"\d+", flow_name or ""):
             pass
