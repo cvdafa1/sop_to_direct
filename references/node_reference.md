@@ -332,25 +332,13 @@
   <bpmn2:outgoing>Flow_next_out</bpmn2:outgoing>
 </io:dcs>
 
-<!-- 连线：每条都必须有 ext:data；禁止 </sequenceFlow> 自闭合无 body -->
-<bpmn2:sequenceFlow id="Flow_to_parallel" sourceRef="Activity_prev" targetRef="Activity_par1">
-  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-</bpmn2:sequenceFlow>
-<bpmn2:sequenceFlow id="Flow_branch_a" sourceRef="Activity_par1_start" targetRef="Activity_pump_a">
-  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-</bpmn2:sequenceFlow>
-<bpmn2:sequenceFlow id="Flow_branch_b" sourceRef="Activity_par1_start" targetRef="Activity_pump_b">
-  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-</bpmn2:sequenceFlow>
-<bpmn2:sequenceFlow id="Flow_branch_a_end" sourceRef="Activity_pump_a" targetRef="Activity_par1_end">
-  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-</bpmn2:sequenceFlow>
-<bpmn2:sequenceFlow id="Flow_branch_b_end" sourceRef="Activity_pump_b" targetRef="Activity_par1_end">
-  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-</bpmn2:sequenceFlow>
-<bpmn2:sequenceFlow id="Flow_from_parallel" sourceRef="Activity_par1" targetRef="Activity_next">
-  <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-</bpmn2:sequenceFlow>
+<!-- 连线：对齐 test/1.xml — plain 自闭合 -->
+<bpmn2:sequenceFlow id="Flow_to_parallel" sourceRef="Activity_prev" targetRef="Activity_par1" />
+<bpmn2:sequenceFlow id="Flow_branch_a" sourceRef="Activity_par1_start" targetRef="Activity_pump_a" />
+<bpmn2:sequenceFlow id="Flow_branch_b" sourceRef="Activity_par1_start" targetRef="Activity_pump_b" />
+<bpmn2:sequenceFlow id="Flow_branch_a_end" sourceRef="Activity_pump_a" targetRef="Activity_par1_end" />
+<bpmn2:sequenceFlow id="Flow_branch_b_end" sourceRef="Activity_pump_b" targetRef="Activity_par1_end" />
+<bpmn2:sequenceFlow id="Flow_from_parallel" sourceRef="Activity_par1" targetRef="Activity_next" />
 ```
 
 #### 12.2 BPMNDiagram XML（对应上方 Process）
@@ -358,71 +346,57 @@
 ```xml
 <bpmndi:BPMNDiagram id="BPMNDiagram_1">
   <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-    <!-- ── BPMNShape（先节点后连线）── -->
-    <!-- 前序节点 -->
-    <bpmndi:BPMNShape id="Activity_prev_di" bpmnElement="Activity_prev">
-      <dc:Bounds x="400" y="60" width="200" height="60" />
-    </bpmndi:BPMNShape>
-    <!-- 并行容器（isExpanded="true" 必须设置） -->
-    <bpmndi:BPMNShape id="Activity_par1_di" bpmnElement="Activity_par1" isExpanded="true">
-      <dc:Bounds x="60" y="195" width="780" height="230" />
-    </bpmndi:BPMNShape>
-    <!-- parallelStart（横条，宽=容器内宽，高=5） -->
-    <bpmndi:BPMNShape id="Activity_par1_start_di" bpmnElement="Activity_par1_start">
-      <dc:Bounds x="100" y="235" width="700" height="5" />
-    </bpmndi:BPMNShape>
-    <!-- 分支 A 节点 -->
-    <bpmndi:BPMNShape id="Activity_pump_a_di" bpmnElement="Activity_pump_a">
-      <dc:Bounds x="100" y="280" width="200" height="60" />
-    </bpmndi:BPMNShape>
-    <!-- 分支 B 节点 -->
-    <bpmndi:BPMNShape id="Activity_pump_b_di" bpmnElement="Activity_pump_b">
-      <dc:Bounds x="600" y="280" width="200" height="60" />
-    </bpmndi:BPMNShape>
-    <!-- parallelEnd（横条，宽=容器内宽，高=5） -->
-    <bpmndi:BPMNShape id="Activity_par1_end_di" bpmnElement="Activity_par1_end">
-      <dc:Bounds x="100" y="380" width="700" height="5" />
-    </bpmndi:BPMNShape>
-    <!-- 后续节点 -->
-    <bpmndi:BPMNShape id="Activity_next_di" bpmnElement="Activity_next">
-      <dc:Bounds x="400" y="480" width="200" height="60" />
-    </bpmndi:BPMNShape>
-
-    <!-- ── BPMNEdge（每条 sequenceFlow 一条 Edge）── -->
-    <!-- 外部 → 容器（情况5 incoming） -->
+    <!-- ── BPMNEdge 在前（对齐 test/1.xml）── -->
     <bpmndi:BPMNEdge id="Flow_to_parallel_di" bpmnElement="Flow_to_parallel">
       <di:waypoint x="500" y="120" />
       <di:waypoint x="500" y="145" />
       <di:waypoint x="450" y="145" />
       <di:waypoint x="450" y="235" />
     </bpmndi:BPMNEdge>
-    <!-- parallelStart → 分支 A（情况3） -->
     <bpmndi:BPMNEdge id="Flow_branch_a_di" bpmnElement="Flow_branch_a">
       <di:waypoint x="200" y="240" />
       <di:waypoint x="200" y="280" />
     </bpmndi:BPMNEdge>
-    <!-- parallelStart → 分支 B（情况3） -->
     <bpmndi:BPMNEdge id="Flow_branch_b_di" bpmnElement="Flow_branch_b">
       <di:waypoint x="700" y="240" />
       <di:waypoint x="700" y="280" />
     </bpmndi:BPMNEdge>
-    <!-- 分支 A → parallelEnd（情况4） -->
     <bpmndi:BPMNEdge id="Flow_branch_a_end_di" bpmnElement="Flow_branch_a_end">
       <di:waypoint x="200" y="340" />
       <di:waypoint x="200" y="380" />
     </bpmndi:BPMNEdge>
-    <!-- 分支 B → parallelEnd（情况4） -->
     <bpmndi:BPMNEdge id="Flow_branch_b_end_di" bpmnElement="Flow_branch_b_end">
       <di:waypoint x="700" y="340" />
       <di:waypoint x="700" y="380" />
     </bpmndi:BPMNEdge>
-    <!-- 容器 → 外部（情况5 outgoing） -->
     <bpmndi:BPMNEdge id="Flow_from_parallel_di" bpmnElement="Flow_from_parallel">
       <di:waypoint x="450" y="385" />
       <di:waypoint x="450" y="475" />
       <di:waypoint x="500" y="475" />
       <di:waypoint x="500" y="480" />
     </bpmndi:BPMNEdge>
+    <!-- ── BPMNShape 在后 ── -->
+    <bpmndi:BPMNShape id="Activity_prev_di" bpmnElement="Activity_prev">
+      <dc:Bounds x="400" y="60" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_par1_di" bpmnElement="Activity_par1" isExpanded="true">
+      <dc:Bounds x="60" y="195" width="780" height="230" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_par1_start_di" bpmnElement="Activity_par1_start">
+      <dc:Bounds x="100" y="235" width="700" height="5" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_pump_a_di" bpmnElement="Activity_pump_a">
+      <dc:Bounds x="100" y="280" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_pump_b_di" bpmnElement="Activity_pump_b">
+      <dc:Bounds x="600" y="280" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_par1_end_di" bpmnElement="Activity_par1_end">
+      <dc:Bounds x="100" y="380" width="700" height="5" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_next_di" bpmnElement="Activity_next">
+      <dc:Bounds x="400" y="480" width="200" height="60" />
+    </bpmndi:BPMNShape>
   </bpmndi:BPMNPlane>
 </bpmndi:BPMNDiagram>
 ```
@@ -824,16 +798,16 @@
 
 ### 6.1 元素顺序
 
-**BPMNPlane 中 BPMNShape 在前、BPMNEdge 在后**（严格按照 `references/xml_template.xml` 模板格式）：
+**BPMNPlane 中 BPMNEdge 在前、BPMNShape 在后**（对齐 `test/1.xml` 黄金样例）：
 
 ```xml
 <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-  <!-- 1. 先输出所有 BPMNShape -->
-  <bpmndi:BPMNShape id="Event_start_di" bpmnElement="Event_start">...</bpmndi:BPMNShape>
-  <bpmndi:BPMNShape id="Activity_1_di" bpmnElement="Activity_1">...</bpmndi:BPMNShape>
-  <!-- 2. 再输出所有 BPMNEdge -->
+  <!-- 1. 先输出所有 BPMNEdge -->
   <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">...</bpmndi:BPMNEdge>
   <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">...</bpmndi:BPMNEdge>
+  <!-- 2. 再输出所有 BPMNShape -->
+  <bpmndi:BPMNShape id="Event_start_di" bpmnElement="Event_start">...</bpmndi:BPMNShape>
+  <bpmndi:BPMNShape id="Activity_1_di" bpmnElement="Activity_1">...</bpmndi:BPMNShape>
 </bpmndi:BPMNPlane>
 ```
 
@@ -912,16 +886,20 @@
   <flow:end id="Event_end">
     <bpmn2:incoming>Flow_2</bpmn2:incoming>
   </flow:end>
-  <!-- 连线定义：禁止自闭合；plain 必须含 ext:data lineType，否则平台不画线 -->
-  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1">
-    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-  </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Event_end">
-    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-  </bpmn2:sequenceFlow>
+  <!-- 连线定义：对齐 test/1.xml — plain 自闭合无 ext:data -->
+  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1" />
+  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Event_end" />
 </bpmn2:process>
 <bpmndi:BPMNDiagram id="BPMNDiagram_1">
   <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+    <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+      <di:waypoint x="527" y="114" />
+      <di:waypoint x="527" y="154" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+      <di:waypoint x="527" y="214" />
+      <di:waypoint x="527" y="254" />
+    </bpmndi:BPMNEdge>
     <bpmndi:BPMNShape id="Event_start_di" bpmnElement="Event_start">
       <dc:Bounds x="500" y="60" width="54" height="54" />
     </bpmndi:BPMNShape>
@@ -931,14 +909,6 @@
     <bpmndi:BPMNShape id="Event_end_di" bpmnElement="Event_end">
       <dc:Bounds x="500" y="254" width="54" height="54" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-      <di:waypoint x="527" y="114" />
-      <di:waypoint x="527" y="154" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-      <di:waypoint x="527" y="214" />
-      <di:waypoint x="527" y="254" />
-    </bpmndi:BPMNEdge>
   </bpmndi:BPMNPlane>
 </bpmndi:BPMNDiagram>
 ```

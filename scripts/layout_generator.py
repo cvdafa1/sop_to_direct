@@ -604,48 +604,63 @@ class LayoutGenerator:
             )
             for wp in waypoints:
                 lines.append(f'      <di:waypoint x="{wp[0]}" y="{wp[1]}" />')
-            lines.append(f'    </bpmndi:BPMNEdge>')
+            # 带 name 的条件/分支连线：平台黄金样例含 BPMNLabel
+            if flow.situation is not None or flow.name:
+                label_name = flow.name
+                if not label_name:
+                    if flow.situation == "yes":
+                        label_name = "是"
+                    elif flow.situation == "no":
+                        label_name = "否"
+                    else:
+                        label_name = str(flow.situation)
+                # Label 放在首个 waypoint 附近
+                lx = waypoints[0][0] - 60 if waypoints else 0
+                ly = waypoints[0][1] - 15 if waypoints else 0
+                lines.append("      <bpmndi:BPMNLabel>")
+                lines.append(
+                    f'        <dc:Bounds x="{lx}" y="{ly}" width="120" height="12" />'
+                )
+                lines.append("      </bpmndi:BPMNLabel>")
+            lines.append("    </bpmndi:BPMNEdge>")
         return "\n".join(lines)
 
     def get_sequence_flow_xml(self):
-        """生成 <bpmn2:sequenceFlow> 元素（流程层连线定义）
+        """生成 <bpmn2:sequenceFlow>（对齐 test/1.xml 黄金样例）
 
-        自动根据 situation 字段选择正确的连线变体：
-        - None → plain (普通连线, ext:data={"lineType":1})
-        - "yes" → situation_yes (条件成立, ext:data={"situation":"yes"})
-        - "no" → situation_no (条件不成立, ext:data={"situation":"no"})
-        - "0"/"1"/"2"... → branch_option (择一分支, ext:data={"situation":"{索引}"})
+        - plain：自闭合，无 ext:data
+        - yes/no：name=\"是\"/\"否\"，ext:data 仅 situation
+        - 分支索引：name 可自定义，situation 为数字字符串
         """
         lines = []
         for flow in self.flows:
             if flow.situation == "yes":
                 lines.append(
-                    f'    <bpmn2:sequenceFlow id="{flow.id}" name="条件成立" '
+                    f'  <bpmn2:sequenceFlow id="{flow.id}" name="是" '
                     f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
-                    f'      <ext:data><![CDATA[{{"situation":"yes"}}]]></ext:data>\n'
-                    f'    </bpmn2:sequenceFlow>'
+                    f'    <ext:data><![CDATA[{{"situation":"yes"}}]]></ext:data>\n'
+                    f'  </bpmn2:sequenceFlow>'
                 )
             elif flow.situation == "no":
                 lines.append(
-                    f'    <bpmn2:sequenceFlow id="{flow.id}" name="条件不成立" '
+                    f'  <bpmn2:sequenceFlow id="{flow.id}" name="否" '
                     f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
-                    f'      <ext:data><![CDATA[{{"situation":"no"}}]]></ext:data>\n'
-                    f'    </bpmn2:sequenceFlow>'
+                    f'    <ext:data><![CDATA[{{"situation":"no"}}]]></ext:data>\n'
+                    f'  </bpmn2:sequenceFlow>'
                 )
             elif flow.situation is not None and str(flow.situation).isdigit():
                 name = flow.name or f"选项{flow.situation}"
                 lines.append(
-                    f'    <bpmn2:sequenceFlow id="{flow.id}" name="{name}" '
+                    f'  <bpmn2:sequenceFlow id="{flow.id}" name="{name}" '
                     f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
-                    f'      <ext:data><![CDATA[{{"situation":"{flow.situation}"}}]]></ext:data>\n'
-                    f'    </bpmn2:sequenceFlow>'
+                    f'    <ext:data><![CDATA[{{"situation":"{flow.situation}"}}]]></ext:data>\n'
+                    f'  </bpmn2:sequenceFlow>'
                 )
             else:
+                # 黄金样例：普通连线自闭合、无 ext:data
                 lines.append(
-                    f'    <bpmn2:sequenceFlow id="{flow.id}" '
-                    f'sourceRef="{flow.source}" targetRef="{flow.target}">\n'
-                    f'      <ext:data><![CDATA[{{"lineType":1}}]]></ext:data>\n'
-                    f'    </bpmn2:sequenceFlow>'
+                    f'  <bpmn2:sequenceFlow id="{flow.id}" '
+                    f'sourceRef="{flow.source}" targetRef="{flow.target}" />'
                 )
         return "\n".join(lines)
 
@@ -739,14 +754,17 @@ class LayoutGenerator:
         return issues
 
     def get_diagram_xml(self, process_id="Process_1"):
-        """生成完整 BPMNDiagram（先 Shape 后 Edge）。根元素无前导缩进，与 xml_template 一致。"""
-        shapes = self.get_shape_xml()
+        """生成完整 BPMNDiagram。
+
+        对齐 test/1.xml：Plane 内先全部 BPMNEdge，再全部 BPMNShape。
+        """
         edges = self.get_edge_xml()
+        shapes = self.get_shape_xml()
         return (
             f'<bpmndi:BPMNDiagram id="BPMNDiagram_1">\n'
             f'  <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="{process_id}">\n'
-            f'{shapes}\n'
             f'{edges}\n'
+            f'{shapes}\n'
             f'  </bpmndi:BPMNPlane>\n'
             f'</bpmndi:BPMNDiagram>'
         )
@@ -783,16 +801,11 @@ class LayoutGenerator:
     def assemble_full_xml(self, node_xml_by_id: dict, process_id="Process_1") -> str:
         """组装可保存的完整 XML（process + diagram）。
 
-        这是防止「节点有、连线不显示」的推荐入口：
-        - sequenceFlow 与 BPMNEdge 使用同一套 flow id
-        - Shape 在前、Edge 在后
-        - 每条 plain 连线带 ext:data lineType
+        对齐 test/1.xml：
+        - sequenceFlow 与 BPMNEdge 同一套 flow id
+        - Diagram 内先 Edge 后 Shape
+        - plain 连线自闭合无 ext:data；条件边 name=是/否
         - 节点 incoming/outgoing 与 flow 一致
-
-        Args:
-            node_xml_by_id: {node_id: 节点完整 XML}。可含或不含 incoming/outgoing，
-                            本方法会剥离后按 flows 重写。
-            process_id: process 元素 id，默认 Process_1
         """
         missing = [nid for nid in self.node_order if nid not in node_xml_by_id]
         if missing:

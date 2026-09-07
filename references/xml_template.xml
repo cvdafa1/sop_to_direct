@@ -1,55 +1,77 @@
 <bpmn2:process id="Process_1" isExecutable="true">
-  <!-- 节点定义 -->
+  <!-- 节点与连线可交错；以下对齐 test/1.xml 黄金样例风格 -->
   <flow:start id="Event_start">
     <bpmn2:outgoing>Flow_1</bpmn2:outgoing>
   </flow:start>
   <io:dcs id="Activity_1" name="操作名称" tabKey="basic">
-    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
+    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"retry"}}]]></ext:data>
     <bpmn2:incoming>Flow_1</bpmn2:incoming>
     <bpmn2:outgoing>Flow_2</bpmn2:outgoing>
   </io:dcs>
-  <flow:or id="Activity_2" name="判断条件" tabKey="basic">
+  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1" />
+  <flow:or id="Activity_2" name="条件或" tabKey="basic">
     <ext:data><![CDATA[{"subTitle":"","showDetail":true,"keep":0,"data":[{"name":"#(PLACEHOLDER.TAG_NAME)","judge":"==","targetValue":"1","row":0,"type":3}]}]]></ext:data>
     <bpmn2:incoming>Flow_2</bpmn2:incoming>
     <bpmn2:outgoing>Flow_yes</bpmn2:outgoing>
     <bpmn2:outgoing>Flow_no</bpmn2:outgoing>
   </flow:or>
+  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Activity_2" />
   <io:dcs id="Activity_3" name="是分支操作" tabKey="basic">
-    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
+    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"retry"}}]]></ext:data>
     <bpmn2:incoming>Flow_yes</bpmn2:incoming>
     <bpmn2:outgoing>Flow_3</bpmn2:outgoing>
   </io:dcs>
+  <bpmn2:sequenceFlow id="Flow_yes" name="是" sourceRef="Activity_2" targetRef="Activity_3">
+    <ext:data><![CDATA[{"situation":"yes"}]]></ext:data>
+  </bpmn2:sequenceFlow>
   <msg:confirm id="Activity_4" name="确认消息" tabKey="basic">
-    <ext:data><![CDATA[{"set":[{"upper":100,"lower":0,"targetVar":"","row":0}],"showDetail":true,"isMute":false,"data":[],"select":[],"labelIds":[],"subTitle":"","message":"提示内容","type":"only","display":"yes","resourceGroupId":"0","needPhoto":false,"needPublish":true,"needHandWritting":false,"partialConfirmLevel":0,"messageLevel":0,"isSelectFile":false,"filePath":"","version":"1"}]]></ext:data>
+    <ext:data><![CDATA[{"set":[{"upper":100,"lower":0,"targetVar":"","row":0}],"showDetail":true,"isMute":false,"data":[],"select":[],"labelIds":[],"subTitle":"","message":"提示内容","type":"only","display":"yes","resourceGroupId":"0","needPhoto":false,"needHandWritting":false,"partialConfirmLevel":0,"messageLevel":0,"version":"1"}]]></ext:data>
     <bpmn2:incoming>Flow_no</bpmn2:incoming>
     <bpmn2:outgoing>Flow_4</bpmn2:outgoing>
   </msg:confirm>
+  <bpmn2:sequenceFlow id="Flow_no" name="否" sourceRef="Activity_2" targetRef="Activity_4">
+    <ext:data><![CDATA[{"situation":"no"}]]></ext:data>
+  </bpmn2:sequenceFlow>
   <flow:end id="Event_end">
     <bpmn2:incoming>Flow_3</bpmn2:incoming>
     <bpmn2:incoming>Flow_4</bpmn2:incoming>
   </flow:end>
-  <!-- 连线定义 -->
-  <bpmn2:sequenceFlow id="Flow_1" sourceRef="Event_start" targetRef="Activity_1">
-    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-  </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Activity_2">
-    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-  </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_yes" name="条件成立" sourceRef="Activity_2" targetRef="Activity_3">
-    <ext:data><![CDATA[{"situation":"yes"}]]></ext:data>
-  </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_no" name="条件不成立" sourceRef="Activity_2" targetRef="Activity_4">
-    <ext:data><![CDATA[{"situation":"no"}]]></ext:data>
-  </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_3" sourceRef="Activity_3" targetRef="Event_end">
-    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-  </bpmn2:sequenceFlow>
-  <bpmn2:sequenceFlow id="Flow_4" sourceRef="Activity_4" targetRef="Event_end">
-    <ext:data><![CDATA[{"lineType":1}]]></ext:data>
-  </bpmn2:sequenceFlow>
+  <bpmn2:sequenceFlow id="Flow_3" sourceRef="Activity_3" targetRef="Event_end" />
+  <bpmn2:sequenceFlow id="Flow_4" sourceRef="Activity_4" targetRef="Event_end" />
 </bpmn2:process>
 <bpmndi:BPMNDiagram id="BPMNDiagram_1">
   <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+    <!-- 黄金规则：先全部 Edge，再全部 Shape -->
+    <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+      <di:waypoint x="527" y="114" />
+      <di:waypoint x="527" y="154" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
+      <di:waypoint x="527" y="214" />
+      <di:waypoint x="527" y="314" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_yes_di" bpmnElement="Flow_yes">
+      <di:waypoint x="427" y="374" />
+      <di:waypoint x="327" y="474" />
+      <bpmndi:BPMNLabel>
+        <dc:Bounds x="367" y="359" width="120" height="12" />
+      </bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_no_di" bpmnElement="Flow_no">
+      <di:waypoint x="627" y="374" />
+      <di:waypoint x="727" y="474" />
+      <bpmndi:BPMNLabel>
+        <dc:Bounds x="667" y="359" width="120" height="12" />
+      </bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
+      <di:waypoint x="327" y="534" />
+      <di:waypoint x="527" y="634" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
+      <di:waypoint x="727" y="534" />
+      <di:waypoint x="527" y="634" />
+    </bpmndi:BPMNEdge>
     <bpmndi:BPMNShape id="Event_start_di" bpmnElement="Event_start">
       <dc:Bounds x="500" y="60" width="54" height="54" />
     </bpmndi:BPMNShape>
@@ -68,29 +90,5 @@
     <bpmndi:BPMNShape id="Event_end_di" bpmnElement="Event_end">
       <dc:Bounds x="500" y="634" width="54" height="54" />
     </bpmndi:BPMNShape>
-    <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-      <di:waypoint x="527" y="114" />
-      <di:waypoint x="527" y="154" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-      <di:waypoint x="527" y="214" />
-      <di:waypoint x="527" y="314" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_yes_di" bpmnElement="Flow_yes">
-      <di:waypoint x="427" y="374" />
-      <di:waypoint x="327" y="474" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_no_di" bpmnElement="Flow_no">
-      <di:waypoint x="627" y="374" />
-      <di:waypoint x="727" y="474" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3">
-      <di:waypoint x="327" y="534" />
-      <di:waypoint x="527" y="634" />
-    </bpmndi:BPMNEdge>
-    <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4">
-      <di:waypoint x="727" y="534" />
-      <di:waypoint x="527" y="634" />
-    </bpmndi:BPMNEdge>
   </bpmndi:BPMNPlane>
 </bpmndi:BPMNDiagram>

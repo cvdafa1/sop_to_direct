@@ -1380,16 +1380,16 @@
     },
     "variants": {
       "plain": {
-        "description": "普通连线",
-        "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" sourceRef=\"{source}\" targetRef=\"{target}\">\n  <ext:data><![CDATA[{\"lineType\":1}]]></ext:data>\n</bpmn2:sequenceFlow>"
+        "description": "普通连线（对齐 test/1.xml：自闭合、无 ext:data）",
+        "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" sourceRef=\"{source}\" targetRef=\"{target}\" />"
       },
       "situation_yes": {
         "description": "条件成立分支（是），用于 flow:and/flow:or/timer:cond 的 outgoing 连线",
-        "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" name=\"条件成立\" sourceRef=\"{source}\" targetRef=\"{target}\">\n  <ext:data><![CDATA[{\"situation\":\"yes\"}]]></ext:data>\n</bpmn2:sequenceFlow>"
+        "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" name=\"是\" sourceRef=\"{source}\" targetRef=\"{target}\">\n  <ext:data><![CDATA[{\"situation\":\"yes\"}]]></ext:data>\n</bpmn2:sequenceFlow>"
       },
       "situation_no": {
         "description": "条件不成立分支（否），用于 flow:and/flow:or/timer:cond 的 outgoing 连线",
-        "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" name=\"条件不成立\" sourceRef=\"{source}\" targetRef=\"{target}\">\n  <ext:data><![CDATA[{\"situation\":\"no\"}]]></ext:data>\n</bpmn2:sequenceFlow>"
+        "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" name=\"否\" sourceRef=\"{source}\" targetRef=\"{target}\">\n  <ext:data><![CDATA[{\"situation\":\"no\"}]]></ext:data>\n</bpmn2:sequenceFlow>"
       },
       "branch_option": {
         "description": "择一分支的选项连线，用于 flow:branch 的 outgoing 连线",

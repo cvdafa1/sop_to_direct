@@ -44,7 +44,7 @@ def _check_file(path: Path) -> list[str]:
     if "PLACEHOLDER" in text and path.name != "xml_template.xml":
         errors.append("PLACEHOLDER leftover in generated XML")
 
-    # Shape 必须全部出现在首个 Edge 之前（在 BPMNPlane 内）
+    # 黄金样例 test/1.xml：Plane 内先全部 Edge，再全部 Shape
     plane_m = re.search(
         r"<bpmndi:BPMNPlane\b[^>]*>(.*?)</bpmndi:BPMNPlane>",
         text,
@@ -53,9 +53,17 @@ def _check_file(path: Path) -> list[str]:
     if plane_m:
         plane = plane_m.group(1)
         first_edge = plane.find("<bpmndi:BPMNEdge")
-        last_shape = plane.rfind("<bpmndi:BPMNShape")
-        if first_edge != -1 and last_shape != -1 and last_shape > first_edge:
-            errors.append("Shape appears after Edge in BPMNPlane (Shapes must come first)")
+        first_shape = plane.find("<bpmndi:BPMNShape")
+        last_edge = plane.rfind("<bpmndi:BPMNEdge")
+        if first_edge != -1 and first_shape != -1:
+            if first_shape < first_edge:
+                errors.append(
+                    "BPMNShape appears before BPMNEdge (golden: all Edges then all Shapes)"
+                )
+            elif last_edge > first_shape:
+                errors.append(
+                    "BPMNEdge appears after a BPMNShape (golden: all Edges then all Shapes)"
+                )
 
     # 位号：name 字段里像路径但未用 #() 包裹的粗检
     for m in re.finditer(r'"name"\s*:\s*"([^"]+)"', text):
@@ -87,26 +95,38 @@ def _check_file(path: Path) -> list[str]:
     if flow_ids and not edge_refs:
         errors.append("has sequenceFlow but zero BPMNEdge (lines will NOT show)")
 
-    # 自闭合 sequenceFlow / 缺少 ext:data → 平台经常不画线
-    for m in re.finditer(r"<bpmn2:sequenceFlow\b([^>]*)/?\s*>", text):
+    # 连线规则（对齐 test/1.xml）：
+    # - plain：可自闭合，无 ext:data
+    # - 条件：name 为 是/否，必须有 situation；禁止只用「条件成立」类旧命名（警告级改为错误以强制对齐）
+    for m in re.finditer(r"<bpmn2:sequenceFlow\b([^>]*)(/?)\s*>", text):
         attrs = m.group(1)
+        self_closing = m.group(2) == "/" or m.group(0).rstrip().endswith("/>")
         fid_m = re.search(r'\bid="([^"]+)"', attrs)
         fid = fid_m.group(1) if fid_m else "?"
-        # self-closing: .../>
-        if m.group(0).rstrip().endswith("/>"):
-            errors.append(f"self-closing sequenceFlow (need ext:data): {fid}")
+        name_m = re.search(r'\bname="([^"]*)"', attrs)
+        flow_name = name_m.group(1) if name_m else None
+
+        if self_closing:
+            if flow_name in ("是", "否", "条件成立", "条件不成立"):
+                errors.append(f"condition sequenceFlow must not be self-closing: {fid}")
             continue
-        # find block until </bpmn2:sequenceFlow>
+
         start = m.end()
         end = text.find("</bpmn2:sequenceFlow>", start)
         if end == -1:
             errors.append(f"unclosed sequenceFlow: {fid}")
             continue
         body = text[start:end]
-        if "<ext:data" not in body:
-            errors.append(f"sequenceFlow missing ext:data (lines may NOT show): {fid}")
-        elif '"lineType"' not in body and '"situation"' not in body:
-            errors.append(f"sequenceFlow ext:data needs lineType or situation: {fid}")
+        if flow_name in ("是", "否") or flow_name in ("条件成立", "条件不成立"):
+            if '"situation"' not in body:
+                errors.append(f"condition sequenceFlow missing situation: {fid}")
+            if flow_name in ("条件成立", "条件不成立"):
+                errors.append(
+                    f"use name 是/否 not 条件成立/条件不成立 (golden test/1.xml): {fid}"
+                )
+        elif flow_name is not None and re.fullmatch(r"\d+", flow_name or ""):
+            pass
+        # plain with body: if has ext:data, situation/lineType both acceptable; not required
 
     # Edge 至少 2 个 waypoint
     for m in re.finditer(

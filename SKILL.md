@@ -20,13 +20,13 @@ description: >-
 
 1. **步骤门禁**：不得跳步；改平台状态的 API 必须先获用户明确同意
 2. **原子拆分**：一个元件 = 一个原子操作或独立判断（详见 `references/element_split.md`）
-3. **XML 唯源**：生成/修正 XML 前必须 Read `element_schema.json`、`node_reference.md`、`xml_template.xml`；禁止凭记忆
-4. **连线必须用 `assemble_full_xml`**：禁止手写 sequenceFlow/Edge；漏 Edge 或 id 不一致会导致平台「有节点无连线」
+3. **XML 唯源**：生成/修正前必须 Read `references/golden_xml_rules.md`、`xml_template.xml`、`element_schema.json`；结构冲突时以 `test/1.xml` 为准
+4. **连线必须用 `assemble_full_xml`**：Diagram **先 Edge 后 Shape**；plain 自闭合无 ext:data；条件边 name 用 `是`/`否`
 5. **位号格式**：DCS 用 `#(…)`，变量用 `$(…)`；全部位号经用户确认
 6. **子程序保存**：主程序 ∈ `updateProcedures`，子程序 ∈ `addProcedures`；`subId` 必须来自 `get_next_id`（详见 `references/subprocess.md`）
 7. **禁止自动编译**：保存后必须询问；禁止调用 `deploy_program`
 8. **编译重试**：同一 appid，最多 3 次；只修数据/格式，不改拓扑；位号问题必须再问用户
-9. **保存前清单**：逐项完成 `references/accuracy_checklist.md`，必须跑 `scripts/validate_bpmn.py`（失败不得 save）
+9. **保存前清单**：完成 `references/accuracy_checklist.md`，且 `validate_bpmn.py` 必须通过（含对 `test/1.xml` 同构检查）
 
 ## 工作流（严格顺序）
 
@@ -82,13 +82,12 @@ description: >-
 
 ### Step 3 — 生成 BPMN XML
 
-**Read**：`references/xml_rules.md` + 三份 schema/模板文件
+**Read**：`references/golden_xml_rules.md` + `references/xml_rules.md` + `xml_template.xml` + `element_schema.json`（有疑问对照 `test/1.xml`）
 
 - 单程序：1 份 XML
 - 拆分：1 份主（含 `flow:subproc`）+ N 份子；`subId` = 预生成 ID
-- **布局与连线（强制）**：`LayoutGenerator` → `layout_*` → `assemble_full_xml(node_xml_by_id)`；禁止手拼 diagram
-- `check_overlaps` / `check_connection_integrity`（并行加 `check_parallel_integrity`）必须通过
-- 写盘后 **必须** 通过：`python scripts/validate_bpmn.py <xml文件...>`（含连线/Edge/ext:data 检查）
+- **布局与连线（强制）**：`LayoutGenerator` → `layout_*` → `assemble_full_xml(node_xml_by_id)`
+- 写盘后 **必须** 通过：`python scripts/validate_bpmn.py <xml...>`；建议同时用黄金样例自检：`python scripts/validate_bpmn.py test/1.xml`
 
 ### Step 3.7 — 流程图确认
 
@@ -123,9 +122,11 @@ description: >-
 | `references/element_split.md` | Step 1 |
 | `references/subprocess.md` | Step 1.5 / 保存子程序 |
 | `references/interaction.md` | Step 2 / 2.5 |
+| `references/golden_xml_rules.md` | Step 3（权威结构，优先） |
+| `test/1.xml` | Step 3 对照黄金样例 |
 | `references/xml_rules.md` | Step 3 |
 | `references/element_schema.json` | Step 3 / 修 XML |
-| `references/node_reference.md` | Step 3 / 修 XML |
+| `references/node_reference.md` | Step 3 补充示例 |
 | `references/xml_template.xml` | Step 3 / 修 XML |
 | `references/accuracy_checklist.md` | Step 4 前 |
 | `scripts/layout_generator.py` | 布局与连线 |
