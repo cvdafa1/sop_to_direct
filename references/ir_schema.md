@@ -82,9 +82,9 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
 
 ## 编译命令 / fixture
 
-唯一示例链：`fixtures/sample_ir.json` → `ir_to_xml` → `fixtures/sample_from_ir.xml`（可由命令重生成）。
+唯一示例：`fixtures/sample_ir.json`（XML 由命令生成，不入库）。
 
 ```bash
-python scripts/ir_to_xml.py fixtures/sample_ir.json -o fixtures/sample_from_ir.xml
-python scripts/validate_bpmn.py fixtures/sample_from_ir.xml
+python scripts/ir_to_xml.py fixtures/sample_ir.json -o out.xml
+python scripts/validate_bpmn.py out.xml
 ```

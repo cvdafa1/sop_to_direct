@@ -5,3 +5,4 @@ __pycache__/
 .env
 _test_*.xml
 test/
+fixtures/*.xml
