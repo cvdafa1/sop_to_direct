@@ -77,12 +77,26 @@
 
 ---
 
-## 4. 尺寸
+## 4. 尺寸与布局（防重叠 / 防交叉）
 
 | 类型 | 宽×高 |
 |------|--------|
 | start / end | 54×54 |
 | 活动节点 | 200×60 |
+
+**槽位（必须用 `LayoutGenerator`）：**
+
+- 主链：`layout_vertical`，垂直间距 ≥100
+- 是/否分叉：`layout_branch_columns`（是→左列，否→右列，列距 ≥300）；仅「是」时主链继续竖排即可
+- 并行：`layout_parallel1` / `layout_parallel2`，分支列距 ≥300，容器 padding ≥40
+
+**走线：**
+
+- 正交折线；水平段走行间走廊，同层错开 lane
+- 逆向上行/侧向汇合用 U 形绕行
+- 保存前 `assemble_full_xml` 会自动扩距/重路由；仍失败则禁止组装
+
+**硬校验（`validate_bpmn.py` + layout）：** 节点不重叠；边不穿节点；正交边不内部交叉。
 
 ---
 
@@ -97,9 +111,9 @@
 ```python
 from layout_generator import LayoutGenerator
 gen = LayoutGenerator()
-# add_node / add_flow / layout_*
+# add_node / add_flow / layout_vertical | layout_branch_columns | layout_parallel*
 xml = gen.assemble_full_xml(node_xml_by_id)
-# python scripts/validate_bpmn.py out.xml  # 必须通过
+# python scripts/validate_bpmn.py out.xml  # 必须通过（含几何）
 ```
 
 禁止手拼 sequenceFlow / Edge / Diagram。

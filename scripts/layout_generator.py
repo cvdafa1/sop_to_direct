@@ -1,4 +1,4 @@
-"""BPMN 布局生成器：防重叠坐标 + 可见连线路径
+"""BPMN 布局生成器：槽位布局 + 正交走廊走线 + 重叠/穿线/交叉校验
 
 使用方法：
     from layout_generator import LayoutGenerator
@@ -6,6 +6,8 @@
     gen.add_node("node1", "dcs", "启动泵")
     gen.add_flow("flow1", "node1", "node2", situation="yes")
     gen.layout_vertical(["node1", "node2"], center_x=500, start_y=60)
+    # 是/否分叉：
+    # gen.layout_branch_columns(decision_id, yes_ids, no_ids, merge_id=...)
 
     # 并行布局
     gen.add_node("pstart", "pstart")
@@ -18,8 +20,7 @@
         branch_groups=[["dcs_a", "or_a"], ["dcs_b", "or_b"]],
         start_x=100, start_y=280
     )
-    shapes = gen.get_shapes()
-    edges = gen.get_edges()
+    xml = gen.assemble_full_xml(node_xml_by_id)  # 含几何自动修复与硬门禁
 """
 
 # 标准库导入
@@ -78,6 +79,7 @@ class Flow:
         self.target = target
         self.situation = situation  # None / "yes" / "no" / "0" / "1" ...
         self.name = name  # "是" / "否" / 分支描述 / None
+        self.waypoints = None  # list[(x,y)]，由布局/路由填充
 
 
 class LayoutGenerator:
@@ -86,6 +88,8 @@ class LayoutGenerator:
     CONTAINER_PADDING = 40
     WAYPOINT_MARGIN = 20
     CONTAINER_EXIT_GAP = 50  # 容器边界外连线弯折间距
+    LANE_SPACING = 18  # 同层水平走线错层间距
+    EDGE_NODE_PAD = 4  # 连线与节点矩形的最小间隙
 
     NODE_SIZES = {
         "start": (54, 54),
@@ -135,6 +139,8 @@ class LayoutGenerator:
         self._container_pstart = {}
         # 容器→pend_id 映射
         self._container_pend = {}
+        # 水平走廊 lane 占用：mid_y → count
+        self._lane_bucket = {}
 
     def add_node(self, node_id, node_type, name=""):
         w, h = self.NODE_SIZES.get(node_type, (200, 60))
@@ -151,6 +157,7 @@ class LayoutGenerator:
     # ──────────────────────────────────────────────
 
     def layout_vertical(self, node_ids, center_x=500, start_y=60, gap=None):
+        """主链单列垂直槽位布局。"""
         gap = gap or self.VERTICAL_GAP
         y = start_y
         for nid in node_ids:
@@ -158,6 +165,44 @@ class LayoutGenerator:
             node.x = center_x - node.w // 2
             node.y = y
             y += node.h + gap
+
+    def layout_branch_columns(self, decision_id, yes_ids, no_ids=None,
+                              merge_id=None, center_x=500, col_gap=None,
+                              row_gap=None):
+        """条件分叉槽位：是→左列，否→右列；可选汇合点在下方居中。
+
+        decision 保持在 center_x；yes_ids/no_ids 为决策点之后各自分支上的节点（不含 decision）。
+        """
+        col_gap = col_gap or self.HORIZONTAL_GAP
+        row_gap = row_gap or self.VERTICAL_GAP
+        no_ids = no_ids or []
+        decision = self.nodes[decision_id]
+        decision.x = center_x - decision.w // 2
+
+        yes_x = center_x - col_gap - 100
+        no_x = center_x + col_gap - 100
+        start_y = decision.bottom + row_gap
+
+        y = start_y
+        for nid in yes_ids:
+            n = self.nodes[nid]
+            n.x = yes_x - n.w // 2
+            n.y = y
+            y += n.h + row_gap
+        yes_bottom = y
+
+        y = start_y
+        for nid in no_ids:
+            n = self.nodes[nid]
+            n.x = no_x - n.w // 2
+            n.y = y
+            y += n.h + row_gap
+        no_bottom = y
+
+        if merge_id:
+            merge = self.nodes[merge_id]
+            merge.x = center_x - merge.w // 2
+            merge.y = max(yes_bottom, no_bottom, start_y)
 
     def layout_parallel1(self, container_id, branch_groups,
                          start_x=100, start_y=280,
@@ -438,23 +483,48 @@ class LayoutGenerator:
         return [(sx, sy), (sx, entry_y), (tx, entry_y), (tx, ty)]
 
     def _calc_normal_waypoints(self, src, tgt):
-        """普通连线：直连或 L 形路径 + 避让节点"""
+        """普通连线：直连或正交折线；水平段走行间走廊并错层。"""
         sx, sy = src.cx, src.bottom
         tx, ty = tgt.cx, tgt.top
         if abs(sx - tx) < 10:
             return [(sx, sy), (tx, ty)]
-        all_nodes = list(self.nodes.values())
+
+        # 目标在源上方或侧向汇合：外侧 U 形，减少交叉
+        if ty + 10 < sy:
+            return self.calc_u_waypoints(src.id, tgt.id, side="right")
+
         mid_y = (sy + ty) // 2
-        for n in all_nodes:
-            if n.id in (src.id, tgt.id):
-                continue
-            # 跳过容器节点（不会阻挡连线）
-            if n.type in self.CONTAINER_TYPES:
-                continue
-            if n.y < mid_y < n.bottom:
-                mid_y = n.bottom + self.WAYPOINT_MARGIN
-                break
+        mid_y = self._avoid_nodes_on_band(mid_y, src.id, tgt.id)
+        mid_y = self._alloc_lane_y(mid_y)
         return [(sx, sy), (sx, mid_y), (tx, mid_y), (tx, ty)]
+
+    def _avoid_nodes_on_band(self, mid_y, src_id, tgt_id):
+        """若 mid_y 落在某节点带内，推到该节点下方走廊。"""
+        changed = True
+        guard = 0
+        while changed and guard < 20:
+            changed = False
+            guard += 1
+            for n in self.nodes.values():
+                if n.id in (src_id, tgt_id):
+                    continue
+                if n.type in self.CONTAINER_TYPES:
+                    continue
+                if n.y - self.EDGE_NODE_PAD < mid_y < n.bottom + self.EDGE_NODE_PAD:
+                    mid_y = n.bottom + self.WAYPOINT_MARGIN
+                    changed = True
+        return mid_y
+
+    def _alloc_lane_y(self, mid_y):
+        """同层水平线错开 lane，避免粘连。"""
+        key = int(round(mid_y / max(self.LANE_SPACING, 1)))
+        count = self._lane_bucket.get(key, 0)
+        self._lane_bucket[key] = count + 1
+        if count == 0:
+            return mid_y
+        # 奇偶上下交替
+        offset = ((count + 1) // 2) * self.LANE_SPACING
+        return mid_y + offset if count % 2 else mid_y - offset
 
     def calc_u_waypoints(self, src_id, tgt_id, side="right"):
         """U 形绕行路径（复杂场景）"""
@@ -532,6 +602,178 @@ class LayoutGenerator:
 
         return issues
 
+    @staticmethod
+    def _segments(waypoints):
+        segs = []
+        for i in range(len(waypoints) - 1):
+            x1, y1 = waypoints[i]
+            x2, y2 = waypoints[i + 1]
+            segs.append((x1, y1, x2, y2))
+        return segs
+
+    @staticmethod
+    def _seg_hits_rect(x1, y1, x2, y2, rx1, ry1, rx2, ry2, pad=0):
+        """正交线段是否穿过矩形内部（端点贴边不算）。"""
+        rx1 -= pad
+        ry1 -= pad
+        rx2 += pad
+        ry2 += pad
+        eps = 0.5
+        if abs(x1 - x2) < 1e-6:  # vertical
+            x = x1
+            ymin, ymax = sorted([y1, y2])
+            if x <= rx1 + eps or x >= rx2 - eps:
+                return False
+            return ymax > ry1 + eps and ymin < ry2 - eps
+        if abs(y1 - y2) < 1e-6:  # horizontal
+            y = y1
+            xmin, xmax = sorted([x1, x2])
+            if y <= ry1 + eps or y >= ry2 - eps:
+                return False
+            return xmax > rx1 + eps and xmin < rx2 - eps
+        return False
+
+    @staticmethod
+    def _hv_proper_cross(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2):
+        """两条正交线段是否内部交叉（端点相接不算）。"""
+        a_vert = abs(ax1 - ax2) < 1e-6
+        b_vert = abs(bx1 - bx2) < 1e-6
+        if a_vert == b_vert:
+            return False  # 平行不记交叉
+        if a_vert:
+            vx, ymin, ymax = ax1, *sorted([ay1, ay2])
+            hy, xmin, xmax = by1, *sorted([bx1, bx2])
+        else:
+            hy, xmin, xmax = ay1, *sorted([ax1, ax2])
+            vx, ymin, ymax = bx1, *sorted([by1, by2])
+        return xmin < vx < xmax and ymin < hy < ymax
+
+    def check_edges_through_nodes(self):
+        """连线段不得穿过非端点节点矩形。"""
+        issues = []
+        for flow in self.flows:
+            wps = flow.waypoints
+            if not wps or len(wps) < 2:
+                continue
+            for n in self.nodes.values():
+                if n.id in (flow.source, flow.target):
+                    continue
+                if n.type in self.CONTAINER_TYPES or n.type in ("pstart", "pend"):
+                    continue
+                rx1, ry1, rx2, ry2 = n.bounds()
+                for x1, y1, x2, y2 in self._segments(wps):
+                    if self._seg_hits_rect(
+                        x1, y1, x2, y2, rx1, ry1, rx2, ry2, pad=self.EDGE_NODE_PAD
+                    ):
+                        issues.append(f"edge_through:{flow.id}→{n.id}")
+                        break
+        return issues
+
+    def check_edge_crossings(self):
+        """正交折线之间不得内部交叉。"""
+        issues = []
+        prepared = []
+        for flow in self.flows:
+            if flow.waypoints and len(flow.waypoints) >= 2:
+                prepared.append((flow.id, self._segments(flow.waypoints)))
+        for i in range(len(prepared)):
+            id_a, segs_a = prepared[i]
+            for j in range(i + 1, len(prepared)):
+                id_b, segs_b = prepared[j]
+                crossed = False
+                for sa in segs_a:
+                    for sb in segs_b:
+                        if self._hv_proper_cross(*sa, *sb):
+                            crossed = True
+                            break
+                    if crossed:
+                        break
+                if crossed:
+                    issues.append(f"edge_cross:{id_a}×{id_b}")
+        return issues
+
+    def recompute_waypoints(self, force_u_for=None):
+        """按当前坐标重算全部边的 waypoints。"""
+        force_u_for = force_u_for or set()
+        self._lane_bucket = {}
+        for flow in self.flows:
+            if flow.id in force_u_for:
+                flow.waypoints = self.calc_u_waypoints(flow.source, flow.target)
+            else:
+                flow.waypoints = self.calc_waypoints(flow.source, flow.target)
+
+    def expand_spacing(self, extra_v=40, extra_h=40):
+        """加大列间距与同行垂直间距，并刷新并行容器边界。"""
+        skip = self.CONTAINER_TYPES | {"pstart", "pend"}
+        nodes = [n for n in self.nodes.values() if n.type not in skip]
+        if not nodes:
+            return
+
+        cols = {}
+        for n in nodes:
+            key = int(round(n.cx / 50.0) * 50)
+            cols.setdefault(key, []).append(n)
+        sorted_keys = sorted(cols.keys())
+        if len(sorted_keys) >= 2:
+            shifts = {}
+            running_right = max(n.right for n in cols[sorted_keys[0]])
+            shifts[sorted_keys[0]] = 0
+            for i in range(1, len(sorted_keys)):
+                cur_key = sorted_keys[i]
+                cur_min_x = min(n.x for n in cols[cur_key])
+                dx = max(0, running_right + self.HORIZONTAL_GAP + extra_h - cur_min_x)
+                shifts[cur_key] = dx
+                running_right = max(n.right for n in cols[cur_key]) + dx
+            for key, ns in cols.items():
+                dx = shifts.get(key, 0)
+                if dx:
+                    for n in ns:
+                        n.x += dx
+
+        for ns in cols.values():
+            ns.sort(key=lambda n: n.y)
+            for i in range(1, len(ns)):
+                min_y = ns[i - 1].bottom + self.VERTICAL_GAP + extra_v
+                if ns[i].y < min_y:
+                    delta = min_y - ns[i].y
+                    for j in range(i, len(ns)):
+                        ns[j].y += delta
+
+        for cid, children in self._container_children.items():
+            if cid not in self.nodes:
+                continue
+            pstart = self._container_pstart.get(cid)
+            pend = self._container_pend.get(cid)
+            c = self.nodes[cid]
+            self._auto_container_bounds(cid, children, c.x, c.y, pstart, pend)
+            self._position_pstart_pend(cid, pstart, pend)
+
+    def fix_layout_issues(self, max_attempts=3):
+        """重叠/穿线/交叉：扩距 + 重路由（必要时 U 形），仍失败则返回问题列表。"""
+        force_u = set()
+        remaining = []
+        for attempt in range(max_attempts):
+            self.recompute_waypoints(force_u_for=force_u)
+            overlaps = self.check_overlaps()
+            through = self.check_edges_through_nodes()
+            crosses = self.check_edge_crossings()
+            remaining = [f"overlap:{a}/{b}" for a, b in overlaps]
+            remaining.extend(through)
+            remaining.extend(crosses)
+            if not remaining:
+                return []
+            for msg in crosses:
+                if msg.startswith("edge_cross:"):
+                    force_u.update(msg.split(":", 1)[1].split("×"))
+            for msg in through:
+                if msg.startswith("edge_through:"):
+                    force_u.add(msg.split(":", 1)[1].split("→")[0])
+            self.expand_spacing(
+                extra_v=30 + attempt * 25,
+                extra_h=40 + attempt * 50,
+            )
+        return remaining
+
     def check_id_match(self, sequence_flow_ids, node_ids):
         mismatches = []
         flow_id_set = set(f.id for f in self.flows)
@@ -563,15 +805,16 @@ class LayoutGenerator:
         return shapes
 
     def get_edges(self):
+        if any(f.waypoints is None for f in self.flows):
+            self.recompute_waypoints()
         edges = []
         for flow in self.flows:
-            waypoints = self.calc_waypoints(flow.source, flow.target)
             edges.append({
                 "id": flow.id,
                 "source": flow.source,
                 "target": flow.target,
                 "situation": flow.situation,
-                "waypoints": waypoints,
+                "waypoints": list(flow.waypoints or []),
             })
         return edges
 
@@ -595,9 +838,11 @@ class LayoutGenerator:
         return "\n".join(lines)
 
     def get_edge_xml(self):
+        if any(f.waypoints is None for f in self.flows):
+            self.recompute_waypoints()
         lines = []
         for flow in self.flows:
-            waypoints = self.calc_waypoints(flow.source, flow.target)
+            waypoints = flow.waypoints or self.calc_waypoints(flow.source, flow.target)
             lines.append(
                 f'    <bpmndi:BPMNEdge id="{flow.id}_di" '
                 f'bpmnElement="{flow.id}">'
@@ -828,9 +1073,12 @@ class LayoutGenerator:
         issues = self.check_connection_integrity()
         if issues:
             raise ValueError("连线完整性失败: " + "; ".join(issues))
-        overlaps = self.check_overlaps()
-        if overlaps:
-            raise ValueError(f"节点重叠: {overlaps}")
+        parallel_issues = self.check_parallel_integrity()
+        if parallel_issues:
+            raise ValueError("并行结构失败: " + "; ".join(parallel_issues))
+        layout_issues = self.fix_layout_issues()
+        if layout_issues:
+            raise ValueError("布局校验失败（重叠/穿线/交叉）: " + "; ".join(layout_issues))
 
         # 未布局（仍在 0,0）会导致 Edge 叠在一起，平台上看起来像没连线
         unset = [

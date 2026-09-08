@@ -22,12 +22,12 @@ description: >-
 2. **原子拆分（防漏元件）**：见 `element_split.md`；必须逐句拆分并做覆盖自检，禁止把多步压成一个元件
 3. **XML 唯源**：结构以 `golden_xml_rules.md` 为准；生成前 Read 它 + `xml_template.xml` + `element_schema.json`；节点示例按需 Read `node_reference.md`
 4. **元件白名单**：生成 XML 只用 `element_schema.json` 已定义元件；`validate_bpmn.py` **必须**校验，未定义元件禁止 save
-5. **连线**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边默认仅「是」，明确有否则时再加「否」）
+5. **连线与布局**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边默认仅「是」，明确有否则时再加「否」；槽位布局 + 正交走线，保存前几何校验必须通过）
 6. **位号**：DCS `#()`、变量 `$()`；须用户确认
 7. **子程序**：主 ∈ `updateProcedures`，子 ∈ `addProcedures`；`subId` 来自 `get_next_id`（见 `subprocess.md`）
 8. **禁止** `deploy_program`；是否编译**始终用二选一**（确认编译 / 暂不编译），禁止开放式询问
 9. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
-10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过（含未定义元件检查）
+10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过（含未定义元件、重叠/穿线/交叉）
 
 ## 工作流
 
@@ -84,8 +84,8 @@ description: >-
 
 **Read** `golden_xml_rules.md` + `xml_template.xml` + `element_schema.json`（按需 `node_reference.md`）。
 
-- `LayoutGenerator` → `layout_*` → `assemble_full_xml`
-- `python scripts/validate_bpmn.py <xml...>` **必须通过**（含：仅允许 `element_schema.json` 已定义元件；未定义元件 → 失败、禁止 save）
+- `LayoutGenerator` → `layout_vertical` / `layout_branch_columns` / `layout_parallel*` → `assemble_full_xml`（自动几何修复；失败禁止组装）
+- `python scripts/validate_bpmn.py <xml...>` **必须通过**（含：schema 白名单；节点重叠 / 边穿节点 / 边交叉）
 
 ### Step 3.7 — 确认图
 

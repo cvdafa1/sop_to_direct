@@ -244,6 +244,156 @@ def _check_file(path: Path) -> list[str]:
             if len(outs) == 2 and "no" not in situations:
                 errors.append(f"{tag} with 2 outgoing must include situation=no: {nid_s}")
 
+    errors.extend(_check_layout_geometry(text))
+    return errors
+
+
+def _parse_bounds(text: str) -> dict[str, tuple[float, float, float, float]]:
+    """bpmnElement → (x, y, x2, y2)"""
+    out = {}
+    for m in re.finditer(
+        r'<bpmndi:BPMNShape\b[^>]*\bbpmnElement="([^"]+)"[^>]*>\s*'
+        r'<dc:Bounds\s+x="([^"]+)"\s+y="([^"]+)"\s+width="([^"]+)"\s+height="([^"]+)"',
+        text,
+        re.DOTALL,
+    ):
+        nid, x, y, w, h = m.group(1), float(m.group(2)), float(m.group(3)), float(m.group(4)), float(m.group(5))
+        out[nid] = (x, y, x + w, y + h)
+    return out
+
+
+def _parse_edge_waypoints(text: str) -> dict[str, list[tuple[float, float]]]:
+    out = {}
+    for m in re.finditer(
+        r'<bpmndi:BPMNEdge\b[^>]*\bbpmnElement="([^"]+)"[^>]*>(.*?)</bpmndi:BPMNEdge>',
+        text,
+        re.DOTALL,
+    ):
+        pts = [
+            (float(a), float(b))
+            for a, b in re.findall(r'<di:waypoint\s+x="([^"]+)"\s+y="([^"]+)"', m.group(2))
+        ]
+        out[m.group(1)] = pts
+    return out
+
+
+def _rects_overlap(a, b, gap=0.0) -> bool:
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    return not (
+        ax2 + gap <= bx1 or bx2 + gap <= ax1 or ay2 + gap <= by1 or by2 + gap <= ay1
+    )
+
+
+def _seg_hits_rect(x1, y1, x2, y2, rx1, ry1, rx2, ry2, pad=4.0) -> bool:
+    rx1 -= pad
+    ry1 -= pad
+    rx2 += pad
+    ry2 += pad
+    eps = 0.5
+    if abs(x1 - x2) < 1e-6:
+        x = x1
+        ymin, ymax = sorted([y1, y2])
+        if x <= rx1 + eps or x >= rx2 - eps:
+            return False
+        return ymax > ry1 + eps and ymin < ry2 - eps
+    if abs(y1 - y2) < 1e-6:
+        y = y1
+        xmin, xmax = sorted([x1, x2])
+        if y <= ry1 + eps or y >= ry2 - eps:
+            return False
+        return xmax > rx1 + eps and xmin < rx2 - eps
+    return False
+
+
+def _hv_proper_cross(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) -> bool:
+    a_vert = abs(ax1 - ax2) < 1e-6
+    b_vert = abs(bx1 - bx2) < 1e-6
+    if a_vert == b_vert:
+        return False
+    if a_vert:
+        vx, ymin, ymax = ax1, *sorted([ay1, ay2])
+        hy, xmin, xmax = by1, *sorted([bx1, bx2])
+    else:
+        hy, xmin, xmax = ay1, *sorted([ax1, ax2])
+        vx, ymin, ymax = bx1, *sorted([by1, by2])
+    return xmin < vx < xmax and ymin < hy < ymax
+
+
+def _check_layout_geometry(text: str) -> list[str]:
+    """节点重叠、连线穿节点、正交边交叉。"""
+    errors: list[str] = []
+    bounds = _parse_bounds(text)
+    edges = _parse_edge_waypoints(text)
+    if not bounds:
+        return errors
+
+    # 跳过极扁/极窄（pstart/pend）与明显大容器
+    skip = set()
+    for nid, (x1, y1, x2, y2) in bounds.items():
+        w, h = x2 - x1, y2 - y1
+        if h <= 8 or w <= 8 or w >= 500 or h >= 400:
+            skip.add(nid)
+
+    ids = [i for i in bounds if i not in skip]
+    for i in range(len(ids)):
+        for j in range(i + 1, len(ids)):
+            a, b = ids[i], ids[j]
+            if _rects_overlap(bounds[a], bounds[b]):
+                errors.append(f"shape overlap: {a} / {b}")
+
+    # flow endpoints for through-node exemption
+    flow_ends = {}
+    for m in re.finditer(
+        r'<bpmn2:sequenceFlow\s+[^>]*\bid="([^"]+)"[^>]*\bsourceRef="([^"]+)"[^>]*\btargetRef="([^"]+)"',
+        text,
+    ):
+        flow_ends[m.group(1)] = (m.group(2), m.group(3))
+    # attribute order may vary
+    for m in re.finditer(r"<bpmn2:sequenceFlow\b([^>]*)(/?)\s*>", text):
+        attrs = m.group(1)
+        fid = re.search(r'\bid="([^"]+)"', attrs)
+        src = re.search(r'\bsourceRef="([^"]+)"', attrs)
+        tgt = re.search(r'\btargetRef="([^"]+)"', attrs)
+        if fid and src and tgt:
+            flow_ends[fid.group(1)] = (src.group(1), tgt.group(1))
+
+    for eid, pts in edges.items():
+        if len(pts) < 2:
+            continue
+        ends = flow_ends.get(eid, (None, None))
+        for i in range(len(pts) - 1):
+            x1, y1 = pts[i]
+            x2, y2 = pts[i + 1]
+            for nid, rect in bounds.items():
+                if nid in skip or nid in ends:
+                    continue
+                if _seg_hits_rect(x1, y1, x2, y2, *rect):
+                    errors.append(f"edge through node: {eid} → {nid}")
+                    break
+
+    eids = list(edges.keys())
+    for i in range(len(eids)):
+        pa = edges[eids[i]]
+        if len(pa) < 2:
+            continue
+        segs_a = [(pa[k][0], pa[k][1], pa[k + 1][0], pa[k + 1][1]) for k in range(len(pa) - 1)]
+        for j in range(i + 1, len(eids)):
+            pb = edges[eids[j]]
+            if len(pb) < 2:
+                continue
+            segs_b = [(pb[k][0], pb[k][1], pb[k + 1][0], pb[k + 1][1]) for k in range(len(pb) - 1)]
+            crossed = False
+            for sa in segs_a:
+                for sb in segs_b:
+                    if _hv_proper_cross(*sa, *sb):
+                        crossed = True
+                        break
+                if crossed:
+                    break
+            if crossed:
+                errors.append(f"edge cross: {eids[i]} × {eids[j]}")
+
     return errors
 
 
