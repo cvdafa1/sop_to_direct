@@ -215,12 +215,34 @@ def _check_file(path: Path) -> list[str]:
             re.DOTALL,
         ):
             outs = re.findall(r"<bpmn2:outgoing>([^<]+)</bpmn2:outgoing>", block.group(1))
-            if len(outs) != 2:
-                nid = re.search(r'\bid="([^"]+)"', block.group(0))
+            nid = re.search(r'\bid="([^"]+)"', block.group(0))
+            nid_s = nid.group(1) if nid else "?"
+            if len(outs) not in (1, 2):
                 errors.append(
-                    f"{tag} needs 2 outgoing, got {len(outs)}: "
-                    f"{nid.group(1) if nid else '?'}"
+                    f"{tag} outgoing must be 1 (yes only) or 2 (yes+no), got {len(outs)}: {nid_s}"
                 )
+                continue
+            # 校验对应 sequenceFlow 的 situation
+            situations = []
+            for fid in outs:
+                # find flow by id
+                fm = re.search(
+                    rf'<bpmn2:sequenceFlow\b[^>]*\bid="{re.escape(fid)}"[^>]*(?:/>|>(.*?)</bpmn2:sequenceFlow>)',
+                    text,
+                    re.DOTALL,
+                )
+                if not fm:
+                    errors.append(f"{tag} outgoing {fid} has no sequenceFlow: {nid_s}")
+                    continue
+                chunk = fm.group(0)
+                if '"situation":"yes"' in chunk or '"situation": "yes"' in chunk:
+                    situations.append("yes")
+                elif '"situation":"no"' in chunk or '"situation": "no"' in chunk:
+                    situations.append("no")
+            if "yes" not in situations:
+                errors.append(f"{tag} must have situation=yes outgoing: {nid_s}")
+            if len(outs) == 2 and "no" not in situations:
+                errors.append(f"{tag} with 2 outgoing must include situation=no: {nid_s}")
 
     return errors
 

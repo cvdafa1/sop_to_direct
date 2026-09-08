@@ -22,7 +22,7 @@ description: >-
 2. **原子拆分（防漏元件）**：见 `element_split.md`；必须逐句拆分并做覆盖自检，禁止把多步压成一个元件
 3. **XML 唯源**：结构以 `golden_xml_rules.md` 为准；生成前 Read 它 + `xml_template.xml` + `element_schema.json`；节点示例按需 Read `node_reference.md`
 4. **元件白名单**：生成 XML 只用 `element_schema.json` 已定义元件；`validate_bpmn.py` **必须**校验，未定义元件禁止 save
-5. **连线**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边 `是`/`否`）
+5. **连线**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边默认仅「是」，明确有否则时再加「否」）
 6. **位号**：DCS `#()`、变量 `$()`；须用户确认
 7. **子程序**：主 ∈ `updateProcedures`，子 ∈ `addProcedures`；`subId` 来自 `get_next_id`（见 `subprocess.md`）
 8. **禁止** `deploy_program`；是否编译**始终用二选一**（确认编译 / 暂不编译），禁止开放式询问

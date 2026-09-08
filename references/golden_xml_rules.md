@@ -48,9 +48,19 @@
 <bpmn2:sequenceFlow id="Flow_xxx" sourceRef="A" targetRef="B" />
 ```
 
-**条件（or/and/cond）— name 用 `是`/`否`，仅 situation：**
+**条件（or/and/cond）：**
+
+- **默认 1 条 outgoing（是）**：SOP 只描述「条件成立后做什么」、未写否则/不成立时，只出 `name="是"` + `situation:yes`
+- **仅当明确需要否分支时再加第 2 条**：原文有「否则 / 不满足 / 未到位则…」等，才增加 `name="否"` + `situation:no`
+- 禁止无依据硬凑「否」空分支；有「否」时两侧都要落到真实后续节点（或 end）
 
 ```xml
+<!-- 仅「是」 -->
+<bpmn2:sequenceFlow id="Flow_yes" name="是" sourceRef="Or" targetRef="A">
+  <ext:data><![CDATA[{"situation":"yes"}]]></ext:data>
+</bpmn2:sequenceFlow>
+
+<!-- 明确有否则时：是 + 否 -->
 <bpmn2:sequenceFlow id="Flow_yes" name="是" sourceRef="Or" targetRef="A">
   <ext:data><![CDATA[{"situation":"yes"}]]></ext:data>
 </bpmn2:sequenceFlow>
@@ -59,11 +69,11 @@
 </bpmn2:sequenceFlow>
 ```
 
-禁止：`条件成立`/`条件不成立`；禁止 plain 强制 `lineType`；禁止条件边带 `lineType`。
+禁止 plain 强制 `lineType`；禁止条件边带 `lineType`。
 
 **BPMNEdge：** 每条 Flow 一条；`bpmnElement` = Flow id；≥2 waypoint；是/否边宜含 `BPMNLabel`。
 
-条件节点必须 2 条 outgoing。
+条件节点 outgoing：**1（仅是）或 2（是+否）**，不得为 0，不得只有「否」没有「是」。
 
 ---
 

@@ -692,7 +692,7 @@ class LayoutGenerator:
         2. 起始节点必须有且只有 outgoing
         3. 结束节点必须有 incoming
         4. 中间节点必须同时有 incoming 和 outgoing
-        5. 条件节点(and/or/cond)必须有 2 条 outgoing
+        5. 条件节点(and/or/cond) outgoing 为 1（仅是）或 2（是+否）；仅明确需要否时才为 2
         6. flow 的 source/target 不能是同一节点（禁止自环）
         """
         issues = []
@@ -746,10 +746,25 @@ class LayoutGenerator:
                 if not out:
                     issues.append(f"中间节点 {nid}({node.type}) 缺少 outgoing 连线")
 
-            if node.type in ("and", "or", "cond") and len(out) != 2:
-                issues.append(
-                    f"条件节点 {nid}({node.type}) 应有 2 条 outgoing，实际 {len(out)} 条"
-                )
+            if node.type in ("and", "or", "cond"):
+                if len(out) not in (1, 2):
+                    issues.append(
+                        f"条件节点 {nid}({node.type}) outgoing 应为 1（仅是）或 2（是+否），实际 {len(out)} 条"
+                    )
+                else:
+                    situations = []
+                    for fid in out:
+                        for flow in self.flows:
+                            if flow.id == fid:
+                                situations.append(flow.situation)
+                    if "yes" not in situations:
+                        issues.append(
+                            f"条件节点 {nid}({node.type}) 必须包含 situation=yes 的 outgoing"
+                        )
+                    if len(out) == 2 and "no" not in situations:
+                        issues.append(
+                            f"条件节点 {nid}({node.type}) 两条 outgoing 时应含 situation=no"
+                        )
 
         return issues
 

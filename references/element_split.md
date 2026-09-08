@@ -83,8 +83,8 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 | R7 | "XX秒未收到B则提示/报警C" | `io:dcs?` → `timer:cond` → `msg:guide`/`msg:alarm` | 超时分支 |
 | R8 | "弹窗提示XXX"（不等人） | `msg:guide` | |
 | R9 | "确认是否XXX，确认后继续" | `msg:confirm` → 下一步 | |
-| R10 | "若A则…否则…" | `flow:or` → yes/no 两支都要展开 | 单条件 |
-| R11 | "若A且B则…否则…" | `flow:and` → yes/no | 多条件 |
+| R10 | "若A则…"（无否则） | `flow:or` → **仅 yes** | 不硬凑否分支 |
+| R11 | "若A则…否则…" | `flow:or`/`and` → yes + no | **仅此时**加否 |
 | R12 | "分别判断三种情况/哪台运行" | `flow:branch`（N 支） | 多选一 |
 | R13 | "全部完成后提示" | 末端 `msg:guide` | |
 | R14 | "报警XXX"（不暂停） | `msg:alarm` | 与 guide 区分 |
@@ -127,7 +127,7 @@ flow:or(YL==0)
   └─ no  → io:dcs(变频0) → flow:or(SI到位) → io:dcs(停风机) → flow:or(YL取反) → msg:guide(结束) → end
 ```
 
-两支都必须完整展开。
+两支都有「否则」语义时才完整展开；若原文无否则，只保留 yes 支。
 
 ---
 

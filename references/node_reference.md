@@ -115,7 +115,7 @@
   - `judge`：`"=="`, `">="`, `"<="`, `">"`, `"<"`, `"!="`
   - `targetValue`：**字符串类型**
   - `type`：3=数字量判断, 1=模拟量判断
-- 出边 2 条：`{"situation":"yes"}` 和 `{"situation":"no"}`
+- 出边：**默认 1 条** `{"situation":"yes"}`；仅 SOP 明确「否则/不成立」时再加 `{"situation":"no"}`
 
 ### 5. flow:and（条件与，多条件同时判断）
 
@@ -136,7 +136,7 @@
 </flow:and>
 ```
 
-**与 flow:or 区别**：多条件 `and` 关系，出边同样是 yes/no。
+**与 flow:or 区别**：多条件 `and` 关系；出边同样默认仅 yes，明确否则时再加 no。
 
 ### 6. flow:branch（多选一分支）
 
