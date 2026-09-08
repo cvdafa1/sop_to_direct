@@ -35,7 +35,7 @@
         "id_pattern": "Activity_{7位随机字母数字}",
         "required_attributes": ["id", "name", "subId"],
         "attribute_notes": {
-          "name": "等于 Step 2.1 确认的子程序 name（[A-Za-z][A-Za-z0-9_]*），并与 save addProcedures.name、程序自身 name 一致",
+          "name": "子程序 name：[A-Za-z][A-Za-z0-9_]*；与 addProcedures.name 一致（详见 subprocess.md）",
           "subId": "等于 get_next_id 返回值"
         },
         "optional_attributes": [],
@@ -58,7 +58,7 @@
             "subTitle": {
               "type": "string",
               "minLength": 1,
-              "description": "子程序描述/职责；必须等于 Step 2.1 用户确认的描述，禁止空字符串"
+              "description": "子程序描述/职责（必填非空）；详见 subprocess.md"
             },
             "showDetail": { "type": "boolean", "default": true },
             "showQueue": { "type": "boolean", "default": false },
@@ -104,7 +104,7 @@
     {
       "name": "条件与",
       "category": "条件判断",
-      "purpose": "与类型二选一分支步，判断条件全部成立走\"条件成立\"分支，否则走\"条件不成立\"分支。",
+      "purpose": "与类型二选一分支步：全部条件成立走「是」(situation=yes)，否则走「否」(situation=no；无否则时可仅 yes)。",
       "usage_scenario": "多个条件必须同时满足才能执行某操作的场景（如电机运行信号反馈检查）。",
       "xml": {
         "status": "confirmed",
@@ -114,13 +114,13 @@
         "optional_attributes": ["tabKey"],
         "connection_rules": {
           "outgoing_variants": ["situation_yes", "situation_no"],
-          "description": "条件与元件的 outgoing 连线必须使用 variants定义的 situation_yes（条件成立分支）和 situation_no（条件不成立分支），禁止使用 plain"
+          "description": "outgoing 必须用 situation_yes/no 变体（sequenceFlow name=是/否）；禁止 plain。默认可仅 yes，见 golden_xml_rules"
         },
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json" },
           { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件成立分支 → situation_yes 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件不成立分支 → situation_no 连线" }
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）" }
         ],
         "optional_children": [],
         "diagram": {
@@ -160,7 +160,7 @@
     {
       "name": "条件或",
       "category": "条件判断",
-      "purpose": "或类型二选一分支步，任一条件成立走\"条件成立\"分支，全部不成立走\"条件不成立\"分支。",
+      "purpose": "或类型二选一分支步：任一条件成立走「是」(situation=yes)，全部不成立走「否」(situation=no；无否则时可仅 yes)。",
       "usage_scenario": "多个条件满足其一即可执行某操作的场景（如判断液偶开度）。",
       "xml": {
         "status": "confirmed",
@@ -170,13 +170,13 @@
         "optional_attributes": ["tabKey"],
         "connection_rules": {
           "outgoing_variants": ["situation_yes", "situation_no"],
-          "description": "条件与元件的 outgoing 连线必须使用 variants定义的 situation_yes（条件成立分支）和 situation_no（条件不成立分支），禁止使用 plain"
+          "description": "outgoing 必须用 situation_yes/no 变体（sequenceFlow name=是/否）；禁止 plain。默认可仅 yes，见 golden_xml_rules"
         },
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json" },
           { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件成立分支 → situation_yes 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件不成立分支 → situation_no 连线（可选，未配置时仅单 outgoing）" }
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否；可选，无否则时仅单 outgoing）" }
         ],
         "optional_children": [],
         "diagram": {
@@ -225,13 +225,13 @@
         "optional_attributes": ["tabKey"],
         "connection_rules": {
           "outgoing_variants": ["situation_yes", "situation_no"],
-          "description": "择一分支元件的 outgoing 连线必须使用 situation_yes（条件成立分支）和 situation_no（条件不成立分支），禁止使用 plain"
+          "description": "outgoing 必须用 situation 变体；sequenceFlow name 规则见 golden_xml_rules；禁止 plain"
         },
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json" },
           { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件成立分支 → situation_yes 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件不成立分支 → situation_no 连线" }
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）" }
         ],
         "optional_children": [],
         "diagram": {
@@ -354,14 +354,14 @@
         "optional_attributes": [],
         "connection_rules": {
           "outgoing_variants": ["situation_yes", "situation_no"],
-          "description": "条件与元件的 outgoing 连线必须使用 variants定义的 situation_yes（条件成立分支）和 situation_no（条件不成立分支），禁止使用 plain",
-          "note": "bpmn2:sequenceFlow 必须带 name 属性（如 name=条件成立/name=条件不成立），否则编译警告 348093431（分支未命名）"
+          "description": "outgoing 必须用 situation_yes/no 变体（sequenceFlow name=是/否）；禁止 plain。默认可仅 yes，见 golden_xml_rules",
+          "note": "bpmn2:sequenceFlow 必须带 name=是/否（与 situation yes/no 对应），禁止 条件成立/条件不成立；见 golden_xml_rules"
         },
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json" },
           { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件成立分支 → situation_yes 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "条件不成立分支 → situation_no 连线" }
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）" }
         ],
         "optional_children": [],
         "diagram": {
@@ -1357,21 +1357,21 @@
       "rules": [
         {
           "source_element": "flow:and",
-          "outgoing": "situation_yes → 条件成立分支",
-          "incoming": "situation_no → 条件不成立分支",
-          "note": "条件与元件：条件成立走 situation_yes，条件不成立走 situation_no"
+          "outgoing": "situation_yes → 是（name=是）",
+          "incoming": "situation_no → 否（name=否，可选）",
+          "note": "详见 golden_xml_rules；默认可仅 yes"
         },
         {
           "source_element": "flow:or",
-          "outgoing": "situation_yes → 条件成立分支",
-          "incoming": "situation_no → 条件不成立分支",
-          "note": "条件或元件：条件成立走 situation_yes，条件不成立走 situation_no"
+          "outgoing": "situation_yes → 是（name=是）",
+          "incoming": "situation_no → 否（name=否，可选）",
+          "note": "详见 golden_xml_rules；默认可仅 yes"
         },
         {
           "source_element": "timer:cond",
-          "outgoing": "situation_yes → 条件成立分支",
-          "incoming": "situation_no → 条件不成立分支",
-          "note": "计时器判断元件：条件成立走 situation_yes，条件不成立走 situation_no"
+          "outgoing": "situation_yes → 是（name=是）",
+          "incoming": "situation_no → 否（name=否，可选）",
+          "note": "详见 golden_xml_rules；默认可仅 yes"
         },
         {
           "source_element": "flow:branch",
@@ -1392,11 +1392,11 @@
         "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" sourceRef=\"{source}\" targetRef=\"{target}\" />"
       },
       "situation_yes": {
-        "description": "条件成立分支（是），用于 flow:and/flow:or/timer:cond 的 outgoing 连线",
+        "description": "是分支：name=是 + situation=yes（flow:and/or、timer:cond）",
         "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" name=\"是\" sourceRef=\"{source}\" targetRef=\"{target}\">\n  <ext:data><![CDATA[{\"situation\":\"yes\"}]]></ext:data>\n</bpmn2:sequenceFlow>"
       },
       "situation_no": {
-        "description": "条件不成立分支（否），用于 flow:and/flow:or/timer:cond 的 outgoing 连线",
+        "description": "否分支：name=否 + situation=no（仅 SOP 有否则时）",
         "xml": "<bpmn2:sequenceFlow id=\"{flow_id}\" name=\"否\" sourceRef=\"{source}\" targetRef=\"{target}\">\n  <ext:data><![CDATA[{\"situation\":\"no\"}]]></ext:data>\n</bpmn2:sequenceFlow>"
       },
       "branch_option": {

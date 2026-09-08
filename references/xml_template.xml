@@ -1,10 +1,10 @@
 <bpmn2:process id="Process_1" isExecutable="true">
-  <!-- 节点与连线可交错；风格见 golden_xml_rules.md -->
+  <!-- 骨架示例；细则见 golden_xml_rules.md。本例含是+否仅为结构演示——无否则时勿生成否分支。io:dcs errorHandler 固定 throw。 -->
   <flow:start id="Event_start">
     <bpmn2:outgoing>Flow_1</bpmn2:outgoing>
   </flow:start>
   <io:dcs id="Activity_1" name="操作名称" tabKey="basic">
-    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"retry"}}]]></ext:data>
+    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
     <bpmn2:incoming>Flow_1</bpmn2:incoming>
     <bpmn2:outgoing>Flow_2</bpmn2:outgoing>
   </io:dcs>
@@ -17,7 +17,7 @@
   </flow:or>
   <bpmn2:sequenceFlow id="Flow_2" sourceRef="Activity_1" targetRef="Activity_2" />
   <io:dcs id="Activity_3" name="是分支操作" tabKey="basic">
-    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"retry"}}]]></ext:data>
+    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(PLACEHOLDER.TAG_NAME)","targetValue":"1","lower":0,"tolerance":"","upper":1000,"deviation":1,"row":0,"type":3}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
     <bpmn2:incoming>Flow_yes</bpmn2:incoming>
     <bpmn2:outgoing>Flow_3</bpmn2:outgoing>
   </io:dcs>

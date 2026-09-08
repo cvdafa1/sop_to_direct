@@ -9,7 +9,8 @@ description: >-
 
 # SOP 转 Direct 平台流程程序
 
-将化工 SOP 转为 Direct BPMN XML，经 API 创建、保存、编译。**目标：语义忠于 SOP，XML 可编译。**
+将化工 SOP 转为 Direct BPMN XML，经 API 创建、保存、编译。**目标：语义忠于 SOP，XML 可编译。**  
+细则只在下表权威文件中；本文件只负责任务编排与门禁。
 
 ## 触发
 
@@ -19,15 +20,15 @@ description: >-
 ## 准确率硬约束
 
 1. **步骤门禁**：不得跳步；create/save/compile 前须用户明确同意
-2. **原子拆分（防漏元件）**：见 `element_split.md`；必须逐句拆分并做覆盖自检，禁止把多步压成一个元件
-3. **XML 唯源**：结构以 `golden_xml_rules.md` 为准；生成前 Read 它 + `xml_template.xml` + `element_schema.json`；节点示例按需 Read `node_reference.md`
-4. **元件白名单**：生成 XML 只用 `element_schema.json` 已定义元件；`validate_bpmn.py` **必须**校验，未定义元件禁止 save
-5. **连线与布局**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边默认仅「是」，明确有否则时再加「否」；槽位布局 + 正交走线，保存前几何校验必须通过）
-6. **位号**：DCS `#()`、变量 `$()`；须用户确认
-7. **子程序**：主 ∈ `updateProcedures`，子 ∈ `addProcedures`；`subId` 来自 `get_next_id`（见 `subprocess.md`）
-8. **禁止** `deploy_program`；是否编译**始终用二选一**（确认编译 / 暂不编译），禁止开放式询问
+2. **原子拆分**：按 `element_split.md` 执行
+3. **XML**：按 `golden_xml_rules.md`；生成前 Read 它 + `xml_template.xml` + `element_schema.json`；示例按需 `node_reference.md`
+4. **白名单 / 校验**：仅 schema 元件；save 前 `validate_bpmn.py` 必须通过
+5. **连线与布局**：仅 `LayoutGenerator.assemble_full_xml`（规则见 golden）
+6. **位号**：确认流程见 `interaction.md`；格式见 `node_reference.md`
+7. **子程序**：见 `subprocess.md`（主 update / 子 add；`subId`=`get_next_id`）
+8. **禁止** `deploy_program`；编译询问见 `interaction.md` Step 4.5（固定二选一）
 9. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
-10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过（含未定义元件、重叠/穿线/交叉）
+10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过
 
 ## 工作流
 
@@ -49,43 +50,28 @@ description: >-
 
 ### Step 1 — 解析
 
-**Read** `element_split.md`（必须按其中「解析强制流程」执行）。
-
-1. 逐句/逐语义点拆成原子元件（操作、反馈、延时、判断、提示/确认/报警、并行均不可漏）  
-2. 产出 IR（每步含 `node_type`、`source_text`）+ **覆盖自检表**  
-3. 向用户展示**完整原子元件列表**（不得只给阶段摘要）；有缺口先补拆  
-4. 覆盖自检通过且用户无异议后再进 Step 1.5  
+**Read** `element_split.md` 并执行其强制流程与覆盖自检；展示完整元件列表后再进 1.5。
 
 ### Step 1.5 — 是否拆分
 
-**Read** `subprocess.md`。AI 做关联性评估后，**只询问用户：拆分 / 不拆分**（可标注推荐，但勿展开子程序明细）。
-
-- 选**不拆分** → 进入 Step 2，之后跳过 2.1  
-- 选**拆分** → 进入 Step 2，创建成功后再做 2.1  
+**Read** `subprocess.md`（评估）+ `interaction.md`（只问拆/不拆）。不拆分则跳过 2.1。
 
 ### Step 2 — 创建主程序
 
-**Read** `interaction.md`；用 `DirectPlatformClient`。  
-`get_data_groups` → 选分组 → 确认主程序 name/version/description → **同意后** `create_program`。
+**Read** `interaction.md` Step 2；同意后 `create_program`。
 
-### Step 2.1 — 子程序信息（仅当 1.5 选择拆分）
+### Step 2.1 — 子程序信息（仅拆分）
 
-创建主程序成功后执行。AI 生成子程序列表（name、描述/职责、对应 SOP 步骤范围），**展示给用户并可修改**。命名：`[A-Za-z][A-Za-z0-9_]*`。  
-用户确认后：`get_next_id` × N，再进入 2.5。生成主 XML 时，`flow:subproc` 的 `name` / `ext:data.subTitle` **必须**分别等于已确认的 name / 描述。
-
-不拆分时**不进入本步**，创建后直接 2.5。
+**Read** `interaction.md` Step 2.1 + `subprocess.md`（name/subTitle/`subId` 写入规则）。创建成功后执行。
 
 ### Step 2.5 — 位号
 
-**Read** `interaction.md`。强制确认表；可用 `get_tags` / `search_tags_by_name`。补参数与阈值。  
-拆分时：先主后子。
+**Read** `interaction.md` Step 2.5；拆分时先主后子。
 
 ### Step 3 — 生成 XML
 
-**Read** `golden_xml_rules.md` + `xml_template.xml` + `element_schema.json`（按需 `node_reference.md`）。
-
-- `LayoutGenerator` → `layout_vertical` / `layout_branch_columns` / `layout_parallel*` → `assemble_full_xml`（自动几何修复；失败禁止组装）
-- `python scripts/validate_bpmn.py <xml...>` **必须通过**（含：schema 白名单；节点重叠 / 边穿节点 / 边交叉）
+**Read** `golden_xml_rules.md` + `xml_template.xml` + `element_schema.json`（按需 `node_reference.md`）。  
+`layout_*` → `assemble_full_xml` → `python scripts/validate_bpmn.py <xml...>` 必须通过。
 
 ### Step 3.7 — 确认图
 
@@ -93,35 +79,28 @@ description: >-
 
 ### Step 4 — 保存
 
-清单通过后一次 `save_program`（子程序用 `subprograms=`）。
+清单通过后一次 `save_program`（子程序见 `subprocess.md`）。
 
 ### Step 4.5 / 5 — 编译
 
-保存成功后，**必须用选项方式**询问（禁止开放式「要不要编译？」）：
-
-- **选项 1：确认编译** — 执行 `compile_program(主 appid)`
-- **选项 2：暂不编译** — 跳过编译，进入 Step 6 报告（用户可稍后在平台手动编译）
-
-用户未明确选择上述选项之一前，不得调用 `compile_program`。
-
-编译失败：位号类错误必须再问用户；格式类可自修 → 同 appid save→compile，≤3 次。禁止新建程序、禁止改拓扑。
+**Read** `interaction.md` Step 4.5。失败：位号再问用户；格式可自修；同 appid ≤3 次；禁止新建、禁止改拓扑。
 
 ### Step 6 — 报告
 
 程序名、appid、节点/连线数、编译结果、补充项。
 
-## 参考索引
+## 参考索引（职责唯一）
 
-| 文件 | 职责（唯一） |
-|------|----------------|
-| `element_split.md` | SOP 拆分 / IR |
-| `subprocess.md` | 是否拆分评估与 save payload |
-| `interaction.md` | 拆分选择 / 创建 / 子程序信息 / 位号 |
-| `golden_xml_rules.md` | XML 结构与连线 |
-| `xml_template.xml` | 最小骨架 |
-| `element_schema.json` | 节点 ext:data schema |
-| `node_reference.md` | 节点示例（不含连线通则） |
-| `accuracy_checklist.md` | 保存前勾选 |
-| `layout_generator.py` | 布局与组装 |
+| 文件 | 职责 |
+|------|------|
+| `element_split.md` | SOP→IR 原子拆分 |
+| `subprocess.md` | 拆分评估 + save payload + `flow:subproc` |
+| `interaction.md` | 用户确认文案（1.5/2/2.1/2.5/4.5） |
+| `golden_xml_rules.md` | XML / 连线 / 布局通则 |
+| `xml_template.xml` | 最小骨架示例 |
+| `element_schema.json` | 元件与 ext:data schema |
+| `node_reference.md` | 节点 XML 示例与位号路径格式 |
+| `accuracy_checklist.md` | 保存前勾选（指向上游，不复述细则） |
+| `layout_generator.py` | 布局与组装实现 |
 | `api_reference.py` | API |
-| `validate_bpmn.py` | 结构校验 |
+| `validate_bpmn.py` | 结构 + 几何校验 |

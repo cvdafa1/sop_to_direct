@@ -42,10 +42,10 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 - ❌ 把「关阀 + 等反馈 + 停泵 + 等反馈」写成 1 个 `io:dcs`
 - ❌ 只写主操作，丢掉「收到反馈」「延时」「弹窗」
 - ❌ 用阶段标题代替阶段内逐步操作
-- ❌ 分支只画「是」不画「否」（或反之）
+- ❌ 原文有「否则/不满足」双侧语义时，只画「是」或只画「否」
 - ❌ 把「确认」做成 `msg:guide`，或把「仅提示」做成 `msg:confirm`
 - ❌ 枚举 A、B、C 三台设备却只生成 1 个节点
-- ❌ 发明未在 `element_schema.json` 中的元件名
+- ❌ 发明 schema 未定义的元件名
 
 ### 0.3 覆盖自检（进入 1.5 前必须做）
 
@@ -131,7 +131,7 @@ flow:or(YL==0)
 
 ---
 
-## 4. IR 结构（每个 step 必须可落到一个白名单元件）
+## 4. IR 结构（每个 step 落到一个 schema 元件）
 
 ```json
 {
@@ -168,7 +168,7 @@ flow:or(YL==0)
 要求：
 
 - 每个 step 必须有 `node_type`（∈ schema）与 `source_text`（可追溯）  
-- 分支用 `branch_yes` / `branch_no` 嵌套子 step 列表，**两侧都要填**  
+- 分支：`branch_yes` 必填；`branch_no` **仅当原文有否则时填写**（对齐 R10/R11 / golden）  
 - 并行：父 step `node_type=flow:parallel1`，子 steps 为各分支序列  
 - 单程序：步骤全在 `main_program.steps`；`subprograms` 为空  
 

@@ -13,8 +13,8 @@
     appid = client.create_program(program_name="主程序", description="描述")
     sub_ids = [client.get_next_id(id_type=0) for _ in range(2)]
     subprograms = [
-        {"id": sub_ids[0], "xml_content": sub1_xml, "description": "子程序1", "name": "sub1"},
-        {"id": sub_ids[1], "xml_content": sub2_xml, "description": "子程序2", "name": "sub2"},
+        {"id": sub_ids[0], "xml_content": sub1_xml, "name": "sub1"},
+        {"id": sub_ids[1], "xml_content": sub2_xml, "name": "sub2"},
     ]
     client.save_program(appid=appid, xml_content=main_xml, description="描述",
                         program_name="主程序", subprograms=subprograms)

@@ -1,9 +1,7 @@
-## 0. 元件白名单（强制校验）
+## 0. 元件白名单
 
-- 业务元件**只能**使用 `element_schema.json` → `components[].xml.element` 中列出的标签
-- 并行内嵌另允许：`flow:parallelStart`、`flow:parallelEnd`
-- 禁止臆造元件（如未入库的 `util:*` / 自造 `flow:*`）
-- 保存前必须：`python scripts/validate_bpmn.py <xml>`；出现 `undefined element` 不得 save
+仅 `element_schema.json` 已定义元件 + 并行内嵌 `flow:parallelStart` / `flow:parallelEnd`。  
+save 前：`python scripts/validate_bpmn.py <xml>` 必须通过。
 
 ---
 
@@ -102,7 +100,7 @@
 
 ## 5. 标签
 
-- DCS：`#(…)` 变量：`$(…)`
+DCS `#()`、变量 `$()`；路径格式见 `node_reference.md`。
 
 ---
 

@@ -46,7 +46,7 @@
 
 2. 用户可改 name / 描述 / 合并拆分条目；name 规则同 program_name（`[A-Za-z][A-Za-z0-9_]*`）  
 3. 用户确认后，再 `get_next_id` × N  
-4. **生成主程序 XML 时**：每个 `flow:subproc` 必须带入已确认信息——属性 `name`=表中 name；`ext:data.subTitle`=表中「描述/职责」（禁止空 `subTitle`）  
+4. 写入主程序 `flow:subproc` 的规则见 **`subprocess.md` §flow:subproc**（name / subTitle / subId）  
 5. 若 Step 1.5 选**不拆分**：跳过本步，直接进入 Step 2.5  
 
 ## Step 2.5：位号与缺失信息（强制）
@@ -61,7 +61,7 @@
 |---|------|------|----------|------|------------|
 | 1 | Step3 启泵 | MANON | P0801A_MANON | 3 | |
 
-type：`1` 浮点 · `2` 整型 · `3` 数字量/开关/阀位
+type：`1` 模拟量 · `3` 数字量/开关/阀位（与 `element_schema` / `node_reference` 一致）
 
 ### 位号填写方式
 

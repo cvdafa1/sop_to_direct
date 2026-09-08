@@ -109,6 +109,8 @@
 </flow:or>
 ```
 
+（示例为是+否结构；无否则时删除 `Flow_no` 那一行 outgoing。连线细则见 `golden_xml_rules.md`。）
+
 **字段说明**：
 - `keep`：0（固定）
 - `data[]`：条件数组（通常只有 1 项）
@@ -542,10 +544,7 @@
 </flow:subproc>
 ```
 
-**字段说明**（与 Step 2.1 对齐）：
-- `name`（属性）：子程序名 = 用户确认 name（`[A-Za-z][A-Za-z0-9_]*`）
-- `subId`（属性）：`get_next_id` 返回值
-- `subTitle`：子程序描述/职责 = 用户确认描述（**禁止空**）
+**字段说明**：写入规则见 `subprocess.md` §flow:subproc（`name` / `subId` / `subTitle`）。
 
 ### 22. flow:otherMainProc（引用主程序，本 skill 不使用）
 
