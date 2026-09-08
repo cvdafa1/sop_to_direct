@@ -44,9 +44,10 @@
 | 1 | load_down | 降负荷相关操作 | 
 | 2 | stop_fan | 停风机相关操作 | 
 
-2. 用户可改 name / 描述 / 合并拆分条目；name 规则同 program_name  
+2. 用户可改 name / 描述 / 合并拆分条目；name 规则同 program_name（`[A-Za-z][A-Za-z0-9_]*`）  
 3. 用户确认后，再 `get_next_id` × N  
-4. 若 Step 1.5 选**不拆分**：跳过本步，直接进入 Step 2.5  
+4. **生成主程序 XML 时**：每个 `flow:subproc` 必须带入已确认信息——属性 `name`=表中 name；`ext:data.subTitle`=表中「描述/职责」（禁止空 `subTitle`）  
+5. 若 Step 1.5 选**不拆分**：跳过本步，直接进入 Step 2.5  
 
 ## Step 2.5：位号与缺失信息（强制）
 

@@ -519,7 +519,35 @@
 **字段说明**：
 - `customField`：自定义字段值，变量引用 `$(XXX)`
 
-### 21. flow:otherMainProc（引用主程序）
+### 21. flow:subproc（子程序，本 skill 使用）
+
+```xml
+<flow:subproc id="Activity_xxx" name="load_down" subId="<get_next_id>">
+  <ext:data><![CDATA[{
+    "subTitle": "降负荷相关操作",
+    "showDetail": true,
+    "showQueue": false,
+    "subTitle2": "",
+    "data": [],
+    "interval": 0,
+    "trends": [],
+    "resourceGroupId": "0",
+    "needPublish": true,
+    "showInReport": true,
+    "conditions": [],
+    "deviceId": ""
+  }]]></ext:data>
+  <bpmn2:incoming>Flow_in</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
+</flow:subproc>
+```
+
+**字段说明**（与 Step 2.1 对齐）：
+- `name`（属性）：子程序名 = 用户确认 name（`[A-Za-z][A-Za-z0-9_]*`）
+- `subId`（属性）：`get_next_id` 返回值
+- `subTitle`：子程序描述/职责 = 用户确认描述（**禁止空**）
+
+### 22. flow:otherMainProc（引用主程序，本 skill 不使用）
 
 ```xml
 <flow:otherMainProc id="Activity_xxx" name="BXCS_copy" subId="1343271715200010000">
@@ -544,7 +572,7 @@
 - `interval`：间隔（0=默认）
 - `trends`：趋势数据数组（通常为空）
 
-### 22. flow:request（请求）
+### 23. flow:request（请求）
 
 ```xml
 <flow:request id="Activity_xxx" name="请求">

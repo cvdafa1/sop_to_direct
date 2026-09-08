@@ -18,7 +18,7 @@
 
 - [ ] 仅使用 `element_schema.json` 已定义元件（+ parallelStart/End）
 - [ ] `assemble_full_xml` 生成；`validate_bpmn.py` 退出码 0（无 undefined element；无 shape overlap / edge through / edge cross）
-- [ ] 子程序：`subId`=真 ID；save 主 update / 子 add
+- [ ] 子程序：`subId`=真 ID；`flow:subproc.name`=确认 name；`ext:data.subTitle`=确认描述（非空）；save 主 update / 子 add
 
 ## D. 门禁
 

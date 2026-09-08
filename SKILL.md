@@ -71,7 +71,7 @@ description: >-
 ### Step 2.1 — 子程序信息（仅当 1.5 选择拆分）
 
 创建主程序成功后执行。AI 生成子程序列表（name、描述/职责、对应 SOP 步骤范围），**展示给用户并可修改**。命名：`[A-Za-z][A-Za-z0-9_]*`。  
-用户确认后：`get_next_id` × N，再进入 2.5。
+用户确认后：`get_next_id` × N，再进入 2.5。生成主 XML 时，`flow:subproc` 的 `name` / `ext:data.subTitle` **必须**分别等于已确认的 name / 描述。
 
 不拆分时**不进入本步**，创建后直接 2.5。
 

@@ -62,7 +62,7 @@
 3. [仅拆分] Step 2.1      → 展示子程序信息（AI 生成，用户可改）→ 确认
 4. [仅拆分] get_next_id×N → 真实子程序 ID（禁止捏造）
 5. Step 2.5 位号确认      → 先主后子（不拆分则仅主）
-6. 生成主程序 XML         → 拆分时 flow:subproc.subId = 预生成 ID
+6. 生成主程序 XML         → `flow:subproc`：`subId`=预生成 ID；`name`=确认 name；`subTitle`=确认描述
 7. [仅拆分] 生成各子程序 XML
 8. save_program 一次保存  → 见下方 payload
 9. 用户确认后 compile     → 用主 appid 统一编译
@@ -119,9 +119,16 @@
 
 使用 `flow:subproc`（不是 `flow:otherMainProc`）。`subId` 必须等于 `get_next_id` 返回值。
 
+**Step 2.1 确认的 name / 描述必须写入主程序中的子程序元件（禁止留空、禁止另起一名）：**
+
+| Step 2.1 字段 | 写入位置 | 规则 |
+|---------------|----------|------|
+| `name` | XML 属性 `name`，且与 save 子程序 `name` 一致 | `[A-Za-z][A-Za-z0-9_]*` |
+| `描述/职责` | `ext:data.subTitle`（必填，禁止 `""`） | 与用户确认文案一致 |
+
 ```xml
-<flow:subproc id="Activity_xxx" name="SUB_NAME" subId="<real_id>">
-  <ext:data><![CDATA[{"subTitle":"","showDetail":true,"showQueue":false,"subTitle2":"","data":[],"interval":0,"trends":[],"resourceGroupId":"0","conditions":[],"deviceId":""}]]></ext:data>
+<flow:subproc id="Activity_xxx" name="load_down" subId="<real_id>">
+  <ext:data><![CDATA[{"subTitle":"降负荷相关操作","showDetail":true,"showQueue":false,"subTitle2":"","data":[],"interval":0,"trends":[],"resourceGroupId":"0","needPublish":true,"showInReport":true,"conditions":[],"deviceId":""}]]></ext:data>
   <bpmn2:incoming>Flow_in</bpmn2:incoming>
   <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
 </flow:subproc>

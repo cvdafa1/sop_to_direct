@@ -34,6 +34,10 @@
         "element": "flow:subproc",
         "id_pattern": "Activity_{7位随机字母数字}",
         "required_attributes": ["id", "name", "subId"],
+        "attribute_notes": {
+          "name": "等于 Step 2.1 确认的子程序 name（[A-Za-z][A-Za-z0-9_]*），并与 save addProcedures.name、程序自身 name 一致",
+          "subId": "等于 get_next_id 返回值"
+        },
         "optional_attributes": [],
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json", "description": "扩展配置JSON" },
@@ -51,7 +55,11 @@
           "type": "object",
           "required": ["subTitle", "showDetail", "showQueue", "subTitle2", "data", "interval", "trends", "resourceGroupId", "needPublish", "showInReport", "conditions", "deviceId"],
           "properties": {
-            "subTitle": { "type": "string", "minLength": 1 },
+            "subTitle": {
+              "type": "string",
+              "minLength": 1,
+              "description": "子程序描述/职责；必须等于 Step 2.1 用户确认的描述，禁止空字符串"
+            },
             "showDetail": { "type": "boolean", "default": true },
             "showQueue": { "type": "boolean", "default": false },
             "subTitle2": { "type": "string", "default": "" },
