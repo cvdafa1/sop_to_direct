@@ -4,9 +4,10 @@
 
 ## A. 语义
 
-- [ ] 按 `element_split.md` 原子拆分；无漏步、无多余节点
-- [ ] guide/confirm、or/and/branch、串行/并行选择正确
-- [ ] 主/子边界与用户方案一致
+- [ ] 按 `element_split.md` **逐句**原子拆分；覆盖自检无缺口（操作/反馈/延时/分支/消息）
+- [ ] 每步有 `node_type`（∈ schema）与 `source_text`；无漏步、无把多步压成一步
+- [ ] guide/confirm/alarm、or/and/branch、串行/并行选择正确
+- [ ] 已向用户展示完整元件列表；主/子边界与用户方案一致
 
 ## B. 位号
 

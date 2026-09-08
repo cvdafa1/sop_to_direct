@@ -19,7 +19,7 @@ description: >-
 ## 准确率硬约束
 
 1. **步骤门禁**：不得跳步；create/save/compile 前须用户明确同意
-2. **原子拆分**：见 `references/element_split.md`
+2. **原子拆分（防漏元件）**：见 `element_split.md`；必须逐句拆分并做覆盖自检，禁止把多步压成一个元件
 3. **XML 唯源**：结构以 `golden_xml_rules.md` 为准；生成前 Read 它 + `xml_template.xml` + `element_schema.json`；节点示例按需 Read `node_reference.md`
 4. **元件白名单**：生成 XML 只用 `element_schema.json` 已定义元件；`validate_bpmn.py` **必须**校验，未定义元件禁止 save
 5. **连线**：只用 `LayoutGenerator.assemble_full_xml`（先 Edge 后 Shape；plain 自闭合；条件边 `是`/`否`）
@@ -49,7 +49,12 @@ description: >-
 
 ### Step 1 — 解析
 
-**Read** `element_split.md`。提取阶段/步骤/设备/参数/联锁 → IR。展示摘要，歧义先澄清。
+**Read** `element_split.md`（必须按其中「解析强制流程」执行）。
+
+1. 逐句/逐语义点拆成原子元件（操作、反馈、延时、判断、提示/确认/报警、并行均不可漏）  
+2. 产出 IR（每步含 `node_type`、`source_text`）+ **覆盖自检表**  
+3. 向用户展示**完整原子元件列表**（不得只给阶段摘要）；有缺口先补拆  
+4. 覆盖自检通过且用户无异议后再进 Step 1.5  
 
 ### Step 1.5 — 是否拆分
 
