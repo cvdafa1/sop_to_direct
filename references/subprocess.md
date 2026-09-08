@@ -40,19 +40,13 @@
 - 主程序可混合（自身步骤 + `flow:subproc`）
 - 每个程序必须完整：`flow:start` → … → `flow:end`
 
-## 子程序执行顺序
+## 时序专规（步骤编排见 `SKILL.md` 工作流）
 
-```
-1. Step 1.5               → 用户只选：拆分 / 不拆分
-2. create_program         → 主 appid（确认主程序信息后）
-3. [仅拆分] Step 2.1      → 展示子程序信息（AI 生成，用户可改）→ 确认
-4. [仅拆分] get_next_id×N → 真实子程序 ID（禁止捏造）
-5. Step 2.5 位号确认      → 先主后子（不拆分则仅主）
-6. 生成主程序 XML         → `flow:subproc`：`subId`=预生成 ID；`name`=确认 name；`subTitle`=确认描述
-7. [仅拆分] 生成各子程序 XML
-8. save_program 一次保存  → 见下方 payload
-9. Step 4.5 固定二选一后 compile → 用主 appid（见 `interaction.md`）
-```
+本文件不复述 Step 编号。专规仅三条：
+
+1. `get_next_id` 必须在 Step 2.1 用户确认之后、生成 XML 之前  
+2. 主程序 `flow:subproc` 字段映射见下方 §flow:subproc  
+3. 一次 `save_program`；payload 见下方；编译用主 appid（询问文案见 `interaction.md` Step 4.5）
 
 ## save_program payload（权威，以此为准）
 

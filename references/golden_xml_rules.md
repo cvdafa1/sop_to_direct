@@ -1,7 +1,6 @@
 ## 0. 元件白名单
 
-仅 `element_schema.json` 已定义元件 + 并行内嵌 `flow:parallelStart` / `flow:parallelEnd`。  
-save 前：`python scripts/validate_bpmn.py <xml>` 必须通过。
+定义源：`element_schema.json`（+ 并行内嵌 Start/End）。校验：`validate_bpmn.py`。本文件不列举元件名。
 
 ---
 
@@ -100,7 +99,7 @@ save 前：`python scripts/validate_bpmn.py <xml>` 必须通过。
 
 ## 5. 标签
 
-DCS `#()`、变量 `$()`；路径格式见 `node_reference.md`。
+路径与 `#()` / `$()`：**唯一来源** `node_reference.md` §一。
 
 ---
 

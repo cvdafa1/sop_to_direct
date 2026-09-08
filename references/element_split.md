@@ -62,11 +62,15 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 
 **任一类原文有而 IR 无 → 必须补拆，不得进入 Step 1.5。**
 
-向用户展示时至少给出：
+向用户展示：阶段列表 + **全部原子元件**（`node_type` + action + 位号/设备）+ 覆盖自检结果。
 
-1. 阶段列表  
-2. **按顺序列出的全部原子元件**（`node_type` + 一句话 action + 涉及位号/设备）  
-3. 覆盖自检结果（有缺口先补）
+进入 1.5 前勾选：
+
+- [ ] 已逐句拆分，非按段概括  
+- [ ] 覆盖自检无缺口  
+- [ ] 每个 step 有 `node_type` + `source_text`  
+- [ ] 无未定义元件名  
+- [ ] 已展示完整原子元件列表（不只摘要）
 
 ---
 
@@ -83,8 +87,8 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 | R7 | "XX秒未收到B则提示/报警C" | `io:dcs?` → `timer:cond` → `msg:guide`/`msg:alarm` | 超时分支 |
 | R8 | "弹窗提示XXX"（不等人） | `msg:guide` | |
 | R9 | "确认是否XXX，确认后继续" | `msg:confirm` → 下一步 | |
-| R10 | "若A则…"（无否则） | `flow:or` → **仅 yes** | 不硬凑否分支 |
-| R11 | "若A则…否则…" | `flow:or`/`and` → yes + no | **仅此时**加否 |
+| R10 | "若A则…"（无否则） | `flow:or` → IR 仅 `branch_yes` | 不硬凑否；出边 XML → `golden_xml_rules.md` §3 |
+| R11 | "若A则…否则…" | `flow:or`/`and` → yes + no | 仅此时 IR 填 `branch_no`；出边 XML → 同上 |
 | R12 | "分别判断三种情况/哪台运行" | `flow:branch`（N 支） | 多选一 |
 | R13 | "全部完成后提示" | 末端 `msg:guide` | |
 | R14 | "报警XXX"（不暂停） | `msg:alarm` | 与 guide 区分 |
@@ -168,16 +172,10 @@ flow:or(YL==0)
 要求：
 
 - 每个 step 必须有 `node_type`（∈ schema）与 `source_text`（可追溯）  
-- 分支：`branch_yes` 必填；`branch_no` **仅当原文有否则时填写**（对齐 R10/R11 / golden）  
+- 分支：`branch_yes` 必填；`branch_no` 仅当原文有否则时填写（见 R10/R11）；出边 XML **唯一来源** `golden_xml_rules.md` §3  
 - 并行：父 step `node_type=flow:parallel1`，子 steps 为各分支序列  
 - 单程序：步骤全在 `main_program.steps`；`subprograms` 为空  
 
 ---
 
-## 5. 解析完成门禁
-
-- [ ] 已逐句拆分，非按段概括  
-- [ ] 覆盖自检无缺口（操作/反馈/延时/分支/消息均已映射）  
-- [ ] 每个 step 有 `node_type` + `source_text`  
-- [ ] 无未定义元件名  
-- [ ] 已向用户展示**完整原子元件列表**（不只摘要数字）  
+（解析完成门禁已并入 §0.3，勿在他处复述。）

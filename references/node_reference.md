@@ -1,7 +1,7 @@
 # Direct 平台节点参考
 
 按节点类型提供 Process 片段与关键字段。  
-**连线 / Diagram 顺序 / ID → `golden_xml_rules.md`；ext:data 完整 schema → `element_schema.json`。**
+**单源原则**：连线/Diagram/布局 → `golden_xml_rules.md`；ext:data schema → `element_schema.json`；子程序元件 → `subprocess.md`；位号路径/type → 本文 §一/§二。
 
 ---
 
@@ -109,15 +109,14 @@
 </flow:or>
 ```
 
-（示例为是+否结构；无否则时删除 `Flow_no` 那一行 outgoing。连线细则见 `golden_xml_rules.md`。）
+（示例为是+否结构。出边条数与 name/situation：**唯一来源** `golden_xml_rules.md` §3。）
 
 **字段说明**：
 - `keep`：0（固定）
 - `data[]`：条件数组（通常只有 1 项）
   - `judge`：`"=="`, `">="`, `"<="`, `">"`, `"<"`, `"!="`
   - `targetValue`：**字符串类型**
-  - `type`：3=数字量判断, 1=模拟量判断
-- 出边：**默认 1 条** `{"situation":"yes"}`；仅 SOP 明确「否则/不成立」时再加 `{"situation":"no"}`
+  - `type`：见上文「二、type 字段值」
 
 ### 5. flow:and（条件与，多条件同时判断）
 
@@ -138,7 +137,7 @@
 </flow:and>
 ```
 
-**与 flow:or 区别**：多条件 `and` 关系；出边同样默认仅 yes，明确否则时再加 no。
+**与 flow:or 区别**：多条件 `and` 关系。出边规则见 `golden_xml_rules.md` §3。
 
 ### 6. flow:branch（多选一分支）
 
@@ -521,57 +520,12 @@
 **字段说明**：
 - `customField`：自定义字段值，变量引用 `$(XXX)`
 
-### 21. flow:subproc（子程序，本 skill 使用）
+### 21. flow:subproc / flow:otherMainProc
 
-```xml
-<flow:subproc id="Activity_xxx" name="load_down" subId="<get_next_id>">
-  <ext:data><![CDATA[{
-    "subTitle": "降负荷相关操作",
-    "showDetail": true,
-    "showQueue": false,
-    "subTitle2": "",
-    "data": [],
-    "interval": 0,
-    "trends": [],
-    "resourceGroupId": "0",
-    "needPublish": true,
-    "showInReport": true,
-    "conditions": [],
-    "deviceId": ""
-  }]]></ext:data>
-  <bpmn2:incoming>Flow_in</bpmn2:incoming>
-  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
-</flow:subproc>
-```
+- **本 skill 使用** `flow:subproc`：XML 与 name/`subId`/`subTitle` 写入规则的**唯一来源** → `subprocess.md` §flow:subproc  
+- `flow:otherMainProc`：本 skill **不使用**（勿生成）
 
-**字段说明**：写入规则见 `subprocess.md` §flow:subproc（`name` / `subId` / `subTitle`）。
-
-### 22. flow:otherMainProc（引用主程序，本 skill 不使用）
-
-```xml
-<flow:otherMainProc id="Activity_xxx" name="BXCS_copy" subId="1343271715200010000">
-  <ext:data><![CDATA[{
-    "subTitle": "",
-    "subTitle2": "",
-    "showDetail": true,
-    "mainProcedure": "BXCS[V1.1]",
-    "showQueue": false,
-    "interval": 0,
-    "trends": []
-  }]]></ext:data>
-  <bpmn2:incoming>Flow_in</bpmn2:incoming>
-  <bpmn2:outgoing>Flow_out</bpmn2:outgoing>
-</flow:otherMainProc>
-```
-
-**字段说明**：
-- `subId`（属性）：子程序ID
-- `mainProcedure`：主程序名称[版本]，如 `"BXCS[V1.1]"`
-- `showQueue`：是否显示队列
-- `interval`：间隔（0=默认）
-- `trends`：趋势数据数组（通常为空）
-
-### 23. flow:request（请求）
+### 22. flow:request（请求）
 
 ```xml
 <flow:request id="Activity_xxx" name="请求">

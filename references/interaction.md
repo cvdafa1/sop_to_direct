@@ -61,7 +61,7 @@
 |---|------|------|----------|------|------------|
 | 1 | Step3 启泵 | MANON | P0801A_MANON | 3 | |
 
-type：`1` 模拟量 · `3` 数字量/开关/阀位（与 `element_schema` / `node_reference` 一致）
+type：取值见 `node_reference.md` §二（唯一来源：`1` / `3`）
 
 ### 位号填写方式
 
@@ -69,7 +69,7 @@ type：`1` 模拟量 · `3` 数字量/开关/阀位（与 `element_schema` / `no
 2. `get_tags` / `search_tags_by_name` 列候选供选  
 3. 从 SOP 原文再核对  
 
-写入 XML 时 DCS 必须 `#()`；变量用 `$()`。
+写入 XML 时的 `#()` / `$()` 格式：**唯一来源** `node_reference.md` §一。
 
 ### 其他缺失项
 

@@ -89,18 +89,21 @@ description: >-
 
 程序名、appid、节点/连线数、编译结果、补充项。
 
-## 参考索引（职责唯一）
+## 参考索引（主题 → 唯一来源）
 
-| 文件 | 职责 |
-|------|------|
-| `element_split.md` | SOP→IR 原子拆分 |
-| `subprocess.md` | 拆分评估 + save payload + `flow:subproc` |
-| `interaction.md` | 用户确认文案（1.5/2/2.1/2.5/4.5） |
-| `golden_xml_rules.md` | XML / 连线 / 布局通则 |
-| `xml_template.xml` | 最小骨架示例 |
-| `element_schema.json` | 元件与 ext:data schema |
-| `node_reference.md` | 节点 XML 示例与位号路径格式 |
-| `accuracy_checklist.md` | 保存前勾选（指向上游，不复述细则） |
-| `layout_generator.py` | 布局与组装实现 |
-| `api_reference.py` | API |
-| `validate_bpmn.py` | 结构 + 几何校验 |
+| 主题 | 唯一来源 |
+|------|----------|
+| 任务编排 / 门禁 | `SKILL.md` |
+| SOP→IR 原子拆分 | `element_split.md` |
+| 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
+| 用户确认文案（1.5/2/2.1/2.5/4.5） | `interaction.md` |
+| XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |
+| 最小骨架示例 | `xml_template.xml` |
+| 元件与 ext:data schema | `element_schema.json` |
+| 节点示例 / 位号路径 / type | `node_reference.md` |
+| 保存前勾选 | `accuracy_checklist.md`（只勾选，不写细则） |
+| 布局组装实现 | `layout_generator.py` |
+| API | `api_reference.py` |
+| 结构+几何校验 | `validate_bpmn.py` |
+
+**原则**：细则只写在唯一来源；其他文件最多一行指针。禁止在第二处再写完整规则或第二份 XML 示例。
