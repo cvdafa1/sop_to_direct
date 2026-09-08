@@ -24,49 +24,47 @@ description: >-
 3. **XML**：Agent 只产 IR（`ir_schema.md`）；禁止手写节点/连线/Diagram XML。编译：`python scripts/ir_to_xml.py <ir.json> -o <out.xml>`
 4. **白名单 / 校验**：仅 schema 元件；save 前 `validate_bpmn.py` 必须通过
 5. **连线与布局**：仅由 `ir_to_xml` → `LayoutGenerator.assemble_full_xml`（规则见 golden）
-6. **位号**：确认流程见 `interaction.md`；格式见 `node_reference.md`
+6. **位号**：确认流程见 `interaction.md` Step 2.5；格式见 `node_reference.md`
 7. **子程序**：见 `subprocess.md`（主 update / 子 add；`subId`=`get_next_id`）
-8. **禁止** `deploy_program`；编译询问见 `interaction.md` Step 4.5（固定二选一）
+8. **禁止** `deploy_program`；编译询问见 `interaction.md` Step 3.5（固定二选一）
 9. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
 10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过
+11. **确认轮次**：仅 1.5 / 2 / 2.5 / 3.5 四轮（见 `interaction.md`）；禁止再拆多轮
 
 ## 工作流
 
 ```
-1 解析 → 1.5 是否拆分 → 2 创建主程序 → [拆分则 2.1 确认子程序信息] → 2.5 位号确认
-  → 3 生成 XML → 3.7 确认流程图 → 4 保存 → 4.5 询问编译 → 5 编译 → 6 报告
+1 解析 → 1.5 拆分方案（拆/不拆+子程序表）→ 2 创建主程序（若拆则随后 get_next_id）
+  → 2.5 位号确认 → 3 生成 XML → 3.5 确认并保存（成功后编译二选一）→ [5 编译] → 6 报告
 ```
 
 | 未完成 | 不得进入 |
 |--------|----------|
 | Step 1 | 1.5 |
-| 1.5 用户选择拆/不拆 | 2 |
-| 2 用户同意创建 | 2.1 或 2.5 |
-| 2.1（仅拆分）子程序信息确认 | 2.5 |
+| 1.5 用户确认拆分方案 | 2 |
+| 2 用户同意创建 | 2.5（若拆分：create 后先 `get_next_id` 再 2.5） |
 | 2.5 位号确认 | 3 |
-| 3 + 3.7 确认图 | 4 |
-| 4 保存成功 | 4.5 |
-| 4.5 同意编译 | 5 |
+| 3 validate 通过 | 3.5 |
+| 3.5 同意保存 | save；保存成功后才能选编译 |
+| 3.5 选「确认编译」 | 5 |
 
 ### Step 1 — 解析
 
-**Read** `element_split.md` 并执行其强制流程与覆盖自检；展示完整元件列表后再进 1.5。
+**Read** `element_split.md` 并执行其强制流程与覆盖自检；展示完整元件列表 / IR 后再进 1.5（本步不单独要「同意解析」）。
 
-### Step 1.5 — 是否拆分
+### Step 1.5 — 拆分方案
 
-**Read** `subprocess.md`（评估）+ `interaction.md`（只问拆/不拆）。不拆分则跳过 2.1。
+**Read** `subprocess.md`（评估）+ `interaction.md` Step 1.5。  
+一次确认：拆/不拆 +（若拆）子程序 name/描述表。
 
 ### Step 2 — 创建主程序
 
-**Read** `interaction.md` Step 2；同意后 `create_program`。
-
-### Step 2.1 — 子程序信息（仅拆分）
-
-**Read** `interaction.md` Step 2.1 + `subprocess.md`（name/subTitle/`subId` 写入规则）。创建成功后执行。
+**Read** `interaction.md` Step 2；同意后 `create_program`。  
+若 1.5 为拆分：创建成功后立即 `get_next_id` × N 并写入 IR（`subprocess.md`），不再另开确认。
 
 ### Step 2.5 — 位号
 
-**Read** `interaction.md` Step 2.5；拆分时先主后子。
+**Read** `interaction.md` Step 2.5；拆分时先主后子。单独一轮，不与其它合并。
 
 ### Step 3 — 生成 XML（确定性编译）
 
@@ -80,17 +78,14 @@ python scripts/validate_bpmn.py <out.xml>
 
 必须退出码 0。细则：`element_schema.json` / `golden_xml_rules.md`（脚本侧）；位号示例按需 `node_reference.md`。
 
-### Step 3.7 — 确认图
+### Step 3.5 — 确认并保存 + 编译选择
 
-展示节点/连线摘要；未确认不得 save。
+**Read** `interaction.md` Step 3.5。  
+展示节点/连线摘要 → 同意后 `save_program` → 成功后编译二选一。未确认不得 save；未选编译选项不得 compile。
 
-### Step 4 — 保存
+### Step 5 — 编译（若用户选确认编译）
 
-清单通过后一次 `save_program`（子程序见 `subprocess.md`）。
-
-### Step 4.5 / 5 — 编译
-
-**Read** `interaction.md` Step 4.5。失败：位号再问用户；格式可自修；同 appid ≤3 次；禁止新建、禁止改拓扑。
+失败：位号再问用户；格式可自修；同 appid ≤3 次；禁止新建、禁止改拓扑。
 
 ### Step 6 — 报告
 
@@ -104,7 +99,7 @@ python scripts/validate_bpmn.py <out.xml>
 | SOP→IR 原子拆分 | `element_split.md` |
 | IR JSON 契约 | `ir_schema.md` |
 | 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
-| 用户确认文案（1.5/2/2.1/2.5/4.5） | `interaction.md` |
+| 用户确认文案（1.5/2/2.5/3.5） | `interaction.md` |
 | XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |
 | 元件与 ext:data schema | `element_schema.json` |
 | 节点示例 / 位号路径 / type | `node_reference.md` |

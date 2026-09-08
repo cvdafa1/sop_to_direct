@@ -30,7 +30,7 @@
 ## 拆分决策与交互时机
 
 评估后倾向：独立子系统≥2 且步骤>10 → 推荐拆分；仅 1 个子系统或步骤≤10 → 推荐不拆分。  
-**交互文案与确认表见 `interaction.md`（Step 1.5 / 2.1）**；本文件只规定评估、拆分原则、save 与 `flow:subproc`。
+**交互文案与确认表见 `interaction.md`（Step 1.5）**；本文件只规定评估、拆分原则、save 与 `flow:subproc`。
 
 ## 拆分原则
 
@@ -44,9 +44,9 @@
 
 本文件不复述 Step 编号。专规仅三条：
 
-1. `get_next_id` 必须在 Step 2.1 用户确认之后、生成 XML 之前  
+1. `get_next_id` 必须在 Step 1.5 用户确认拆分方案、且 Step 2 `create_program` 成功之后、生成 XML 之前  
 2. 主程序 `flow:subproc` 字段映射见下方 §flow:subproc  
-3. 一次 `save_program`；payload 见下方；编译用主 appid（询问文案见 `interaction.md` Step 4.5）
+3. 一次 `save_program`；payload 见下方；编译用主 appid（询问文案见 `interaction.md` Step 3.5）
 
 ## save_program payload（权威，以此为准）
 
@@ -99,9 +99,9 @@
 
 使用 `flow:subproc`（不是 `flow:otherMainProc`）。`subId` 必须等于 `get_next_id` 返回值。
 
-**Step 2.1 确认的 name / 描述必须写入主程序中的子程序元件（禁止留空、禁止另起一名）：**
+**Step 1.5 确认的 name / 描述必须写入主程序中的子程序元件（禁止留空、禁止另起一名）：**
 
-| Step 2.1 字段 | 写入位置 | 规则 |
+| Step 1.5 字段 | 写入位置 | 规则 |
 |---------------|----------|------|
 | `name` | XML 属性 `name`，且与 save 子程序 `name` 一致 | `[A-Za-z][A-Za-z0-9_]*` |
 | `描述/职责` | `ext:data.subTitle`（必填，禁止 `""`） | 与用户确认文案一致 |
