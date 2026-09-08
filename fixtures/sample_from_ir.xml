@@ -1,0 +1,152 @@
+<bpmn2:process id="Process_1" isExecutable="true">
+<flow:start id="Event_iK2ZWeq">
+  <bpmn2:outgoing>Flow_YngFb51</bpmn2:outgoing>
+</flow:start>
+<msg:guide id="Activity_hFWCEPy" name="提示">
+  <ext:data><![CDATA[{"subTitle":"","display":"yes","showDetail":true,"isMute":false,"isPersistent":false,"needPhoto":false,"needPublish":true,"needHandWritting":false,"resourceGroupId":"0","data":[],"message":"进入泵阀联调"}]]></ext:data>
+  <bpmn2:incoming>Flow_YngFb51</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_CrUZoL8</bpmn2:outgoing>
+</msg:guide>
+<msg:confirm id="Activity_yBMWXaS" name="确认">
+  <ext:data><![CDATA[{"subTitle":"","display":"yes","version":"1","showDetail":true,"isMute":false,"needPhoto":false,"needPublish":true,"needHandWritting":false,"partialConfirmLevel":0,"messageLevel":0,"resourceGroupId":"0","set":[],"data":[],"select":[],"labelIds":[],"message":"确认开始联调"}]]></ext:data>
+  <bpmn2:incoming>Flow_CrUZoL8</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_Ia84yRn</bpmn2:outgoing>
+</msg:confirm>
+<io:dcs id="Activity_g5ubbbP" name="开泵">
+  <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","checkData":[],"errorHandler":{"handler":"throw"},"data":[{"name":"#(pidtest232.MVH)","targetValue":"1","row":0,"type":3,"lower":0,"tolerance":"0","upper":1000,"deviation":1}]}]]></ext:data>
+  <bpmn2:incoming>Flow_Ia84yRn</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_8FJowoR</bpmn2:outgoing>
+</io:dcs>
+<flow:or id="Activity_BUbHoWC" name="运行反馈" tabKey="basic">
+  <ext:data><![CDATA[{"showDetail":true,"keep":0,"data":[{"name":"#(pidtest232.MVH)","judge":"==","targetValue":"1","row":0,"type":3}]}]]></ext:data>
+  <bpmn2:incoming>Flow_8FJowoR</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_A16J7Pg</bpmn2:outgoing>
+  <bpmn2:outgoing>Flow_v5UTG79</bpmn2:outgoing>
+</flow:or>
+<timer:wait id="Activity_oWD8s7b" name="延时">
+  <ext:data><![CDATA[{"subTitle":"","version":1,"showDetail":true,"type":"specifiedTime","specifiedTime":"00:00:05","integerTime":0}]]></ext:data>
+  <bpmn2:incoming>Flow_A16J7Pg</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_sL4F28G</bpmn2:outgoing>
+</timer:wait>
+<msg:alarm id="Activity_lOU3shV" name="报警" tabKey="basic">
+  <ext:data><![CDATA[{"subTitle":"","showDetail":true,"isMute":false,"isPersistent":false,"display":"yes","data":[],"resourceGroupId":"0","needPhoto":false,"needHandWritting":false,"message":"泵反馈未到位"}]]></ext:data>
+  <bpmn2:incoming>Flow_v5UTG79</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_zL2cEpV</bpmn2:outgoing>
+</msg:alarm>
+<msg:guide id="Activity_BG16Qmt" name="分支汇合">
+  <ext:data><![CDATA[{"subTitle":"","display":"yes","showDetail":true,"isMute":false,"isPersistent":false,"needPhoto":false,"needPublish":true,"needHandWritting":false,"resourceGroupId":"0","data":[],"message":"汇合"}]]></ext:data>
+  <bpmn2:incoming>Flow_sL4F28G</bpmn2:incoming>
+  <bpmn2:incoming>Flow_zL2cEpV</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_4SXRVxf</bpmn2:outgoing>
+</msg:guide>
+<msg:guide id="Activity_ZzAQlxJ" name="结束提示">
+  <ext:data><![CDATA[{"subTitle":"","display":"yes","showDetail":true,"isMute":false,"isPersistent":false,"needPhoto":false,"needPublish":true,"needHandWritting":false,"resourceGroupId":"0","data":[],"message":"联调结束"}]]></ext:data>
+  <bpmn2:incoming>Flow_4SXRVxf</bpmn2:incoming>
+  <bpmn2:outgoing>Flow_1zxFUbE</bpmn2:outgoing>
+</msg:guide>
+<flow:end id="Event_CQGgXkH">
+  <bpmn2:incoming>Flow_1zxFUbE</bpmn2:incoming>
+</flow:end>
+  <bpmn2:sequenceFlow id="Flow_YngFb51" sourceRef="Event_iK2ZWeq" targetRef="Activity_hFWCEPy" />
+  <bpmn2:sequenceFlow id="Flow_CrUZoL8" sourceRef="Activity_hFWCEPy" targetRef="Activity_yBMWXaS" />
+  <bpmn2:sequenceFlow id="Flow_Ia84yRn" sourceRef="Activity_yBMWXaS" targetRef="Activity_g5ubbbP" />
+  <bpmn2:sequenceFlow id="Flow_8FJowoR" sourceRef="Activity_g5ubbbP" targetRef="Activity_BUbHoWC" />
+  <bpmn2:sequenceFlow id="Flow_A16J7Pg" name="是" sourceRef="Activity_BUbHoWC" targetRef="Activity_oWD8s7b">
+    <ext:data><![CDATA[{"situation":"yes"}]]></ext:data>
+  </bpmn2:sequenceFlow>
+  <bpmn2:sequenceFlow id="Flow_v5UTG79" name="否" sourceRef="Activity_BUbHoWC" targetRef="Activity_lOU3shV">
+    <ext:data><![CDATA[{"situation":"no"}]]></ext:data>
+  </bpmn2:sequenceFlow>
+  <bpmn2:sequenceFlow id="Flow_sL4F28G" sourceRef="Activity_oWD8s7b" targetRef="Activity_BG16Qmt" />
+  <bpmn2:sequenceFlow id="Flow_zL2cEpV" sourceRef="Activity_lOU3shV" targetRef="Activity_BG16Qmt" />
+  <bpmn2:sequenceFlow id="Flow_4SXRVxf" sourceRef="Activity_BG16Qmt" targetRef="Activity_ZzAQlxJ" />
+  <bpmn2:sequenceFlow id="Flow_1zxFUbE" sourceRef="Activity_ZzAQlxJ" targetRef="Event_CQGgXkH" />
+</bpmn2:process>
+<bpmndi:BPMNDiagram id="BPMNDiagram_1">
+  <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+    <bpmndi:BPMNEdge id="Flow_YngFb51_di" bpmnElement="Flow_YngFb51">
+      <di:waypoint x="500" y="114" />
+      <di:waypoint x="500" y="214" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_CrUZoL8_di" bpmnElement="Flow_CrUZoL8">
+      <di:waypoint x="500" y="274" />
+      <di:waypoint x="500" y="374" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_Ia84yRn_di" bpmnElement="Flow_Ia84yRn">
+      <di:waypoint x="500" y="434" />
+      <di:waypoint x="500" y="534" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_8FJowoR_di" bpmnElement="Flow_8FJowoR">
+      <di:waypoint x="500" y="594" />
+      <di:waypoint x="500" y="694" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_A16J7Pg_di" bpmnElement="Flow_A16J7Pg">
+      <di:waypoint x="500" y="754" />
+      <di:waypoint x="500" y="804" />
+      <di:waypoint x="100" y="804" />
+      <di:waypoint x="100" y="854" />
+      <bpmndi:BPMNLabel>
+        <dc:Bounds x="440" y="739" width="120" height="12" />
+      </bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_v5UTG79_di" bpmnElement="Flow_v5UTG79">
+      <di:waypoint x="500" y="754" />
+      <di:waypoint x="500" y="822" />
+      <di:waypoint x="700" y="822" />
+      <di:waypoint x="700" y="854" />
+      <bpmndi:BPMNLabel>
+        <dc:Bounds x="440" y="739" width="120" height="12" />
+      </bpmndi:BPMNLabel>
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_sL4F28G_di" bpmnElement="Flow_sL4F28G">
+      <di:waypoint x="100" y="914" />
+      <di:waypoint x="100" y="964" />
+      <di:waypoint x="500" y="964" />
+      <di:waypoint x="500" y="1014" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_zL2cEpV_di" bpmnElement="Flow_zL2cEpV">
+      <di:waypoint x="700" y="914" />
+      <di:waypoint x="700" y="982" />
+      <di:waypoint x="500" y="982" />
+      <di:waypoint x="500" y="1014" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_4SXRVxf_di" bpmnElement="Flow_4SXRVxf">
+      <di:waypoint x="500" y="1074" />
+      <di:waypoint x="500" y="1174" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNEdge id="Flow_1zxFUbE_di" bpmnElement="Flow_1zxFUbE">
+      <di:waypoint x="500" y="1234" />
+      <di:waypoint x="500" y="1334" />
+    </bpmndi:BPMNEdge>
+    <bpmndi:BPMNShape id="Event_iK2ZWeq_di" bpmnElement="Event_iK2ZWeq">
+      <dc:Bounds x="473" y="60" width="54" height="54" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_hFWCEPy_di" bpmnElement="Activity_hFWCEPy">
+      <dc:Bounds x="400" y="214" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_yBMWXaS_di" bpmnElement="Activity_yBMWXaS">
+      <dc:Bounds x="400" y="374" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_g5ubbbP_di" bpmnElement="Activity_g5ubbbP">
+      <dc:Bounds x="400" y="534" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_BUbHoWC_di" bpmnElement="Activity_BUbHoWC">
+      <dc:Bounds x="400" y="694" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_oWD8s7b_di" bpmnElement="Activity_oWD8s7b">
+      <dc:Bounds x="0" y="854" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_lOU3shV_di" bpmnElement="Activity_lOU3shV">
+      <dc:Bounds x="600" y="854" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_BG16Qmt_di" bpmnElement="Activity_BG16Qmt">
+      <dc:Bounds x="400" y="1014" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Activity_ZzAQlxJ_di" bpmnElement="Activity_ZzAQlxJ">
+      <dc:Bounds x="400" y="1174" width="200" height="60" />
+    </bpmndi:BPMNShape>
+    <bpmndi:BPMNShape id="Event_CQGgXkH_di" bpmnElement="Event_CQGgXkH">
+      <dc:Bounds x="473" y="1334" width="54" height="54" />
+    </bpmndi:BPMNShape>
+  </bpmndi:BPMNPlane>
+</bpmndi:BPMNDiagram>

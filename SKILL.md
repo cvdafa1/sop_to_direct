@@ -21,9 +21,9 @@ description: >-
 
 1. **步骤门禁**：不得跳步；create/save/compile 前须用户明确同意
 2. **原子拆分**：按 `element_split.md` 执行
-3. **XML**：按 `golden_xml_rules.md`；生成前 Read 它 + `xml_template.xml` + `element_schema.json`；示例按需 `node_reference.md`
+3. **XML**：Agent 只产 IR（`ir_schema.md`）；禁止手写节点/连线/Diagram XML。编译：`python scripts/ir_to_xml.py <ir.json> -o <out.xml>`
 4. **白名单 / 校验**：仅 schema 元件；save 前 `validate_bpmn.py` 必须通过
-5. **连线与布局**：仅 `LayoutGenerator.assemble_full_xml`（规则见 golden）
+5. **连线与布局**：仅由 `ir_to_xml` → `LayoutGenerator.assemble_full_xml`（规则见 golden）
 6. **位号**：确认流程见 `interaction.md`；格式见 `node_reference.md`
 7. **子程序**：见 `subprocess.md`（主 update / 子 add；`subId`=`get_next_id`）
 8. **禁止** `deploy_program`；编译询问见 `interaction.md` Step 4.5（固定二选一）
@@ -68,10 +68,17 @@ description: >-
 
 **Read** `interaction.md` Step 2.5；拆分时先主后子。
 
-### Step 3 — 生成 XML
+### Step 3 — 生成 XML（确定性编译）
 
-**Read** `golden_xml_rules.md` + `xml_template.xml` + `element_schema.json`（按需 `node_reference.md`）。  
-`layout_*` → `assemble_full_xml` → `python scripts/validate_bpmn.py <xml...>` 必须通过。
+**Read** `ir_schema.md`（IR 已在 Step 1 / 2.5 写好位号）。  
+禁止手搓 XML。执行：
+
+```bash
+python scripts/ir_to_xml.py <ir.json> -o <out.xml>
+python scripts/validate_bpmn.py <out.xml>
+```
+
+必须退出码 0。细则：`element_schema.json` / `golden_xml_rules.md`（脚本侧）；位号示例按需 `node_reference.md`。
 
 ### Step 3.7 — 确认图
 
@@ -95,13 +102,14 @@ description: >-
 |------|----------|
 | 任务编排 / 门禁 | `SKILL.md` |
 | SOP→IR 原子拆分 | `element_split.md` |
+| IR JSON 契约 | `ir_schema.md` |
 | 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
 | 用户确认文案（1.5/2/2.1/2.5/4.5） | `interaction.md` |
 | XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |
-| 最小骨架示例 | `xml_template.xml` |
 | 元件与 ext:data schema | `element_schema.json` |
 | 节点示例 / 位号路径 / type | `node_reference.md` |
 | 保存前勾选 | `accuracy_checklist.md`（只勾选，不写细则） |
+| IR→XML 编译 | `ir_to_xml.py`（fixture：`fixtures/sample_ir.json`） |
 | 布局组装实现 | `layout_generator.py` |
 | API | `api_reference.py` |
 | 结构+几何校验 | `validate_bpmn.py` |

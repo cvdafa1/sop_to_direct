@@ -11,11 +11,11 @@ flow:parallelStart / flow:parallelEnd）。未定义元件一律报错。
 
 from __future__ import annotations
 
-import json
 import re
 import sys
-from functools import lru_cache
 from pathlib import Path
+
+from schema_loader import components_by_element
 
 
 FORBIDDEN_PATTERNS = [
@@ -28,20 +28,8 @@ FORBIDDEN_PATTERNS = [
 NESTED_ALLOWED = frozenset({"flow:parallelStart", "flow:parallelEnd"})
 
 
-@lru_cache(maxsize=1)
 def _load_allowed_elements() -> frozenset[str]:
-    schema_path = (
-        Path(__file__).resolve().parent.parent / "references" / "element_schema.json"
-    )
-    data = json.loads(schema_path.read_text(encoding="utf-8"))
-    elems = set()
-    for comp in data.get("components", []):
-        xml = comp.get("xml") or {}
-        el = xml.get("element")
-        if el:
-            elems.add(el)
-    elems |= NESTED_ALLOWED
-    return frozenset(elems)
+    return frozenset(components_by_element()) | NESTED_ALLOWED
 
 
 def _check_undefined_elements(text: str, allowed: frozenset[str]) -> list[str]:
@@ -93,8 +81,7 @@ def _check_file(path: Path) -> list[str]:
     # 强制：仅允许 schema 已定义元件
     errors.extend(_check_undefined_elements(text, allowed))
 
-    # PLACEHOLDER is OK only in the skill template file
-    if "PLACEHOLDER" in text and path.name != "xml_template.xml":
+    if "PLACEHOLDER" in text:
         errors.append("PLACEHOLDER leftover in generated XML")
 
     # Plane 内先全部 Edge，再全部 Shape（见 golden_xml_rules）
@@ -127,9 +114,6 @@ def _check_file(path: Path) -> list[str]:
             continue
         # 含点且像设备路径时提醒
         if "." in name and re.search(r"[A-Za-z]", name):
-            # template uses #(PLACEHOLDER.TAG_NAME) which is fine
-            if "PLACEHOLDER" in name:
-                continue
             errors.append(f"tag may need #() wrap: {name}")
 
     # ID 匹配：sequenceFlow id vs Edge bpmnElement

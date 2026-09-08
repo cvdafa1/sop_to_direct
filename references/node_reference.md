@@ -630,7 +630,7 @@
 | 主题 | 权威文件 |
 |------|----------|
 | 连线 / Edge-Shape 顺序 / ID | `golden_xml_rules.md` |
-| 最小 XML 骨架 | `xml_template.xml` |
+| IR / 编译入口 | `ir_schema.md` / `ir_to_xml.py` |
 | ext:data schema | `element_schema.json` |
 | SOP→节点选择 | `element_split.md` |
 | 布局坐标 | `scripts/layout_generator.py` |

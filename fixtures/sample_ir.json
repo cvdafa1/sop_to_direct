@@ -1,0 +1,96 @@
+{
+  "process_id": "Process_1",
+  "nodes": [
+    { "id": "Event_iK2ZWeq", "type": "flow:start" },
+    {
+      "id": "Activity_hFWCEPy",
+      "type": "msg:guide",
+      "name": "提示",
+      "ext": { "message": "进入泵阀联调" }
+    },
+    {
+      "id": "Activity_yBMWXaS",
+      "type": "msg:confirm",
+      "name": "确认",
+      "ext": { "message": "确认开始联调" }
+    },
+    {
+      "id": "Activity_g5ubbbP",
+      "type": "io:dcs",
+      "name": "开泵",
+      "ext": {
+        "data": [
+          {
+            "name": "#(pidtest232.MVH)",
+            "targetValue": "1",
+            "row": 0,
+            "type": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "Activity_BUbHoWC",
+      "type": "flow:or",
+      "name": "运行反馈",
+      "ext": {
+        "data": [
+          {
+            "name": "#(pidtest232.MVH)",
+            "judge": "==",
+            "targetValue": "1",
+            "row": 0,
+            "type": 3
+          }
+        ]
+      }
+    },
+    {
+      "id": "Activity_oWD8s7b",
+      "type": "timer:wait",
+      "name": "延时",
+      "ext": { "specifiedTime": "00:00:05", "integerTime": 0 }
+    },
+    {
+      "id": "Activity_lOU3shV",
+      "type": "msg:alarm",
+      "name": "报警",
+      "ext": { "message": "泵反馈未到位" }
+    },
+    {
+      "id": "Activity_BG16Qmt",
+      "type": "msg:guide",
+      "name": "分支汇合",
+      "ext": { "message": "汇合" }
+    },
+    {
+      "id": "Activity_ZzAQlxJ",
+      "type": "msg:guide",
+      "name": "结束提示",
+      "ext": { "message": "联调结束" }
+    },
+    { "id": "Event_CQGgXkH", "type": "flow:end" }
+  ],
+  "flows": [
+    { "id": "Flow_YngFb51", "source": "Event_iK2ZWeq", "target": "Activity_hFWCEPy" },
+    { "id": "Flow_CrUZoL8", "source": "Activity_hFWCEPy", "target": "Activity_yBMWXaS" },
+    { "id": "Flow_Ia84yRn", "source": "Activity_yBMWXaS", "target": "Activity_g5ubbbP" },
+    { "id": "Flow_8FJowoR", "source": "Activity_g5ubbbP", "target": "Activity_BUbHoWC" },
+    {
+      "id": "Flow_A16J7Pg",
+      "source": "Activity_BUbHoWC",
+      "target": "Activity_oWD8s7b",
+      "situation": "yes"
+    },
+    {
+      "id": "Flow_v5UTG79",
+      "source": "Activity_BUbHoWC",
+      "target": "Activity_lOU3shV",
+      "situation": "no"
+    },
+    { "id": "Flow_sL4F28G", "source": "Activity_oWD8s7b", "target": "Activity_BG16Qmt" },
+    { "id": "Flow_zL2cEpV", "source": "Activity_lOU3shV", "target": "Activity_BG16Qmt" },
+    { "id": "Flow_4SXRVxf", "source": "Activity_BG16Qmt", "target": "Activity_ZzAQlxJ" },
+    { "id": "Flow_1zxFUbE", "source": "Activity_ZzAQlxJ", "target": "Event_CQGgXkH" }
+  ]
+}

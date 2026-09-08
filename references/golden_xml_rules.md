@@ -105,12 +105,11 @@
 
 ## 6. 强制生成
 
-```python
-from layout_generator import LayoutGenerator
-gen = LayoutGenerator()
-# add_node / add_flow / layout_vertical | layout_branch_columns | layout_parallel*
-xml = gen.assemble_full_xml(node_xml_by_id)
-# python scripts/validate_bpmn.py out.xml  # 必须通过（含几何）
+Skill 路径：IR → `python scripts/ir_to_xml.py ir.json -o out.xml`（内部调用 `LayoutGenerator.assemble_full_xml`）。
+
+```bash
+python scripts/ir_to_xml.py ir.json -o out.xml
+python scripts/validate_bpmn.py out.xml  # 必须通过（含几何）
 ```
 
-禁止手拼 sequenceFlow / Edge / Diagram。
+禁止 Agent 手拼节点 / sequenceFlow / Edge / Diagram。IR 契约见 `ir_schema.md`。
