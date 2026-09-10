@@ -123,7 +123,7 @@ def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:
 
 
 def _auto_layout(gen: LayoutGenerator, meta: dict[str, dict[str, Any]]) -> None:
-    """Linear spine + one-level yes/no branch_columns."""
+    """Linear spine; yes-only decisions stay on spine; yes+no uses branch_columns."""
     outgoing: dict[str, list] = {}
     incoming: dict[str, list] = {}
     for flow in gen.flows:

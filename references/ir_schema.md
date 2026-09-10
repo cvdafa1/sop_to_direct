@@ -23,7 +23,7 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
 | `process_id` | 否 | 默认 `Process_1` |
 | `nodes` | 是 | 顺序即 process 内节点顺序 |
 | `flows` | 是 | 全部连线；条件边带 `situation` |
-| `layout` | 否 | 显式槽位；缺省时脚本自动 `vertical` + `branch_columns` |
+| `layout` | 否 | 显式槽位；缺省时：仅 yes 主链竖排，yes+no 用 `branch_columns` |
 
 ---
 
@@ -54,7 +54,7 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
 ## Flow
 
 ```json
-{ "id": "Flow_xxxxxxx", "source": "A", "target": "B", "situation": "yes", "name": "是" }
+{ "id": "Flow_xxxxxxx", "source": "A", "target": "B", "situation": "yes" }
 ```
 
 | 字段 | 必填 | 说明 |
@@ -65,6 +65,13 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
 | `name` | 否 | 一般可省略；yes/no 由脚本生成「是/否」 |
 
 普通边不要 `situation`。
+
+**条件边（`or` / `and` / `cond`）— 与 `golden_xml_rules.md` §3 一致：**
+
+- **必须**有一条 `situation: "yes"`
+- **`situation: "no"` 仅当 SOP 有否则/不满足语义时才加**
+- 合法：仅 yes，或 yes+no；禁止只有 no、禁止无依据硬凑空否
+- 入出边由编译器按 `flows` 注入，IR 不要写 `incoming`/`outgoing`
 
 ---
 

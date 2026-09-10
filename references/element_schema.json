@@ -114,20 +114,22 @@
         "optional_attributes": ["tabKey"],
         "connection_rules": {
           "outgoing_variants": ["situation_yes", "situation_no"],
-          "description": "outgoing 必须用 situation_yes/no 变体（sequenceFlow name=是/否）；禁止 plain。默认可仅 yes，见 golden_xml_rules"
+          "description": "必须有 situation=yes；situation=no 仅当 SOP 有否则时添加。禁止 plain。见 golden_xml_rules §3",
+          "outgoing_count": "1（仅是）或 2（是+否）"
         },
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json" },
           { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）" }
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）必填" }
         ],
-        "optional_children": [],
+        "optional_children": [
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）；仅原文有否则时" }
+        ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
           "bounds": { "width": 200, "height": 60 }
         },
-        "template": "<flow:and id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing_yes}</bpmn2:outgoing>\n  <bpmn2:outgoing>{outgoing_no}</bpmn2:outgoing>\n</flow:and>",
+        "template": "<flow:and id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n</flow:and>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
@@ -170,20 +172,22 @@
         "optional_attributes": ["tabKey"],
         "connection_rules": {
           "outgoing_variants": ["situation_yes", "situation_no"],
-          "description": "outgoing 必须用 situation_yes/no 变体（sequenceFlow name=是/否）；禁止 plain。默认可仅 yes，见 golden_xml_rules"
+          "description": "必须有 situation=yes；situation=no 仅当 SOP 有否则时添加。禁止 plain。见 golden_xml_rules §3",
+          "outgoing_count": "1（仅是）或 2（是+否）"
         },
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json" },
           { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否；可选，无否则时仅单 outgoing）" }
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）必填" }
         ],
-        "optional_children": [],
+        "optional_children": [
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）；仅原文有否则时" }
+        ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
           "bounds": { "width": 200, "height": 60 }
         },
-        "template": "<flow:or id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing_yes}</bpmn2:outgoing>\n  <bpmn2:outgoing>{outgoing_no}</bpmn2:outgoing>\n</flow:or>",
+        "template": "<flow:or id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n</flow:or>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
@@ -354,21 +358,23 @@
         "optional_attributes": [],
         "connection_rules": {
           "outgoing_variants": ["situation_yes", "situation_no"],
-          "description": "outgoing 必须用 situation_yes/no 变体（sequenceFlow name=是/否）；禁止 plain。默认可仅 yes，见 golden_xml_rules",
-          "note": "bpmn2:sequenceFlow 必须带 name=是/否（与 situation yes/no 对应），禁止 条件成立/条件不成立；见 golden_xml_rules"
+          "description": "必须有 situation=yes；situation=no 仅当 SOP 有否则时添加。禁止 plain。见 golden_xml_rules §3",
+          "outgoing_count": "1（仅是）或 2（是+否）",
+          "note": "sequenceFlow name 必须为 是/否（与 situation yes/no 对应），禁止 条件成立/条件不成立"
         },
         "required_children": [
           { "tag": "ext:data", "type": "cdata_json" },
           { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）" }
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）必填" }
         ],
-        "optional_children": [],
+        "optional_children": [
+          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）；仅原文有否则时" }
+        ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
           "bounds": { "width": 200, "height": 60 }
         },
-        "template": "<timer:cond id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing_yes}</bpmn2:outgoing>\n  <bpmn2:outgoing>{outgoing_no}</bpmn2:outgoing>\n</timer:cond>",
+        "template": "<timer:cond id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n</timer:cond>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
