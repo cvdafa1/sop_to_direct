@@ -15,7 +15,8 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
   "nodes": [ /* Node */ ],
   "flows": [ /* Flow */ ],
   "layout": [ /* LayoutOp，可选；省略则自动布局 */ ],
-  "timers": [ /* 可选；见下方 */ ]
+  "timers": [ /* 可选；见下方 */ ],
+  "variables": [ /* 可选；见下方 */ ]
 }
 ```
 
@@ -26,6 +27,7 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
 | `flows` | 是 | 全部连线；条件边带 `situation` |
 | `layout` | 否 | 显式槽位；缺省时：仅 yes 主链竖排，yes+no 用 `branch_columns` |
 | `timers` | 条件 | 使用 start/stop/pause/restart/cond 时声明；亦可省略，由 save 从 XML 提取 |
+| `variables` | 条件 | 使用 `io:var` 等程序变量时声明（含 dataType）；权威见 `subprocess.md` §variables |
 
 ---
 
@@ -89,6 +91,22 @@ IR 可写：
 
 或完整项：`{"name":"JSQ1","dataType":3,"defaultValue":"00:00:00"}`。  
 节点 `ext.timer` 用 `$(JSQ1)`；`timers[].name` 为裸名 `JSQ1`，**仅允许字母、数字、下划线**（`[A-Za-z0-9_]`）。`timer:wait` / `timer:clock` 不必列入。
+
+---
+
+## variables（可选）
+
+`io:var` / `io:calc` 等使用程序变量时，save 的 `sfc.variables` 必须声明（权威见 `subprocess.md` §variables）。计时器只进 `timers`，不要重复进 `variables`。
+
+```json
+"variables": [
+  { "name": "BL", "dataType": 1, "unit": "", "isEnum": false, "defaultValue": "0.000" },
+  { "name": "msg", "dataType": 2, "defaultValue": "" },
+  { "name": "cnt", "dataType": 3, "defaultValue": "0" }
+]
+```
+
+`dataType`：`1`=浮点，`2`=字符串，`3`=整型。`name` 仅 `[A-Za-z0-9_]`。
 
 ---
 

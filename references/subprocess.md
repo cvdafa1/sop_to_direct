@@ -56,6 +56,7 @@
 | 字段 | 主程序 | 子程序 |
 |------|--------|--------|
 | `sfc.timers` | 见下方 §timers | 同左（按该程序 XML） |
+| `sfc.variables` | 见下方 §variables | 同左（按该程序 XML） |
 | `sfc.refServerVariables` | `{"list": []}` | `{}` |
 | `description` | 有 | 无 |
 | `id` | 主 appid | `get_next_id` 返回值（= XML `subId`） |
@@ -68,8 +69,8 @@
 | `schedulePeriod` | 1000 | 无 |
 | `signPathId` / `branchSignPathId` / `formulaGroupId` | `"0"` | 无 |
 
-使用 `scripts/api_reference.py` 的 `save_program(..., subprograms=[...], timers=...)`，不要手写 payload。  
-`timers` 可省略：客户端会从该程序 XML 的 `ext.timer` 自动提取。
+使用 `scripts/api_reference.py` 的 `save_program(..., subprograms=[...], timers=..., variables=...)`，不要手写 payload。  
+`timers` / `variables` 可省略：客户端会从该程序 XML 自动提取（变量自动提取时 dataType 默认浮点，精确类型应显式传入）。
 
 ### sfc.timers（计时器变量）
 
@@ -92,6 +93,29 @@
 | `defaultValue` | 固定 `"00:00:00"` |
 
 同一程序内按 `name` 去重；主/子各自一份 `timers`（只声明本程序 XML 用到的）。
+
+### sfc.variables（程序变量）
+
+元件使用程序变量（如 `io:var` 写变量、`io:calc` 的 `$(BL)` 等）时，**必须**在对应程序的 `sfc.variables.list` 声明。  
+计时器名进 `timers`，**不要**重复进 `variables`。
+
+```json
+"variables": {
+  "list": [
+    { "name": "BL", "dataType": 1, "unit": "", "isEnum": false, "defaultValue": "0.000" },
+    { "name": "3", "dataType": 2, "unit": "", "isEnum": false, "defaultValue": "" },
+    { "name": "2", "dataType": 3, "unit": "", "isEnum": false, "defaultValue": "0" }
+  ]
+}
+```
+
+| 字段 | 规则 |
+|------|------|
+| `name` | 裸名，仅 `[A-Za-z0-9_]`；`$(BL)` → `BL` |
+| `dataType` | `1`=浮点，`2`=字符串，`3`=整型 |
+| `unit` | 默认 `""` |
+| `isEnum` | 默认 `false` |
+| `defaultValue` | 浮点默认 `"0.000"`；字符串默认 `""`；整型默认 `"0"` |
 
 ### 单程序示例结构
 

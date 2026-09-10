@@ -7,8 +7,8 @@
     # 不含子程序
     appid = client.create_program(program_name="测试程序", description="描述")
     client.save_program(appid=appid, xml_content=xml_string, description="描述", program_name="测试程序")
-    # 含计时器元件时：可显式传 timers，或省略由 XML 自动提取
-    # client.save_program(..., timers=[{"name": "JSQ1", "dataType": 3, "defaultValue": "00:00:00"}])
+    # 含计时器 / 程序变量时可显式传入，或省略由 XML 自动提取
+    # client.save_program(..., timers=[...], variables=[{"name":"BL","dataType":1}])
     client.compile_program(appid=appid)
 
     # 含子程序
@@ -126,6 +126,105 @@ def resolve_timers(timers, xml_content: str) -> list:
     if timers is not None:
         return normalize_timers(timers)
     return extract_timers_from_xml(xml_content)
+
+
+# 程序变量 dataType：1=浮点 2=字符串 3=整型
+_VAR_DEFAULTS = {
+    1: {"unit": "", "isEnum": False, "defaultValue": "0.000"},
+    2: {"unit": "", "isEnum": False, "defaultValue": ""},
+    3: {"unit": "", "isEnum": False, "defaultValue": "0"},
+}
+_VAR_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+
+
+def strip_var_ref(ref: str) -> str:
+    """$(BL) / $$$(x) / BL → 裸名（不处理 #() 位号）"""
+    s = (ref or "").strip()
+    if s.startswith("$$$(") and s.endswith(")"):
+        return s[4:-1].strip()
+    if s.startswith("$(") and s.endswith(")"):
+        return s[2:-1].strip()
+    return s
+
+
+def validate_var_name(name: str) -> str:
+    """程序变量名仅允许字母、数字、下划线。"""
+    if not name or not _VAR_NAME_RE.fullmatch(name):
+        raise ValueError(
+            f"invalid variable name {name!r}: only letters, digits, underscore allowed"
+        )
+    return name
+
+
+def normalize_variables(variables) -> list:
+    """规范为 save payload 的 variables.list 项。
+
+    入参可为:
+      - ["BL", "$(x)"]  → dataType 默认 1（浮点）
+      - [{"name":"BL","dataType":1,"unit":"","isEnum":false,"defaultValue":"0.000"}, ...]
+    dataType: 1=浮点 2=字符串 3=整型。
+    """
+    if not variables:
+        return []
+    seen = set()
+    out = []
+    for item in variables:
+        if isinstance(item, str):
+            name = validate_var_name(strip_var_ref(item))
+            dt = 1
+            base = dict(_VAR_DEFAULTS[dt])
+            entry = {"name": name, "dataType": dt, **base}
+        elif isinstance(item, dict):
+            name = validate_var_name(strip_var_ref(str(item.get("name", ""))))
+            dt = int(item.get("dataType", 1))
+            if dt not in _VAR_DEFAULTS:
+                raise ValueError(f"invalid variable dataType {dt}: must be 1, 2, or 3")
+            base = dict(_VAR_DEFAULTS[dt])
+            entry = {
+                "name": name,
+                "dataType": dt,
+                "unit": item["unit"] if "unit" in item else base["unit"],
+                "isEnum": bool(item["isEnum"]) if "isEnum" in item else base["isEnum"],
+                "defaultValue": (
+                    item["defaultValue"]
+                    if "defaultValue" in item and item["defaultValue"] is not None
+                    else base["defaultValue"]
+                ),
+            }
+        else:
+            raise TypeError(f"invalid variable entry: {item!r}")
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append(entry)
+    return out
+
+
+def extract_variables_from_xml(xml_content: str, timer_names: set | None = None) -> list:
+    """从 XML 收集 $(name) 程序变量；排除 #() 位号与已在 timers 中的名。
+
+    自动提取时 dataType 默认 1；精确类型请显式传 variables / IR.variables。
+    """
+    if not xml_content:
+        return []
+    timer_names = timer_names or {
+        t["name"] for t in extract_timers_from_xml(xml_content)
+    }
+    names = []
+    for m in re.finditer(r"\$\(([A-Za-z0-9_]+)\)", xml_content):
+        name = m.group(1)
+        if name in timer_names:
+            continue
+        names.append(name)
+    return normalize_variables(names)
+
+
+def resolve_variables(variables, xml_content: str, timers_list: list | None = None) -> list:
+    """显式 variables 优先；否则从 XML 自动提取（dataType 默认浮点）。"""
+    if variables is not None:
+        return normalize_variables(variables)
+    timer_names = {t["name"] for t in (timers_list or [])}
+    return extract_variables_from_xml(xml_content, timer_names=timer_names)
 
 
 def _handle_api_errors(fn):
@@ -247,7 +346,8 @@ class DirectPlatformClient:
     # 保存主程序（XML内容）—— 支持子程序
     def save_program(self, appid: str, xml_content: str,
                      description: str = "", program_name: str = "",
-                     subprograms: list = None, timers: list = None) -> dict:
+                     subprograms: list = None, timers: list = None,
+                     variables: list = None) -> dict:
         """保存主程序，可选同时保存子程序。
 
         :param appid: 主程序ID
@@ -259,18 +359,21 @@ class DirectPlatformClient:
                 "id": "子程序预生成ID",
                 "xml_content": "<子程序XML>",
                 "name": "子程序名称",
-                "timers": [...]  # 可选；省略则从该子 XML 自动提取
+                "timers": [...],     # 可选；省略则从该子 XML 自动提取
+                "variables": [...]   # 可选；省略则从该子 XML 自动提取
             }
-        :param timers: 主程序计时器变量列表；省略则从主 XML 自动提取。
-            使用 timer:start / stop / pause / restart / cond 时必须在
-            sfc.timers.list 中声明，格式见 normalize_timers()。
+        :param timers: 主程序计时器列表；省略则从主 XML 自动提取。
+            timer:start/stop/pause/restart/cond → sfc.timers（见 normalize_timers）。
+        :param variables: 主程序变量列表；省略则从主 XML 的 $(name) 提取。
+            io:var / io:calc 等使用程序变量时 → sfc.variables（见 normalize_variables）。
+            dataType: 1=浮点 2=字符串 3=整型。
         """
-        def _make_main(appid, xml_content, description, name, timers_list):
+        def _make_main(appid, xml_content, description, name, timers_list, variables_list):
             return {
                 "sfc": {
                     "params": {"list": []},
                     "refServerVariables": {"list": []},
-                    "variables": {"list": []},
+                    "variables": {"list": variables_list},
                     "timers": {"list": timers_list},
                     "aliases": {"list": []},
                     "sfcRunning": {"value": xml_content},
@@ -292,12 +395,13 @@ class DirectPlatformClient:
                 "formulaGroupId": "0"
             }
 
-        def _make_sub(sub_id, sub_xml, sub_name, parent_id, root_id, order, timers_list):
+        def _make_sub(sub_id, sub_xml, sub_name, parent_id, root_id, order,
+                      timers_list, variables_list):
             return {
                 "sfc": {
                     "params": {"list": []},
                     "refServerVariables": {},
-                    "variables": {"list": []},
+                    "variables": {"list": variables_list},
                     "timers": {"list": timers_list},
                     "aliases": {"list": []},
                     "sfcRunning": {"value": sub_xml},
@@ -313,16 +417,19 @@ class DirectPlatformClient:
             }
 
         main_timers = resolve_timers(timers, xml_content)
+        main_vars = resolve_variables(variables, xml_content, main_timers)
         update_list = [_make_main(
-            appid, xml_content, description, program_name, main_timers
+            appid, xml_content, description, program_name, main_timers, main_vars
         )]
         add_list = []
         if subprograms:
             for idx, sub in enumerate(subprograms, start=1):
                 sub_xml = sub["xml_content"]
                 sub_timers = resolve_timers(sub.get("timers"), sub_xml)
+                sub_vars = resolve_variables(sub.get("variables"), sub_xml, sub_timers)
                 add_list.append(_make_sub(
-                    sub["id"], sub_xml, sub["name"], appid, appid, idx, sub_timers
+                    sub["id"], sub_xml, sub["name"], appid, appid, idx,
+                    sub_timers, sub_vars
                 ))
 
         payload = {
