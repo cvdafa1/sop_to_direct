@@ -204,6 +204,46 @@ class LayoutGenerator:
             merge.x = center_x - merge.w // 2
             merge.y = max(yes_bottom, no_bottom, start_y)
 
+    def layout_multi_columns(self, decision_id, branch_groups,
+                             merge_id=None, center_x=500, col_gap=None,
+                             row_gap=None):
+        """多路择一（flow:branch）槽位：每路一列，可选汇合点居中下方。
+
+        branch_groups: 列表，每项为该路节点 id 列表（不含 decision / merge）。
+        列从左到右排列，整体以 center_x 为中心。
+        """
+        col_gap = col_gap or self.HORIZONTAL_GAP
+        row_gap = row_gap or self.VERTICAL_GAP
+        branch_groups = [list(g) for g in (branch_groups or []) if g is not None]
+        if not branch_groups:
+            raise ValueError("layout_multi_columns requires branch_groups")
+
+        decision = self.nodes[decision_id]
+        decision.x = center_x - decision.w // 2
+        # decision.y 由调用方先设好（或保持原值）
+        start_y = decision.bottom + row_gap
+
+        n = len(branch_groups)
+        # 以 center_x 为中心均分列
+        total_span = (n - 1) * col_gap
+        left_center = center_x - total_span / 2.0
+
+        bottoms = []
+        for i, group in enumerate(branch_groups):
+            col_cx = left_center + i * col_gap
+            y = start_y
+            for nid in group:
+                node = self.nodes[nid]
+                node.x = int(col_cx - node.w // 2)
+                node.y = int(y)
+                y += node.h + row_gap
+            bottoms.append(y)
+
+        if merge_id:
+            merge = self.nodes[merge_id]
+            merge.x = center_x - merge.w // 2
+            merge.y = max(bottoms) if bottoms else start_y
+
     def layout_parallel1(self, container_id, branch_groups,
                          start_x=100, start_y=280,
                          col_gap=None, row_gap=None,
@@ -543,6 +583,21 @@ class LayoutGenerator:
         return [(sx, sy), (sx, mid_y1), (outer_x, mid_y1),
                 (outer_x, mid_y2), (tx, mid_y2), (tx, ty)]
 
+    def calc_bus_waypoints(self, src_id, tgt_id, bus_y: int):
+        """高扇入汇合：先落到共享水平总线再进目标，减少交叉。"""
+        src = self.nodes[src_id]
+        tgt = self.nodes[tgt_id]
+        sx, sy = src.cx, src.bottom
+        tx, ty = tgt.cx, tgt.top
+        by = int(bus_y)
+        if by <= sy:
+            by = sy + 40
+        if by >= ty:
+            by = max(sy + 20, ty - 40)
+        if abs(sx - tx) < 10:
+            return [(sx, sy), (tx, ty)]
+        return [(sx, sy), (sx, by), (tx, by), (tx, ty)]
+
     # ──────────────────────────────────────────────
     # 验证方法
     # ──────────────────────────────────────────────
@@ -696,9 +751,29 @@ class LayoutGenerator:
         """按当前坐标重算全部边的 waypoints。"""
         force_u_for = force_u_for or set()
         self._lane_bucket = {}
+        fan_in: dict = {}
+        for flow in self.flows:
+            fan_in.setdefault(flow.target, []).append(flow)
+        bus_y_by_tgt = {}
+        for tgt, fins in fan_in.items():
+            if len(fins) < 3 or tgt not in self.nodes:
+                continue
+            bottoms = [
+                self.nodes[f.source].bottom
+                for f in fins
+                if f.source in self.nodes
+            ]
+            if not bottoms:
+                continue
+            top = self.nodes[tgt].top
+            bus_y_by_tgt[tgt] = (max(bottoms) + top) // 2
         for flow in self.flows:
             if flow.id in force_u_for:
                 flow.waypoints = self.calc_u_waypoints(flow.source, flow.target)
+            elif flow.target in bus_y_by_tgt:
+                flow.waypoints = self.calc_bus_waypoints(
+                    flow.source, flow.target, bus_y_by_tgt[flow.target]
+                )
             else:
                 flow.waypoints = self.calc_waypoints(flow.source, flow.target)
 
@@ -748,7 +823,7 @@ class LayoutGenerator:
             self._auto_container_bounds(cid, children, c.x, c.y, pstart, pend)
             self._position_pstart_pend(cid, pstart, pend)
 
-    def fix_layout_issues(self, max_attempts=3):
+    def fix_layout_issues(self, max_attempts=6):
         """重叠/穿线/交叉：扩距 + 重路由（必要时 U 形），仍失败则返回问题列表。"""
         force_u = set()
         remaining = []
@@ -769,8 +844,8 @@ class LayoutGenerator:
                 if msg.startswith("edge_through:"):
                     force_u.add(msg.split(":", 1)[1].split("→")[0])
             self.expand_spacing(
-                extra_v=30 + attempt * 25,
-                extra_h=40 + attempt * 50,
+                extra_v=35 + attempt * 30,
+                extra_h=50 + attempt * 55,
             )
         return remaining
 

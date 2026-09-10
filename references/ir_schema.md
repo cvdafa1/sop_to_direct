@@ -116,15 +116,25 @@ IR 可写：
 |------|------|----------|
 | `vertical` | `nodes`, 可选 `center_x`/`start_y`/`gap` | `layout_vertical` |
 | `branch_columns` | `decision`, `yes`, `no`, 可选 `merge`/`center_x` | `layout_branch_columns` |
+| `multi_columns` | `decision`, `branches`（多路节点列表）, 可选 `merge`/`center_x` | `layout_multi_columns` |
 | `vertical_continue` | `after`, `nodes`, 可选 `center_x`/`gap` | 自 `after` 底边继续竖排 |
 
-一期不在 IR 里展开 `parallel1`/`parallel2`（容器 + pstart/pend）；需要时再扩展。
+**自动布局（省略 `layout` 时）已支持：**
+
+- 直线；仅 yes；一层 yes+no
+- **`flow:branch` 多路**（situation `0/1/2…`）
+- **支路内再套一层 yes/no**（如三路里每路一个 `flow:and`）
+- 高扇入汇合用共享总线走线；仍过 `assemble` 重叠/交叉门禁与 `validate_bpmn`
+
+一期仍不支持：`parallel1` / `parallel2`。
 
 ---
 
 ## 编译命令 / fixture
 
-唯一示例：`fixtures/sample_ir.json`（XML 由命令生成，不入库）。
+| 文件 | 覆盖 |
+|------|------|
+| `fixtures/sample_ir.json` | 直线 + 一层是/否 |
 
 ```bash
 python scripts/ir_to_xml.py fixtures/sample_ir.json -o out.xml
