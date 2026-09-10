@@ -10,18 +10,133 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 from layout_generator import LayoutGenerator
 from schema_loader import layout_type, render_node_xml, resolve_element
+from api_reference import (
+    ensure_ident_name,
+    sanitize_xml_ident_names,
+    strip_timer_ref,
+    strip_var_ref,
+    unique_rename_map,
+)
 
 UNSUPPORTED_LAYOUT = frozenset({"parallel1", "parallel2"})
 DECISION_YN_TYPES = frozenset({"or", "and", "cond"})
 
 
+def _rewrite_dollar_refs(text: str, mapping: dict[str, str]) -> str:
+    if not text or not mapping:
+        return text
+
+    def repl(m: re.Match) -> str:
+        inner = m.group(1)
+        new = mapping.get(inner)
+        return f"$({new})" if new else m.group(0)
+
+    ordered = sorted(mapping.keys(), key=len, reverse=True)
+    pat = re.compile(r"\$\((" + "|".join(re.escape(k) for k in ordered) + r")\)")
+    return pat.sub(repl, text)
+
+
+def _walk_ext_rewrite(obj: Any, mapping: dict[str, str]) -> Any:
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if k == "timer" and isinstance(v, str):
+                bare = strip_timer_ref(v)
+                new = mapping.get(bare, bare)
+                out[k] = f"$({new})" if v.strip().startswith("$(") else new
+            else:
+                out[k] = _walk_ext_rewrite(v, mapping)
+        return out
+    if isinstance(obj, list):
+        return [_walk_ext_rewrite(x, mapping) for x in obj]
+    if isinstance(obj, str):
+        return _rewrite_dollar_refs(obj, mapping)
+    return obj
+
+
+def sanitize_ir_idents(ir: dict[str, Any]) -> dict[str, Any]:
+    """规范 IR 中子程序名、timers/variables、ext 内 $()/timer 引用。"""
+    import copy
+
+    ir = copy.deepcopy(ir)
+    nodes = ir.get("nodes") or []
+
+    dollar_raw: list[str] = []
+    for node in nodes:
+        element = resolve_element(node.get("type", ""))
+        if element == "flow:subproc":
+            node["name"] = ensure_ident_name(
+                node.get("name") or "", fallback_prefix="sub"
+            )
+        ext = node.get("ext")
+        if not ext:
+            continue
+        blob = json.dumps(ext, ensure_ascii=False)
+        for m in re.finditer(r"\$\(([^)]+)\)", blob):
+            dollar_raw.append(m.group(1).strip())
+        if isinstance(ext, dict):
+            t = ext.get("timer")
+            if isinstance(t, str) and t.strip():
+                dollar_raw.append(strip_timer_ref(t))
+
+    timers = ir.get("timers")
+    if timers:
+        fixed = []
+        for item in timers:
+            if isinstance(item, str):
+                fixed.append(
+                    ensure_ident_name(strip_timer_ref(item), fallback_prefix="tm")
+                )
+            elif isinstance(item, dict):
+                item = dict(item)
+                item["name"] = ensure_ident_name(
+                    strip_timer_ref(str(item.get("name", ""))), fallback_prefix="tm"
+                )
+                fixed.append(item)
+            else:
+                fixed.append(item)
+        ir["timers"] = fixed
+
+    variables = ir.get("variables")
+    if variables:
+        fixed = []
+        for item in variables:
+            if isinstance(item, str):
+                fixed.append(
+                    ensure_ident_name(strip_var_ref(item), fallback_prefix="var")
+                )
+            elif isinstance(item, dict):
+                item = dict(item)
+                item["name"] = ensure_ident_name(
+                    strip_var_ref(str(item.get("name", ""))), fallback_prefix="var"
+                )
+                fixed.append(item)
+            else:
+                fixed.append(item)
+        ir["variables"] = fixed
+
+    mapping = {
+        k: v
+        for k, v in unique_rename_map(dollar_raw, fallback_prefix="n").items()
+        if k != v
+    }
+    if mapping:
+        for node in nodes:
+            if node.get("ext") is not None:
+                node["ext"] = _walk_ext_rewrite(node["ext"], mapping)
+
+    return ir
+
+
 def compile_ir(ir: dict[str, Any]) -> str:
+    ir = sanitize_ir_idents(ir)
     nodes = ir.get("nodes") or []
     flows = ir.get("flows") or []
     if not nodes:
@@ -76,7 +191,9 @@ def compile_ir(ir: dict[str, Any]) -> str:
     else:
         _auto_layout(gen, meta)
 
-    return gen.assemble_full_xml(node_xml_by_id, process_id=process_id)
+    xml = gen.assemble_full_xml(node_xml_by_id, process_id=process_id)
+    xml, _renames = sanitize_xml_ident_names(xml)
+    return xml
 
 
 def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:

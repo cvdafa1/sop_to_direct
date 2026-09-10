@@ -92,7 +92,8 @@
 | `dataType` | 固定 `3` |
 | `defaultValue` | 固定 `"00:00:00"` |
 
-同一程序内按 `name` 去重；主/子各自一份 `timers`（只声明本程序 XML 用到的）。
+同一程序内按 `name` 去重；主/子各自一份 `timers`（只声明本程序 XML 用到的）。  
+保存前：`validate_bpmn.py` 校验 XML 内计时器名；非法则改 IR 或 `--fix`（`save_program` / `ir_to_xml` 也会自动 sanitize）。
 
 ### sfc.variables（程序变量）
 

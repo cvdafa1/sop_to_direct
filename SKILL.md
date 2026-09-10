@@ -22,13 +22,13 @@ description: >-
 1. **步骤门禁**：不得跳步；create/save/compile 前须用户明确同意
 2. **原子拆分**：按 `element_split.md` 执行
 3. **XML**：Agent 只产 IR（`ir_schema.md`）；禁止手写节点/连线/Diagram XML。编译：`python scripts/ir_to_xml.py <ir.json> -o <out.xml>`
-4. **白名单 / 校验**：仅 schema 元件；save 前 `validate_bpmn.py` 必须通过
+4. **白名单 / 校验**：仅 schema 元件；save 前 `validate_bpmn.py` 必须通过（含 XML 内子程序/计时器/变量名 `[A-Za-z0-9_]`；非法则改 IR 或 `validate_bpmn.py --fix` 后再校验）
 5. **连线与布局**：仅由 `ir_to_xml` → `LayoutGenerator.assemble_full_xml`（规则见 golden）
 6. **位号**：确认流程见 `interaction.md` Step 2.5；格式见 `node_reference.md`
 7. **子程序**：见 `subprocess.md`（主 update / 子 add；`subId`=`get_next_id`）
 8. **禁止** `deploy_program`；编译询问见 `interaction.md` Step 3.5（固定二选一）
 9. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
-10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过
+10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过（标识符命名见上）
 11. **确认轮次**：仅 1.5 / 2 / 2.5 / 3.5 四轮（见 `interaction.md`）；禁止再拆多轮
 
 ## 工作流
@@ -74,9 +74,12 @@ description: >-
 ```bash
 python scripts/ir_to_xml.py <ir.json> -o <out.xml>
 python scripts/validate_bpmn.py <out.xml>
+# 若报 invalid … name：改 IR 后重编译，或
+python scripts/validate_bpmn.py --fix <out.xml>
 ```
 
-必须退出码 0。细则：`element_schema.json` / `golden_xml_rules.md`（脚本侧）；位号示例按需 `node_reference.md`。
+必须退出码 0。细则：`element_schema.json` / `golden_xml_rules.md`（脚本侧）；位号示例按需 `node_reference.md`。  
+命名：XML 内 `flow:subproc` 的 `name`、`ext.timer` / `$(…)` 程序变量须 `[A-Za-z0-9_]`（与 `subprocess.md` 一致）；`ir_to_xml` / `save_program` 会对非法名自动改写，但 Agent 应在 IR 中直接使用合法名。
 
 ### Step 3.5 — 确认并保存 + 编译选择
 

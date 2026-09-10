@@ -24,6 +24,7 @@
 """
 
 # 标准库导入
+import hashlib
 import os
 import re
 import time
@@ -56,6 +57,11 @@ TIMER_VAR_ELEMENTS = frozenset({
 
 # 主程序名 / 子程序名 / 计时器名 / 程序变量名：仅字母、数字、下划线（同一规则，必须遵守）
 _IDENT_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+_IDENT_SAFE_RE = re.compile(r"[^A-Za-z0-9_]+")
+
+
+def is_valid_ident_name(name: str) -> bool:
+    return bool(name) and bool(_IDENT_NAME_RE.fullmatch(name))
 
 
 def validate_ident_name(name: str, kind: str = "name") -> str:
@@ -63,12 +69,40 @@ def validate_ident_name(name: str, kind: str = "name") -> str:
 
     适用于：主程序 program_name、子程序 name、timers[].name、variables[].name。
     """
-    if not name or not _IDENT_NAME_RE.fullmatch(name):
+    if not is_valid_ident_name(name):
         raise ValueError(
             f"invalid {kind} {name!r}: only letters, digits, underscore allowed "
             f"(same rule for main/sub program, timers, and variables)"
         )
     return name
+
+
+def sanitize_ident_name(name: str, *, fallback_prefix: str = "n") -> str:
+    """将任意字符串改写为合法标识符 [A-Za-z0-9_]。
+
+    非法字符替换为 `_`；若结果为空、过短或无字母（常见于中文名），
+    则用 ``{prefix}_{md5前8}``。
+    """
+    raw = (name or "").strip()
+    had_illegal = bool(_IDENT_SAFE_RE.search(raw))
+    cleaned = _IDENT_SAFE_RE.sub("_", raw)
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    prefix = fallback_prefix if is_valid_ident_name(fallback_prefix) else "n"
+    if (
+        not cleaned
+        or (had_illegal and (len(cleaned) < 2 or not re.search(r"[A-Za-z]", cleaned)))
+    ):
+        digest = hashlib.md5(raw.encode("utf-8")).hexdigest()[:8]
+        cleaned = f"{prefix}_{digest}"
+    return cleaned
+
+
+def ensure_ident_name(name: str, kind: str = "name", *, fallback_prefix: str = "n") -> str:
+    """合法则原样返回，否则 sanitize。"""
+    s = (name or "").strip()
+    if is_valid_ident_name(s):
+        return s
+    return sanitize_ident_name(s, fallback_prefix=fallback_prefix)
 
 
 def validate_program_name(name: str) -> str:
@@ -88,6 +122,183 @@ def validate_timer_name(name: str) -> str:
     return validate_ident_name(name, kind="timer name")
 
 
+def unique_rename_map(
+    raw_names: list[str], *, fallback_prefix: str
+) -> dict[str, str]:
+    """old→new；已合法的不变；冲突时追加 _2/_3…"""
+    mapping: dict[str, str] = {}
+    used: set[str] = set()
+    for raw in raw_names:
+        if raw in mapping:
+            continue
+        if is_valid_ident_name(raw):
+            base = raw
+        else:
+            base = sanitize_ident_name(raw, fallback_prefix=fallback_prefix)
+        cand = base
+        n = 2
+        while cand in used:
+            cand = f"{base}_{n}"
+            n += 1
+        used.add(cand)
+        mapping[raw] = cand
+    return mapping
+
+
+def collect_xml_ident_names(xml_content: str) -> dict[str, list[str]]:
+    """从 XML 收集子程序 / 计时器 / 程序变量裸名（可能含非法名）。
+
+    返回 {"subproc": [...], "timer": [...], "variable": [...]}（去重保序）。
+    """
+    if not xml_content:
+        return {"subproc": [], "timer": [], "variable": []}
+
+    def _uniq(seq: list[str]) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for x in seq:
+            if x in seen:
+                continue
+            seen.add(x)
+            out.append(x)
+        return out
+
+    subprocs: list[str] = []
+    for m in re.finditer(r"<flow:subproc\b([^>]*)>", xml_content):
+        nm = re.search(r'\bname="([^"]*)"', m.group(1))
+        if nm:
+            subprocs.append(nm.group(1).strip())
+
+    timers: list[str] = []
+    for m in re.finditer(r'"timer"\s*:\s*"(\$\([^"]+\)|[^"]+)"', xml_content):
+        timers.append(strip_timer_ref(m.group(1)))
+
+    timer_set = set(timers)
+    variables: list[str] = []
+    for m in re.finditer(r"\$\(([^)]+)\)", xml_content):
+        name = m.group(1).strip()
+        if not name or name in timer_set:
+            continue
+        variables.append(name)
+
+    return {
+        "subproc": _uniq(subprocs),
+        "timer": _uniq(timers),
+        "variable": _uniq(variables),
+    }
+
+
+def find_invalid_xml_idents(xml_content: str) -> list[tuple[str, str]]:
+    """返回 [(kind, raw_name), ...]，kind 为 subproc|timer|variable。"""
+    issues: list[tuple[str, str]] = []
+    collected = collect_xml_ident_names(xml_content)
+    for kind, names in collected.items():
+        for name in names:
+            if not is_valid_ident_name(name):
+                issues.append((kind, name))
+    return issues
+
+
+def sanitize_xml_ident_names(xml_content: str) -> tuple[str, list[tuple[str, str, str]]]:
+    """改写 XML 内非法的子程序/计时器/变量名。
+
+    返回 (new_xml, [(kind, old, new), ...])；无改动时 renames 为空。
+    """
+    if not xml_content:
+        return xml_content, []
+
+    collected = collect_xml_ident_names(xml_content)
+    renames: list[tuple[str, str, str]] = []
+    text = xml_content
+
+    sub_map = unique_rename_map(collected["subproc"], fallback_prefix="sub")
+    for old, new in sub_map.items():
+        if old == new:
+            continue
+        renames.append(("subproc", old, new))
+
+        def _sub_repl(m: re.Match, _old=old, _new=new) -> str:
+            attrs = m.group(1)
+            attrs2 = re.sub(
+                rf'(\bname=")({re.escape(_old)})(")',
+                rf"\g<1>{_new}\3",
+                attrs,
+                count=1,
+            )
+            return f"<flow:subproc{attrs2}>"
+
+        text = re.sub(r"<flow:subproc\b([^>]*)>", _sub_repl, text)
+
+    # 计时器与变量共用 $() 改写；先合并映射再统一替换
+    tm_map = unique_rename_map(collected["timer"], fallback_prefix="tm")
+    # 变量改写时避开已占用的计时器新名
+    used_after_tm = set(tm_map.values())
+    var_map: dict[str, str] = {}
+    for raw in collected["variable"]:
+        if raw in var_map:
+            continue
+        if is_valid_ident_name(raw) and raw not in used_after_tm:
+            var_map[raw] = raw
+            used_after_tm.add(raw)
+            continue
+        base = (
+            raw
+            if is_valid_ident_name(raw)
+            else sanitize_ident_name(raw, fallback_prefix="var")
+        )
+        cand = base
+        n = 2
+        while cand in used_after_tm:
+            cand = f"{base}_{n}"
+            n += 1
+        var_map[raw] = cand
+        used_after_tm.add(cand)
+
+    dollar_map: dict[str, str] = {}
+    for old, new in tm_map.items():
+        if old != new:
+            renames.append(("timer", old, new))
+            dollar_map[old] = new
+    for old, new in var_map.items():
+        if old != new:
+            renames.append(("variable", old, new))
+            dollar_map[old] = new
+
+    if dollar_map:
+        # 长名优先，避免前缀误伤
+        ordered = sorted(dollar_map.keys(), key=len, reverse=True)
+
+        def _dollar_repl(m: re.Match) -> str:
+            inner = m.group(1)
+            new = dollar_map.get(inner)
+            return f"$({new})" if new else m.group(0)
+
+        # 一次性替换所有 $()；仅映射表内的会变
+        pattern = re.compile(
+            r"\$\((" + "|".join(re.escape(k) for k in ordered) + r")\)"
+        )
+        text = pattern.sub(_dollar_repl, text)
+
+        # "timer": "裸名" 无 $() 的写法
+        def _timer_field_repl(m: re.Match) -> str:
+            raw = m.group(1)
+            bare = strip_timer_ref(raw)
+            new = dollar_map.get(bare)
+            if not new:
+                return m.group(0)
+            if raw.startswith("$("):
+                return f'"timer": "$({new})"'
+            return f'"timer": "{new}"'
+
+        text = re.sub(
+            r'"timer"\s*:\s*"(\$\([^"]+\)|[^"]+)"',
+            _timer_field_repl,
+            text,
+        )
+
+    return text, renames
+
+
 def normalize_timers(timers) -> list:
     """规范为 save payload 的 timers.list 项。
 
@@ -95,7 +306,7 @@ def normalize_timers(timers) -> list:
       - ["JSQ1", "$(JSQ_001)"]
       - [{"name": "JSQ1", "dataType": 3, "defaultValue": "00:00:00"}, ...]
     返回去重后的 list[{name, dataType, defaultValue}]。
-    name 规则与程序变量相同：仅 [A-Za-z0-9_]。
+    name 规则与程序变量相同：仅 [A-Za-z0-9_]；非法名自动 sanitize。
     """
     if not timers:
         return []
@@ -103,10 +314,16 @@ def normalize_timers(timers) -> list:
     out = []
     for item in timers:
         if isinstance(item, str):
-            name = validate_timer_name(strip_timer_ref(item))
+            name = ensure_ident_name(
+                strip_timer_ref(item), kind="timer name", fallback_prefix="tm"
+            )
             entry = {"name": name, "dataType": 3, "defaultValue": "00:00:00"}
         elif isinstance(item, dict):
-            name = validate_timer_name(strip_timer_ref(str(item.get("name", ""))))
+            name = ensure_ident_name(
+                strip_timer_ref(str(item.get("name", ""))),
+                kind="timer name",
+                fallback_prefix="tm",
+            )
             entry = {
                 "name": name,
                 "dataType": int(item.get("dataType", 3)),
@@ -172,7 +389,7 @@ def normalize_variables(variables) -> list:
       - ["BL", "$(x)"]  → dataType 默认 1（浮点）
       - [{"name":"BL","dataType":1,"unit":"","isEnum":false,"defaultValue":"0.000"}, ...]
     dataType: 1=浮点 2=字符串 3=整型。
-    name 规则与计时器相同：仅 [A-Za-z0-9_]。
+    name 规则与计时器相同：仅 [A-Za-z0-9_]；非法名自动 sanitize。
     """
     if not variables:
         return []
@@ -180,12 +397,18 @@ def normalize_variables(variables) -> list:
     out = []
     for item in variables:
         if isinstance(item, str):
-            name = validate_var_name(strip_var_ref(item))
+            name = ensure_ident_name(
+                strip_var_ref(item), kind="variable name", fallback_prefix="var"
+            )
             dt = 1
             base = dict(_VAR_DEFAULTS[dt])
             entry = {"name": name, "dataType": dt, **base}
         elif isinstance(item, dict):
-            name = validate_var_name(strip_var_ref(str(item.get("name", ""))))
+            name = ensure_ident_name(
+                strip_var_ref(str(item.get("name", ""))),
+                kind="variable name",
+                fallback_prefix="var",
+            )
             dt = int(item.get("dataType", 1))
             if dt not in _VAR_DEFAULTS:
                 raise ValueError(f"invalid variable dataType {dt}: must be 1, 2, or 3")
@@ -221,9 +444,9 @@ def extract_variables_from_xml(xml_content: str, timer_names: set | None = None)
         t["name"] for t in extract_timers_from_xml(xml_content)
     }
     names = []
-    for m in re.finditer(r"\$\(([A-Za-z0-9_]+)\)", xml_content):
-        name = m.group(1)
-        if name in timer_names:
+    for m in re.finditer(r"\$\(([^)]+)\)", xml_content):
+        name = m.group(1).strip()
+        if not name or name in timer_names:
             continue
         names.append(name)
     return normalize_variables(names)
@@ -325,7 +548,9 @@ class DirectPlatformClient:
                        description: str = "", group_id: str = "1001",
                        label_id: str = "0", product_id: str = "0",
                        created_by: str = "admin") -> str:
-        program_name = validate_program_name(program_name)
+        program_name = ensure_ident_name(
+            program_name, kind="program name", fallback_prefix="proc"
+        )
         payload = {
             "procedureHead": {
                 "name": program_name,
@@ -379,7 +604,9 @@ class DirectPlatformClient:
             io:var / io:calc 等使用程序变量时 → sfc.variables（见 normalize_variables）。
             dataType: 1=浮点 2=字符串 3=整型。
         """
-        program_name = validate_program_name(program_name)
+        program_name = ensure_ident_name(
+            program_name, kind="program name", fallback_prefix="proc"
+        )
 
         def _make_main(appid, xml_content, description, name, timers_list, variables_list):
             return {
@@ -429,6 +656,9 @@ class DirectPlatformClient:
                 "customOrder": order
             }
 
+        # 保存前：XML 内子程序/计时器/变量名必须 [A-Za-z0-9_]；非法则改写
+        xml_content, _ = sanitize_xml_ident_names(xml_content)
+
         main_timers = resolve_timers(timers, xml_content)
         main_vars = resolve_variables(variables, xml_content, main_timers)
         update_list = [_make_main(
@@ -437,8 +667,10 @@ class DirectPlatformClient:
         add_list = []
         if subprograms:
             for idx, sub in enumerate(subprograms, start=1):
-                sub_xml = sub["xml_content"]
-                sub_name = validate_program_name(sub["name"])
+                sub_xml, _ = sanitize_xml_ident_names(sub["xml_content"])
+                sub_name = ensure_ident_name(
+                    sub["name"], kind="program name", fallback_prefix="sub"
+                )
                 sub_timers = resolve_timers(sub.get("timers"), sub_xml)
                 sub_vars = resolve_variables(sub.get("variables"), sub_xml, sub_timers)
                 add_list.append(_make_sub(

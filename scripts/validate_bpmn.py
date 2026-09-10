@@ -3,10 +3,13 @@
 
 用法:
     python scripts/validate_bpmn.py path/to/main.xml [path/to/sub.xml ...]
+    python scripts/validate_bpmn.py --fix path/to/main.xml [path/to/sub.xml ...]
 退出码: 0=通过, 1=存在错误
 
 元件白名单来自 references/element_schema.json（另含并行内嵌的
 flow:parallelStart / flow:parallelEnd）。未定义元件一律报错。
+
+子程序 / 计时器 / 程序变量名须为 [A-Za-z0-9_]；`--fix` 时就地改写非法名。
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ import re
 import sys
 from pathlib import Path
 
+from api_reference import find_invalid_xml_idents, sanitize_xml_ident_names
 from schema_loader import components_by_element
 
 
@@ -83,6 +87,13 @@ def _check_file(path: Path) -> list[str]:
 
     if "PLACEHOLDER" in text:
         errors.append("PLACEHOLDER leftover in generated XML")
+
+    # 子程序 / 计时器 / 程序变量标识符：仅 [A-Za-z0-9_]
+    for kind, raw in find_invalid_xml_idents(text):
+        errors.append(
+            f"invalid {kind} name {raw!r}: only [A-Za-z0-9_] allowed "
+            f"(re-run with --fix or fix IR then ir_to_xml)"
+        )
 
     # Plane 内先全部 Edge，再全部 Shape（见 golden_xml_rules）
     plane_m = re.search(
@@ -382,17 +393,36 @@ def _check_layout_geometry(text: str) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) < 2:
-        print("Usage: python scripts/validate_bpmn.py <xml> [xml...]", file=sys.stderr)
+    args = argv[1:]
+    do_fix = False
+    if args and args[0] == "--fix":
+        do_fix = True
+        args = args[1:]
+
+    if not args:
+        print(
+            "Usage: python scripts/validate_bpmn.py [--fix] <xml> [xml...]",
+            file=sys.stderr,
+        )
         return 2
 
     any_err = False
-    for arg in argv[1:]:
+    for arg in args:
         path = Path(arg)
         if not path.is_file():
             print(f"[FAIL] {path}: file not found")
             any_err = True
             continue
+
+        if do_fix:
+            text = path.read_text(encoding="utf-8")
+            new_text, renames = sanitize_xml_ident_names(text)
+            if renames:
+                path.write_text(new_text, encoding="utf-8")
+                print(f"[FIX]  {path}")
+                for kind, old, new in renames:
+                    print(f"  - {kind}: {old!r} → {new!r}")
+
         errs = _check_file(path)
         if errs:
             any_err = True

@@ -7,6 +7,7 @@
 | A 语义 | 逐句拆分 + 覆盖自检 + 完整列表已展示 | `element_split.md` |
 | B 位号 | 已确认；`#()`/`$()`；type；无 PLACEHOLDER | `interaction.md` Step 2.5 + `node_reference.md` §一/二 |
 | C XML | `ir_to_xml.py` + `validate_bpmn.py`=0 | `ir_schema.md` / `golden_xml_rules.md` |
+| C 标识符 | XML 内子程序/计时器/变量名均为 `[A-Za-z0-9_]`；非法已改 | `subprocess.md` + `validate_bpmn.py` |
 | C 子程序 | 若有：字段与 save 正确 | `subprocess.md` |
 | C timers | 若用 start/stop/pause/restart/cond：`sfc.timers` 已声明 | `subprocess.md` §timers |
 | C variables | 若用程序变量（如 io:var）：`sfc.variables` 已声明且 dataType 正确 | `subprocess.md` §variables |

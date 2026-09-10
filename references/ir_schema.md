@@ -90,7 +90,7 @@ IR 可写：
 ```
 
 或完整项：`{"name":"JSQ1","dataType":3,"defaultValue":"00:00:00"}`。  
-节点 `ext.timer` 用 `$(JSQ1)`；`timers[].name` 为裸名 `JSQ1`，**仅允许字母、数字、下划线**（`[A-Za-z0-9_]`）。`timer:wait` / `timer:clock` 不必列入。
+节点 `ext.timer` 用 `$(JSQ1)`；`timers[].name` 为裸名 `JSQ1`，**仅允许字母、数字、下划线**（`[A-Za-z0-9_]`）。非法名在 `ir_to_xml` / save 前会被 sanitize。`timer:wait` / `timer:clock` 不必列入。
 
 ---
 
@@ -106,7 +106,7 @@ IR 可写：
 ]
 ```
 
-`dataType`：`1`=浮点，`2`=字符串，`3`=整型。`name` 规则与 `timers` 相同：仅 `[A-Za-z0-9_]`。
+`dataType`：`1`=浮点，`2`=字符串，`3`=整型。`name` 规则与 `timers` 相同：仅 `[A-Za-z0-9_]`。`flow:subproc` 的 `name` 同此规则。
 
 ---
 
