@@ -35,7 +35,7 @@
         "id_pattern": "Activity_{7位随机字母数字}",
         "required_attributes": ["id", "name", "subId"],
         "attribute_notes": {
-          "name": "子程序 name：[A-Za-z][A-Za-z0-9_]*；与 addProcedures.name 一致（详见 subprocess.md）",
+          "name": "子程序 name：仅 [A-Za-z0-9_]（与主程序/timers/variables 同规则）；与 addProcedures.name 一致（详见 subprocess.md）",
           "subId": "等于 get_next_id 返回值"
         },
         "optional_attributes": [],

@@ -4,22 +4,22 @@
     from api_reference import DirectPlatformClient
     client = DirectPlatformClient()
 
-    # 不含子程序
-    appid = client.create_program(program_name="测试程序", description="描述")
-    client.save_program(appid=appid, xml_content=xml_string, description="描述", program_name="测试程序")
+    # 不含子程序（名称仅 [A-Za-z0-9_]）
+    appid = client.create_program(program_name="test_proc", description="描述")
+    client.save_program(appid=appid, xml_content=xml_string, description="描述", program_name="test_proc")
     # 含计时器 / 程序变量时可显式传入，或省略由 XML 自动提取
     # client.save_program(..., timers=[...], variables=[{"name":"BL","dataType":1}])
     client.compile_program(appid=appid)
 
     # 含子程序
-    appid = client.create_program(program_name="主程序", description="描述")
+    appid = client.create_program(program_name="main_proc", description="描述")
     sub_ids = [client.get_next_id(id_type=0) for _ in range(2)]
     subprograms = [
         {"id": sub_ids[0], "xml_content": sub1_xml, "name": "sub1"},
         {"id": sub_ids[1], "xml_content": sub2_xml, "name": "sub2"},
     ]
     client.save_program(appid=appid, xml_content=main_xml, description="描述",
-                        program_name="主程序", subprograms=subprograms)
+                        program_name="main_proc", subprograms=subprograms)
     client.compile_program(appid=appid)
 """
 
@@ -54,6 +54,28 @@ TIMER_VAR_ELEMENTS = frozenset({
 })
 
 
+# 主程序名 / 子程序名 / 计时器名 / 程序变量名：仅字母、数字、下划线（同一规则，必须遵守）
+_IDENT_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+
+
+def validate_ident_name(name: str, kind: str = "name") -> str:
+    """标识符名：仅允许 [A-Za-z0-9_]。
+
+    适用于：主程序 program_name、子程序 name、timers[].name、variables[].name。
+    """
+    if not name or not _IDENT_NAME_RE.fullmatch(name):
+        raise ValueError(
+            f"invalid {kind} {name!r}: only letters, digits, underscore allowed "
+            f"(same rule for main/sub program, timers, and variables)"
+        )
+    return name
+
+
+def validate_program_name(name: str) -> str:
+    """主程序 / 子程序名称校验（与 timers/variables 同规则）。"""
+    return validate_ident_name(name, kind="program name")
+
+
 def strip_timer_ref(ref: str) -> str:
     """$(JSQ1) / JSQ1 → JSQ1"""
     s = (ref or "").strip()
@@ -62,16 +84,8 @@ def strip_timer_ref(ref: str) -> str:
     return s
 
 
-_TIMER_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
-
-
 def validate_timer_name(name: str) -> str:
-    """计时器名仅允许字母、数字、下划线。"""
-    if not name or not _TIMER_NAME_RE.fullmatch(name):
-        raise ValueError(
-            f"invalid timer name {name!r}: only letters, digits, underscore allowed"
-        )
-    return name
+    return validate_ident_name(name, kind="timer name")
 
 
 def normalize_timers(timers) -> list:
@@ -81,7 +95,7 @@ def normalize_timers(timers) -> list:
       - ["JSQ1", "$(JSQ_001)"]
       - [{"name": "JSQ1", "dataType": 3, "defaultValue": "00:00:00"}, ...]
     返回去重后的 list[{name, dataType, defaultValue}]。
-    name 仅允许 [A-Za-z0-9_]。
+    name 规则与程序变量相同：仅 [A-Za-z0-9_]。
     """
     if not timers:
         return []
@@ -134,7 +148,6 @@ _VAR_DEFAULTS = {
     2: {"unit": "", "isEnum": False, "defaultValue": ""},
     3: {"unit": "", "isEnum": False, "defaultValue": "0"},
 }
-_VAR_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
 
 
 def strip_var_ref(ref: str) -> str:
@@ -148,12 +161,8 @@ def strip_var_ref(ref: str) -> str:
 
 
 def validate_var_name(name: str) -> str:
-    """程序变量名仅允许字母、数字、下划线。"""
-    if not name or not _VAR_NAME_RE.fullmatch(name):
-        raise ValueError(
-            f"invalid variable name {name!r}: only letters, digits, underscore allowed"
-        )
-    return name
+    """程序变量名与计时器名规则一致：仅 [A-Za-z0-9_]。"""
+    return validate_ident_name(name, kind="variable name")
 
 
 def normalize_variables(variables) -> list:
@@ -163,6 +172,7 @@ def normalize_variables(variables) -> list:
       - ["BL", "$(x)"]  → dataType 默认 1（浮点）
       - [{"name":"BL","dataType":1,"unit":"","isEnum":false,"defaultValue":"0.000"}, ...]
     dataType: 1=浮点 2=字符串 3=整型。
+    name 规则与计时器相同：仅 [A-Za-z0-9_]。
     """
     if not variables:
         return []
@@ -315,6 +325,7 @@ class DirectPlatformClient:
                        description: str = "", group_id: str = "1001",
                        label_id: str = "0", product_id: str = "0",
                        created_by: str = "admin") -> str:
+        program_name = validate_program_name(program_name)
         payload = {
             "procedureHead": {
                 "name": program_name,
@@ -353,12 +364,12 @@ class DirectPlatformClient:
         :param appid: 主程序ID
         :param xml_content: 主程序XML（含 flow:subproc 引用）
         :param description: 程序描述
-        :param program_name: 程序名称
+        :param program_name: 程序名称（仅 [A-Za-z0-9_]，与子程序/timers/variables 同规则）
         :param subprograms: 子程序列表，每项为 dict：
             {
                 "id": "子程序预生成ID",
                 "xml_content": "<子程序XML>",
-                "name": "子程序名称",
+                "name": "子程序名称",  # 同 program_name 命名规则
                 "timers": [...],     # 可选；省略则从该子 XML 自动提取
                 "variables": [...]   # 可选；省略则从该子 XML 自动提取
             }
@@ -368,6 +379,8 @@ class DirectPlatformClient:
             io:var / io:calc 等使用程序变量时 → sfc.variables（见 normalize_variables）。
             dataType: 1=浮点 2=字符串 3=整型。
         """
+        program_name = validate_program_name(program_name)
+
         def _make_main(appid, xml_content, description, name, timers_list, variables_list):
             return {
                 "sfc": {
@@ -425,10 +438,11 @@ class DirectPlatformClient:
         if subprograms:
             for idx, sub in enumerate(subprograms, start=1):
                 sub_xml = sub["xml_content"]
+                sub_name = validate_program_name(sub["name"])
                 sub_timers = resolve_timers(sub.get("timers"), sub_xml)
                 sub_vars = resolve_variables(sub.get("variables"), sub_xml, sub_timers)
                 add_list.append(_make_sub(
-                    sub["id"], sub_xml, sub["name"], appid, appid, idx,
+                    sub["id"], sub_xml, sub_name, appid, appid, idx,
                     sub_timers, sub_vars
                 ))
 

@@ -32,7 +32,7 @@
 | 1 | load_down | 降负荷相关操作 |
 | 2 | stop_fan | 停风机相关操作 |
 
-3. 用户可改：拆/不拆、name、描述、合并/删减行；name 规则同 program_name（`[A-Za-z][A-Za-z0-9_]*`）
+3. 用户可改：拆/不拆、name、描述、合并/删减行；**name 规则与主程序/timers/variables 相同**：仅 `[A-Za-z0-9_]`（禁止中文、空格、连字符）
 4. 用户确认本步后，才进入 Step 2；**不要**在创建后再单独开一轮问子程序表
 
 写入 `flow:subproc` 的 name / subTitle / subId 规则见 **`subprocess.md` §flow:subproc**。  
@@ -47,7 +47,7 @@
 
 | 字段 | 规则 | 默认 |
 |------|------|------|
-| program_name | 字母开头；仅 `[A-Za-z0-9_]`；禁止中文 | 由 SOP 标题转写 |
+| program_name | 仅 `[A-Za-z0-9_]`（与子程序名/timers/variables 同规则）；禁止中文 | 由 SOP 标题转写 |
 | description | 无限制 | 可空 |
 | version | 无限制 | v1.0 |
 | group_id | 来自分组列表 | 1001 |
