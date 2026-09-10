@@ -14,7 +14,8 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
   "process_id": "Process_1",
   "nodes": [ /* Node */ ],
   "flows": [ /* Flow */ ],
-  "layout": [ /* LayoutOp，可选；省略则自动布局 */ ]
+  "layout": [ /* LayoutOp，可选；省略则自动布局 */ ],
+  "timers": [ /* 可选；见下方 */ ]
 }
 ```
 
@@ -24,6 +25,7 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
 | `nodes` | 是 | 顺序即 process 内节点顺序 |
 | `flows` | 是 | 全部连线；条件边带 `situation` |
 | `layout` | 否 | 显式槽位；缺省时：仅 yes 主链竖排，yes+no 用 `branch_columns` |
+| `timers` | 条件 | 使用 start/stop/pause/restart/cond 时声明；亦可省略，由 save 从 XML 提取 |
 
 ---
 
@@ -72,6 +74,21 @@ Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` �
 - **`situation: "no"` 仅当 SOP 有否则/不满足语义时才加**
 - 合法：仅 yes，或 yes+no；禁止只有 no、禁止无依据硬凑空否
 - 入出边由编译器按 `flows` 注入，IR 不要写 `incoming`/`outgoing`
+
+---
+
+## timers（可选）
+
+程序内使用 `timer:start` / `stop` / `pause` / `restart` / `cond` 时，save 的 `sfc.timers` 必须声明对应变量（权威字段见 `subprocess.md` §timers）。
+
+IR 可写：
+
+```json
+"timers": ["JSQ1", "$(JSQ_001)"]
+```
+
+或完整项：`{"name":"JSQ1","dataType":3,"defaultValue":"00:00:00"}`。  
+节点 `ext.timer` 用 `$(JSQ1)`；`timers[].name` 为裸名 `JSQ1`，**仅允许字母、数字、下划线**（`[A-Za-z0-9_]`）。`timer:wait` / `timer:clock` 不必列入。
 
 ---
 

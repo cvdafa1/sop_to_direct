@@ -7,6 +7,8 @@
     # 不含子程序
     appid = client.create_program(program_name="测试程序", description="描述")
     client.save_program(appid=appid, xml_content=xml_string, description="描述", program_name="测试程序")
+    # 含计时器元件时：可显式传 timers，或省略由 XML 自动提取
+    # client.save_program(..., timers=[{"name": "JSQ1", "dataType": 3, "defaultValue": "00:00:00"}])
     client.compile_program(appid=appid)
 
     # 含子程序
@@ -23,6 +25,7 @@
 
 # 标准库导入
 import os
+import re
 import time
 from functools import wraps
 
@@ -40,6 +43,89 @@ HEADERS = {
     "Authorization": AUTH_TOKEN,
     "Content-Type": "application/json",
 }
+
+# 引用程序计时器变量的元件（须在 sfc.timers.list 声明；timer:wait/clock 不需要）
+TIMER_VAR_ELEMENTS = frozenset({
+    "timer:start",
+    "timer:stop",
+    "timer:pause",
+    "timer:restart",
+    "timer:cond",
+})
+
+
+def strip_timer_ref(ref: str) -> str:
+    """$(JSQ1) / JSQ1 → JSQ1"""
+    s = (ref or "").strip()
+    if s.startswith("$(") and s.endswith(")"):
+        return s[2:-1].strip()
+    return s
+
+
+_TIMER_NAME_RE = re.compile(r"^[A-Za-z0-9_]+$")
+
+
+def validate_timer_name(name: str) -> str:
+    """计时器名仅允许字母、数字、下划线。"""
+    if not name or not _TIMER_NAME_RE.fullmatch(name):
+        raise ValueError(
+            f"invalid timer name {name!r}: only letters, digits, underscore allowed"
+        )
+    return name
+
+
+def normalize_timers(timers) -> list:
+    """规范为 save payload 的 timers.list 项。
+
+    入参可为:
+      - ["JSQ1", "$(JSQ_001)"]
+      - [{"name": "JSQ1", "dataType": 3, "defaultValue": "00:00:00"}, ...]
+    返回去重后的 list[{name, dataType, defaultValue}]。
+    name 仅允许 [A-Za-z0-9_]。
+    """
+    if not timers:
+        return []
+    seen = set()
+    out = []
+    for item in timers:
+        if isinstance(item, str):
+            name = validate_timer_name(strip_timer_ref(item))
+            entry = {"name": name, "dataType": 3, "defaultValue": "00:00:00"}
+        elif isinstance(item, dict):
+            name = validate_timer_name(strip_timer_ref(str(item.get("name", ""))))
+            entry = {
+                "name": name,
+                "dataType": int(item.get("dataType", 3)),
+                "defaultValue": item.get("defaultValue") or "00:00:00",
+            }
+        else:
+            raise TypeError(f"invalid timer entry: {item!r}")
+        if name in seen:
+            continue
+        seen.add(name)
+        out.append(entry)
+    return out
+
+
+def extract_timers_from_xml(xml_content: str) -> list:
+    """从 XML 中收集 timer:start/stop/pause/restart/cond 的 ext.timer 引用。"""
+    if not xml_content:
+        return []
+    names = []
+    # 在含 timer 字段的 CDATA JSON 中匹配 "timer":"$(...)" / "timer": "..."
+    for m in re.finditer(
+        r'"timer"\s*:\s*"(\$\([^"]+\)|[^"]+)"',
+        xml_content,
+    ):
+        names.append(m.group(1))
+    return normalize_timers(names)
+
+
+def resolve_timers(timers, xml_content: str) -> list:
+    """显式 timers 优先；否则从 XML 自动提取。"""
+    if timers is not None:
+        return normalize_timers(timers)
+    return extract_timers_from_xml(xml_content)
 
 
 def _handle_api_errors(fn):
@@ -161,7 +247,7 @@ class DirectPlatformClient:
     # 保存主程序（XML内容）—— 支持子程序
     def save_program(self, appid: str, xml_content: str,
                      description: str = "", program_name: str = "",
-                     subprograms: list = None) -> dict:
+                     subprograms: list = None, timers: list = None) -> dict:
         """保存主程序，可选同时保存子程序。
 
         :param appid: 主程序ID
@@ -172,16 +258,20 @@ class DirectPlatformClient:
             {
                 "id": "子程序预生成ID",
                 "xml_content": "<子程序XML>",
-                "name": "子程序名称"
+                "name": "子程序名称",
+                "timers": [...]  # 可选；省略则从该子 XML 自动提取
             }
+        :param timers: 主程序计时器变量列表；省略则从主 XML 自动提取。
+            使用 timer:start / stop / pause / restart / cond 时必须在
+            sfc.timers.list 中声明，格式见 normalize_timers()。
         """
-        def _make_main(appid, xml_content, description, name):
+        def _make_main(appid, xml_content, description, name, timers_list):
             return {
                 "sfc": {
                     "params": {"list": []},
                     "refServerVariables": {"list": []},
                     "variables": {"list": []},
-                    "timers": {"list": []},
+                    "timers": {"list": timers_list},
                     "aliases": {"list": []},
                     "sfcRunning": {"value": xml_content},
                     "sfcPausing": {"value": ""},
@@ -202,13 +292,13 @@ class DirectPlatformClient:
                 "formulaGroupId": "0"
             }
 
-        def _make_sub(sub_id, sub_xml, sub_name, parent_id, root_id, order):
+        def _make_sub(sub_id, sub_xml, sub_name, parent_id, root_id, order, timers_list):
             return {
                 "sfc": {
                     "params": {"list": []},
                     "refServerVariables": {},
                     "variables": {"list": []},
-                    "timers": {"list": []},
+                    "timers": {"list": timers_list},
                     "aliases": {"list": []},
                     "sfcRunning": {"value": sub_xml},
                     "sfcPausing": {"value": ""},
@@ -222,12 +312,17 @@ class DirectPlatformClient:
                 "customOrder": order
             }
 
-        update_list = [_make_main(appid, xml_content, description, program_name)]
+        main_timers = resolve_timers(timers, xml_content)
+        update_list = [_make_main(
+            appid, xml_content, description, program_name, main_timers
+        )]
         add_list = []
         if subprograms:
             for idx, sub in enumerate(subprograms, start=1):
+                sub_xml = sub["xml_content"]
+                sub_timers = resolve_timers(sub.get("timers"), sub_xml)
                 add_list.append(_make_sub(
-                    sub["id"], sub["xml_content"], sub["name"], appid, appid, idx
+                    sub["id"], sub_xml, sub["name"], appid, appid, idx, sub_timers
                 ))
 
         payload = {

@@ -55,6 +55,7 @@
 
 | 字段 | 主程序 | 子程序 |
 |------|--------|--------|
+| `sfc.timers` | 见下方 §timers | 同左（按该程序 XML） |
 | `sfc.refServerVariables` | `{"list": []}` | `{}` |
 | `description` | 有 | 无 |
 | `id` | 主 appid | `get_next_id` 返回值（= XML `subId`） |
@@ -67,7 +68,30 @@
 | `schedulePeriod` | 1000 | 无 |
 | `signPathId` / `branchSignPathId` / `formulaGroupId` | `"0"` | 无 |
 
-使用 `scripts/api_reference.py` 的 `save_program(..., subprograms=[...])`，不要手写 payload。
+使用 `scripts/api_reference.py` 的 `save_program(..., subprograms=[...], timers=...)`，不要手写 payload。  
+`timers` 可省略：客户端会从该程序 XML 的 `ext.timer` 自动提取。
+
+### sfc.timers（计时器变量）
+
+使用下列元件时，**必须**在对应程序的 `sfc.timers.list` 声明变量（`timer:wait` / `timer:clock` 不需要）：
+
+- `timer:start` / `timer:stop` / `timer:pause` / `timer:restart` / `timer:cond`
+
+```json
+"timers": {
+  "list": [
+    { "name": "JSQ1", "dataType": 3, "defaultValue": "00:00:00" }
+  ]
+}
+```
+
+| 字段 | 规则 |
+|------|------|
+| `name` | 裸名，仅 `[A-Za-z0-9_]`；与 XML `ext.timer` 一致但**不含** `$()`；`$(JSQ1)` → `JSQ1` |
+| `dataType` | 固定 `3` |
+| `defaultValue` | 固定 `"00:00:00"` |
+
+同一程序内按 `name` 去重；主/子各自一份 `timers`（只声明本程序 XML 用到的）。
 
 ### 单程序示例结构
 
