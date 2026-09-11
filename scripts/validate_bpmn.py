@@ -319,8 +319,43 @@ def _hv_proper_cross(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) -> bool:
     return xmin < vx < xmax and ymin < hy < ymax
 
 
+def _hv_collinear_overlap(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2, min_len=1.0) -> bool:
+    a_vert = abs(ax1 - ax2) < 1e-6
+    a_horz = abs(ay1 - ay2) < 1e-6
+    b_vert = abs(bx1 - bx2) < 1e-6
+    b_horz = abs(by1 - by2) < 1e-6
+    if a_vert and b_vert:
+        if abs(ax1 - bx1) > 1e-6:
+            return False
+        a0, a1 = sorted([ay1, ay2])
+        b0, b1 = sorted([by1, by2])
+        return min(a1, b1) - max(a0, b0) > min_len
+    if a_horz and b_horz:
+        if abs(ay1 - by1) > 1e-6:
+            return False
+        a0, a1 = sorted([ax1, ax2])
+        b0, b1 = sorted([bx1, bx2])
+        return min(a1, b1) - max(a0, b0) > min_len
+    return False
+
+
+def _point_near(x, y, px, py, tol=2.0) -> bool:
+    return abs(x - px) <= tol and abs(y - py) <= tol
+
+
+def _seg_touches_port(seg, bounds_map, node_id, port: str) -> bool:
+    rect = bounds_map.get(node_id)
+    if not rect:
+        return False
+    x1, y1, x2, y2 = rect
+    cx = (x1 + x2) / 2.0
+    py = y1 if port == "top" else y2
+    sx1, sy1, sx2, sy2 = seg
+    return _point_near(sx1, sy1, cx, py) or _point_near(sx2, sy2, cx, py)
+
+
 def _check_layout_geometry(text: str) -> list[str]:
-    """节点重叠、连线穿节点、正交边交叉。"""
+    """节点重叠、连线穿节点、正交边交叉、连线共线重叠。"""
     errors: list[str] = []
     bounds = _parse_bounds(text)
     edges = _parse_edge_waypoints(text)
@@ -377,21 +412,38 @@ def _check_layout_geometry(text: str) -> list[str]:
         if len(pa) < 2:
             continue
         segs_a = [(pa[k][0], pa[k][1], pa[k + 1][0], pa[k + 1][1]) for k in range(len(pa) - 1)]
+        src_a, tgt_a = flow_ends.get(eids[i], (None, None))
         for j in range(i + 1, len(eids)):
             pb = edges[eids[j]]
             if len(pb) < 2:
                 continue
             segs_b = [(pb[k][0], pb[k][1], pb[k + 1][0], pb[k + 1][1]) for k in range(len(pb) - 1)]
+            src_b, tgt_b = flow_ends.get(eids[j], (None, None))
             crossed = False
+            overlapped = False
             for sa in segs_a:
                 for sb in segs_b:
                     if _hv_proper_cross(*sa, *sb):
                         crossed = True
-                        break
-                if crossed:
+                    if _hv_collinear_overlap(*sa, *sb):
+                        share_tgt = tgt_a and tgt_a == tgt_b
+                        share_src = src_a and src_a == src_b
+                        if share_tgt and _seg_touches_port(
+                            sa, bounds, tgt_a, "top"
+                        ) and _seg_touches_port(sb, bounds, tgt_b, "top"):
+                            pass
+                        elif share_src and _seg_touches_port(
+                            sa, bounds, src_a, "bottom"
+                        ) and _seg_touches_port(sb, bounds, src_b, "bottom"):
+                            pass
+                        else:
+                            overlapped = True
+                if crossed and overlapped:
                     break
             if crossed:
                 errors.append(f"edge cross: {eids[i]} × {eids[j]}")
+            if overlapped:
+                errors.append(f"edge overlap: {eids[i]} × {eids[j]}")
 
     return errors
 

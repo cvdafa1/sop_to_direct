@@ -584,7 +584,7 @@ class LayoutGenerator:
                 (outer_x, mid_y2), (tx, mid_y2), (tx, ty)]
 
     def calc_bus_waypoints(self, src_id, tgt_id, bus_y: int):
-        """高扇入汇合：先落到共享水平总线再进目标，减少交叉。"""
+        """高扇入汇合：水平段分 lane，避免多条边共线重叠。"""
         src = self.nodes[src_id]
         tgt = self.nodes[tgt_id]
         sx, sy = src.cx, src.bottom
@@ -594,6 +594,7 @@ class LayoutGenerator:
             by = sy + 40
         if by >= ty:
             by = max(sy + 20, ty - 40)
+        by = self._alloc_lane_y(by)
         if abs(sx - tx) < 10:
             return [(sx, sy), (tx, ty)]
         return [(sx, sy), (sx, by), (tx, by), (tx, ty)]
@@ -703,6 +704,43 @@ class LayoutGenerator:
             vx, ymin, ymax = bx1, *sorted([by1, by2])
         return xmin < vx < xmax and ymin < hy < ymax
 
+    @staticmethod
+    def _hv_collinear_overlap(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2, min_len=1.0):
+        """两条正交线段是否共线且有正长度重叠（不允许叠线）。"""
+        a_vert = abs(ax1 - ax2) < 1e-6
+        a_horz = abs(ay1 - ay2) < 1e-6
+        b_vert = abs(bx1 - bx2) < 1e-6
+        b_horz = abs(by1 - by2) < 1e-6
+        if a_vert and b_vert:
+            if abs(ax1 - bx1) > 1e-6:
+                return False
+            a0, a1 = sorted([ay1, ay2])
+            b0, b1 = sorted([by1, by2])
+            return min(a1, b1) - max(a0, b0) > min_len
+        if a_horz and b_horz:
+            if abs(ay1 - by1) > 1e-6:
+                return False
+            a0, a1 = sorted([ax1, ax2])
+            b0, b1 = sorted([bx1, bx2])
+            return min(a1, b1) - max(a0, b0) > min_len
+        return False
+
+    @staticmethod
+    def _point_near(x, y, px, py, tol=2.0) -> bool:
+        return abs(x - px) <= tol and abs(y - py) <= tol
+
+    def _seg_touches_node_port(self, seg, node_id, port: str) -> bool:
+        """线段端点是否落在节点顶/底中心端口（汇合/分叉豁免用）。"""
+        n = self.nodes.get(node_id)
+        if not n:
+            return False
+        x1, y1, x2, y2 = seg
+        if port == "top":
+            px, py = n.cx, n.top
+        else:
+            px, py = n.cx, n.bottom
+        return self._point_near(x1, y1, px, py) or self._point_near(x2, y2, px, py)
+
     def check_edges_through_nodes(self):
         """连线段不得穿过非端点节点矩形。"""
         issues = []
@@ -745,6 +783,40 @@ class LayoutGenerator:
                         break
                 if crossed:
                     issues.append(f"edge_cross:{id_a}×{id_b}")
+        return issues
+
+    def check_edge_overlaps(self):
+        """不同连线不得共线重叠；仅豁免同源/同宿端口处的汇合短重合。"""
+        issues = []
+        prepared = []
+        for flow in self.flows:
+            if flow.waypoints and len(flow.waypoints) >= 2:
+                prepared.append((flow, self._segments(flow.waypoints)))
+        for i in range(len(prepared)):
+            fa, segs_a = prepared[i]
+            for j in range(i + 1, len(prepared)):
+                fb, segs_b = prepared[j]
+                share_src = fa.source == fb.source
+                share_tgt = fa.target == fb.target
+                overlapped = False
+                for sa in segs_a:
+                    for sb in segs_b:
+                        if not self._hv_collinear_overlap(*sa, *sb):
+                            continue
+                        if share_tgt and self._seg_touches_node_port(
+                            sa, fa.target, "top"
+                        ) and self._seg_touches_node_port(sb, fb.target, "top"):
+                            continue
+                        if share_src and self._seg_touches_node_port(
+                            sa, fa.source, "bottom"
+                        ) and self._seg_touches_node_port(sb, fb.source, "bottom"):
+                            continue
+                        overlapped = True
+                        break
+                    if overlapped:
+                        break
+                if overlapped:
+                    issues.append(f"edge_overlap:{fa.id}×{fb.id}")
         return issues
 
     def recompute_waypoints(self, force_u_for=None):
@@ -824,7 +896,7 @@ class LayoutGenerator:
             self._position_pstart_pend(cid, pstart, pend)
 
     def fix_layout_issues(self, max_attempts=6):
-        """重叠/穿线/交叉：扩距 + 重路由（必要时 U 形），仍失败则返回问题列表。"""
+        """重叠/穿线/交叉/叠线：扩距 + 重路由（必要时 U 形），仍失败则返回问题列表。"""
         force_u = set()
         remaining = []
         for attempt in range(max_attempts):
@@ -832,13 +904,15 @@ class LayoutGenerator:
             overlaps = self.check_overlaps()
             through = self.check_edges_through_nodes()
             crosses = self.check_edge_crossings()
+            edge_olaps = self.check_edge_overlaps()
             remaining = [f"overlap:{a}/{b}" for a, b in overlaps]
             remaining.extend(through)
             remaining.extend(crosses)
+            remaining.extend(edge_olaps)
             if not remaining:
                 return []
-            for msg in crosses:
-                if msg.startswith("edge_cross:"):
+            for msg in crosses + edge_olaps:
+                if msg.startswith("edge_cross:") or msg.startswith("edge_overlap:"):
                     force_u.update(msg.split(":", 1)[1].split("×"))
             for msg in through:
                 if msg.startswith("edge_through:"):
@@ -1153,7 +1227,7 @@ class LayoutGenerator:
             raise ValueError("并行结构失败: " + "; ".join(parallel_issues))
         layout_issues = self.fix_layout_issues()
         if layout_issues:
-            raise ValueError("布局校验失败（重叠/穿线/交叉）: " + "; ".join(layout_issues))
+            raise ValueError("布局校验失败（重叠/穿线/交叉/叠线）: " + "; ".join(layout_issues))
 
         # 未布局（仍在 0,0）会导致 Edge 叠在一起，平台上看起来像没连线
         unset = [
