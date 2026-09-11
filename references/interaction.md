@@ -90,13 +90,13 @@ type：取值见 `node_reference.md` §二（唯一来源：`1` / `3`）
 
 ## Step 3.5：确认图并保存 + 编译二选一（原 3.7 + 4 + 4.5 合并）
 
-前置：Step 3 已 `ir_to_xml` + `validate_bpmn.py` 退出码 0；`accuracy_checklist.md` 已勾选。
+前置：Step 3 已对主（及拆分时全部子）`ir_to_xml` + `validate_bpmn.py main.xml [sub….xml]` 退出码 0；`accuracy_checklist.md` 已勾选。
 
 **同一轮**完成：
 
-1. 展示节点/连线摘要（确认图）
+1. 展示节点/连线摘要（拆分时：主程序 + 各子程序分别摘要；确认主图含全部 `flow:subproc`）
 2. 请用户明确同意保存；未同意禁止 `save_program`
-3. 同意后一次 `save_program`（子程序见 `subprocess.md`）
+3. 同意后一次 `save_program`（拆分必须带齐 `subprograms[].xml_content`，见 `subprocess.md`）
 4. 保存成功后展示简要结果（程序名、appid、节点/连线数），**只允许**下面两种回复：
 
 ```

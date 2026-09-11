@@ -18,7 +18,11 @@ import re
 import sys
 from pathlib import Path
 
-from api_reference import find_invalid_xml_idents, sanitize_xml_ident_names
+from api_reference import (
+    extract_subproc_refs,
+    find_invalid_xml_idents,
+    sanitize_xml_ident_names,
+)
 from schema_loader import components_by_element
 
 
@@ -392,6 +396,54 @@ def _check_layout_geometry(text: str) -> list[str]:
     return errors
 
 
+def _check_split_files(paths: list[Path], texts: list[str]) -> list[str]:
+    """多文件：第一个为主程序，其后为子程序；主 XML 必须引用全部子程序。
+
+    单文件若含 flow:subproc，视为拆分包不完整。
+    """
+    errors: list[str] = []
+    if not texts:
+        return errors
+
+    main_text = texts[0]
+    refs = extract_subproc_refs(main_text)
+
+    if len(paths) == 1:
+        if refs:
+            errors.append(
+                f"{paths[0].name}: has {len(refs)} flow:subproc but no sub XML "
+                f"passed; when split, run: validate_bpmn.py main.xml sub1.xml ..."
+            )
+        return errors
+
+    # 子程序 XML 自身不应再嵌套未声明的拆分包要求（可有 0 个 flow:subproc）
+    sub_paths = paths[1:]
+    sub_texts = texts[1:]
+    if len(refs) != len(sub_paths):
+        errors.append(
+            f"split bundle: main has {len(refs)} flow:subproc but "
+            f"{len(sub_paths)} sub XML file(s) given"
+        )
+
+    for i, ref in enumerate(refs):
+        if not ref["name"]:
+            errors.append(f"main flow:subproc[{i}] missing name")
+        if not ref["subId"]:
+            errors.append(f"main flow:subproc[{i}] missing subId")
+
+    for p, t in zip(sub_paths, sub_texts):
+        nested = extract_subproc_refs(t)
+        if nested:
+            errors.append(
+                f"{p.name}: subprogram XML should not contain flow:subproc "
+                f"({len(nested)} found); nest only in main"
+            )
+        if not str(t).strip():
+            errors.append(f"{p.name}: empty subprogram XML")
+
+    return errors
+
+
 def main(argv: list[str]) -> int:
     args = argv[1:]
     do_fix = False
@@ -401,12 +453,15 @@ def main(argv: list[str]) -> int:
 
     if not args:
         print(
-            "Usage: python scripts/validate_bpmn.py [--fix] <xml> [xml...]",
+            "Usage: python scripts/validate_bpmn.py [--fix] <main.xml> [sub.xml...]",
             file=sys.stderr,
         )
         return 2
 
     any_err = False
+    paths: list[Path] = []
+    texts: list[str] = []
+
     for arg in args:
         path = Path(arg)
         if not path.is_file():
@@ -431,6 +486,18 @@ def main(argv: list[str]) -> int:
                 print(f"  - {e}")
         else:
             print(f"[OK]   {path}")
+        paths.append(path)
+        texts.append(path.read_text(encoding="utf-8"))
+
+    if paths:
+        split_errs = _check_split_files(paths, texts)
+        if split_errs:
+            any_err = True
+            print("[FAIL] split bundle")
+            for e in split_errs:
+                print(f"  - {e}")
+        elif len(paths) > 1:
+            print(f"[OK]   split bundle: main + {len(paths) - 1} sub(s)")
 
     return 1 if any_err else 0
 

@@ -163,12 +163,7 @@ def collect_xml_ident_names(xml_content: str) -> dict[str, list[str]]:
             out.append(x)
         return out
 
-    subprocs: list[str] = []
-    for m in re.finditer(r"<flow:subproc\b([^>]*)>", xml_content):
-        nm = re.search(r'\bname="([^"]*)"', m.group(1))
-        if nm:
-            subprocs.append(nm.group(1).strip())
-
+    subprocs = [r["name"] for r in extract_subproc_refs(xml_content)]
     timers: list[str] = []
     for m in re.finditer(r'"timer"\s*:\s*"(\$\([^"]+\)|[^"]+)"', xml_content):
         timers.append(strip_timer_ref(m.group(1)))
@@ -186,6 +181,107 @@ def collect_xml_ident_names(xml_content: str) -> dict[str, list[str]]:
         "timer": _uniq(timers),
         "variable": _uniq(variables),
     }
+
+
+def extract_subproc_refs(xml_content: str) -> list[dict]:
+    """主程序 XML 中的 flow:subproc 引用：[{name, subId}, ...]（文档顺序）。"""
+    if not xml_content:
+        return []
+    refs: list[dict] = []
+    for m in re.finditer(r"<flow:subproc\b([^>]*)>", xml_content):
+        attrs = m.group(1)
+        nm = re.search(r'\bname="([^"]*)"', attrs)
+        sid = re.search(r'\bsubId="([^"]*)"', attrs)
+        refs.append({
+            "name": (nm.group(1).strip() if nm else ""),
+            "subId": (sid.group(1).strip() if sid else ""),
+        })
+    return refs
+
+
+def check_split_bundle(main_xml: str, subprograms: list | None) -> list[str]:
+    """拆分保存一致性：主 XML 必须引用全部子程序，且每个子程序有非空 XML。
+
+    返回错误列表（空=通过）。
+    """
+    errors: list[str] = []
+    refs = extract_subproc_refs(main_xml or "")
+    subs = list(subprograms or [])
+
+    if not refs and not subs:
+        return errors
+
+    if refs and not subs:
+        errors.append(
+            "main XML has flow:subproc but subprograms is empty; "
+            "split mode requires main XML + each sub XML"
+        )
+        return errors
+
+    if subs and not refs:
+        errors.append(
+            "subprograms provided but main XML has no flow:subproc; "
+            "main must reference every subprocess"
+        )
+        return errors
+
+    if len(refs) != len(subs):
+        errors.append(
+            f"flow:subproc count ({len(refs)}) != subprograms count ({len(subs)})"
+        )
+
+    by_id: dict[str, dict] = {}
+    for i, sub in enumerate(subs):
+        sid = str(sub.get("id") or "").strip()
+        sname = str(sub.get("name") or "").strip()
+        sxml = sub.get("xml_content") or ""
+        if not sid:
+            errors.append(f"subprograms[{i}] missing id")
+            continue
+        if not sname:
+            errors.append(f"subprograms[{i}] missing name")
+        if not str(sxml).strip():
+            errors.append(f"subprograms[{i}] ({sname or sid}) missing xml_content")
+        if sid in by_id:
+            errors.append(f"duplicate subprograms id {sid!r}")
+        by_id[sid] = sub
+
+    seen_ids: set[str] = set()
+    for i, ref in enumerate(refs):
+        name, sid = ref["name"], ref["subId"]
+        if not name:
+            errors.append(f"flow:subproc[{i}] missing name")
+        if not sid:
+            errors.append(f"flow:subproc[{i}] missing subId")
+            continue
+        if sid in seen_ids:
+            errors.append(f"duplicate flow:subproc subId {sid!r}")
+        seen_ids.add(sid)
+        sub = by_id.get(sid)
+        if not sub:
+            errors.append(
+                f"flow:subproc name={name!r} subId={sid!r} has no matching "
+                f"subprograms[].id"
+            )
+            continue
+        sub_name = ensure_ident_name(
+            str(sub.get("name") or ""), fallback_prefix="sub"
+        )
+        ref_name = ensure_ident_name(name, fallback_prefix="sub") if name else ""
+        if name and sub_name != ref_name:
+            errors.append(
+                f"flow:subproc name={name!r} != subprograms name="
+                f"{sub.get('name')!r} (subId={sid})"
+            )
+
+    for sid, sub in by_id.items():
+        if sid not in seen_ids:
+            errors.append(
+                f"subprograms id={sid!r} name={sub.get('name')!r} "
+                f"not referenced by any flow:subproc in main XML"
+            )
+
+    return errors
 
 
 def find_invalid_xml_idents(xml_content: str) -> list[tuple[str, str]]:
@@ -587,10 +683,10 @@ class DirectPlatformClient:
         """保存主程序，可选同时保存子程序。
 
         :param appid: 主程序ID
-        :param xml_content: 主程序XML（含 flow:subproc 引用）
+        :param xml_content: 主程序XML；拆分时必须含全部 flow:subproc 引用
         :param description: 程序描述
         :param program_name: 程序名称（仅 [A-Za-z0-9_]，与子程序/timers/variables 同规则）
-        :param subprograms: 子程序列表，每项为 dict：
+        :param subprograms: 拆分时必填；与主 XML 中 flow:subproc 一一对应（id=subId、name 一致、xml_content 非空）
             {
                 "id": "子程序预生成ID",
                 "xml_content": "<子程序XML>",
@@ -659,6 +755,22 @@ class DirectPlatformClient:
         # 保存前：XML 内子程序/计时器/变量名必须 [A-Za-z0-9_]；非法则改写
         xml_content, _ = sanitize_xml_ident_names(xml_content)
 
+        # 拆分：主 XML 必须含 flow:subproc，且与 subprograms 一一对应
+        if subprograms:
+            fixed_subs = []
+            for sub in subprograms:
+                sub = dict(sub)
+                if sub.get("xml_content"):
+                    sub["xml_content"], _ = sanitize_xml_ident_names(sub["xml_content"])
+                fixed_subs.append(sub)
+            subprograms = fixed_subs
+
+        split_errs = check_split_bundle(xml_content, subprograms)
+        if split_errs:
+            raise ValueError(
+                "split save rejected:\n  - " + "\n  - ".join(split_errs)
+            )
+
         main_timers = resolve_timers(timers, xml_content)
         main_vars = resolve_variables(variables, xml_content, main_timers)
         update_list = [_make_main(
@@ -667,7 +779,7 @@ class DirectPlatformClient:
         add_list = []
         if subprograms:
             for idx, sub in enumerate(subprograms, start=1):
-                sub_xml, _ = sanitize_xml_ident_names(sub["xml_content"])
+                sub_xml = sub["xml_content"]
                 sub_name = ensure_ident_name(
                     sub["name"], kind="program name", fallback_prefix="sub"
                 )

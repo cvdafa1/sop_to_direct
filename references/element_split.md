@@ -175,6 +175,7 @@ flow:or(YL==0)
 - 分支：`branch_yes` 必填；`branch_no` 仅当原文有否则时填写（见 R10/R11）；出边 XML **唯一来源** `golden_xml_rules.md` §3  
 - 并行：父 step `node_type=flow:parallel1`，子 steps 为各分支序列  
 - 单程序：步骤全在 `main_program.steps`；`subprograms` 为空  
+- **拆分**：`subprograms` 非空；每个子程序有完整 steps；主程序 steps 须含对应 `flow:subproc` 调用点（生成主 XML 时写入 `flow:subproc`，见 `subprocess.md` 硬门禁）
 
 ---
 

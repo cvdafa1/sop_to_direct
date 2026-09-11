@@ -25,7 +25,7 @@ description: >-
 4. **白名单 / 校验**：仅 schema 元件；save 前 `validate_bpmn.py` 必须通过（含 XML 内子程序/计时器/变量名 `[A-Za-z0-9_]`；非法则改 IR 或 `validate_bpmn.py --fix` 后再校验）
 5. **连线与布局**：仅由 `ir_to_xml` → `LayoutGenerator.assemble_full_xml`（规则见 golden）
 6. **位号**：确认流程见 `interaction.md` Step 2.5；格式见 `node_reference.md`
-7. **子程序**：见 `subprocess.md`（主 update / 子 add；`subId`=`get_next_id`）
+7. **子程序**：用户确认拆分后必须 **主 XML + 全部子 XML**，且主 XML 用 `flow:subproc` 引用每一个子程序（见 `subprocess.md` 硬门禁）；`subId`=`get_next_id`；save 主 update / 子 add
 8. **禁止** `deploy_program`；编译询问见 `interaction.md` Step 3.5（固定二选一）
 9. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
 10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过（标识符命名见上）
@@ -69,17 +69,27 @@ description: >-
 ### Step 3 — 生成 XML（确定性编译）
 
 **Read** `ir_schema.md`（IR 已在 Step 1 / 2.5 写好位号）。  
-禁止手搓 XML。执行：
+禁止手搓 XML。
+
+**不拆分**：
 
 ```bash
-python scripts/ir_to_xml.py <ir.json> -o <out.xml>
-python scripts/validate_bpmn.py <out.xml>
-# 若报 invalid … name：改 IR 后重编译，或
-python scripts/validate_bpmn.py --fix <out.xml>
+python scripts/ir_to_xml.py <main_ir.json> -o <main.xml>
+python scripts/validate_bpmn.py <main.xml>
+```
+
+**拆分**（必须主 + 全部子；主须含 `flow:subproc`）：
+
+```bash
+python scripts/ir_to_xml.py <main_ir.json> -o <main.xml>
+python scripts/ir_to_xml.py <sub1_ir.json> -o <sub1.xml>
+# …每个子程序各编译一次…
+python scripts/validate_bpmn.py <main.xml> <sub1.xml> … <subN.xml>
 ```
 
 必须退出码 0。细则：`element_schema.json` / `golden_xml_rules.md`（脚本侧）；位号示例按需 `node_reference.md`。  
-命名：XML 内 `flow:subproc` 的 `name`、`ext.timer` / `$(…)` 程序变量须 `[A-Za-z0-9_]`（与 `subprocess.md` 一致）；`ir_to_xml` / `save_program` 会对非法名自动改写，但 Agent 应在 IR 中直接使用合法名。
+命名：XML 内 `flow:subproc` 的 `name`、`ext.timer` / `$(…)` 程序变量须 `[A-Za-z0-9_]`（与 `subprocess.md` 一致）；`ir_to_xml` / `save_program` 会对非法名自动改写，但 Agent 应在 IR 中直接使用合法名。  
+拆分硬门禁唯一来源：`subprocess.md`。
 
 ### Step 3.5 — 确认并保存 + 编译选择
 

@@ -40,6 +40,16 @@
 - 主程序可混合（自身步骤 + `flow:subproc`）
 - 每个程序必须完整：`flow:start` → … → `flow:end`
 
+### 拆分硬门禁（用户确认「拆分」后必须满足）
+
+1. **产物齐全**：生成 **1 份主程序 IR/XML + N 份子程序 IR/XML**（N = Step 1.5 表行数）；禁止只出主程序或只出子程序  
+2. **主程序必须引用**：主 XML 内须有 **恰好 N 个** `flow:subproc`，每个对应一个子程序；`name` / `subId` 与 `get_next_id` + save `subprograms[]` 一致  
+3. **子程序完整 XML**：每个子程序独立 `ir_to_xml` → 完整 `flow:start`…`flow:end`；子 XML **禁止**再嵌套 `flow:subproc`  
+4. **一次保存**：`save_program(..., xml_content=主XML, subprograms=[{id,name,xml_content}, ...])`；缺任一子 XML 或主未引用 → 拒绝保存  
+5. **校验**：`python scripts/validate_bpmn.py main.xml sub1.xml ... subN.xml`（须把主文件放第一位）
+
+禁止：把子步骤全部塞进主程序却无 `flow:subproc`；或有 `flow:subproc` 却未生成/未传入对应子 XML。
+
 ## 时序专规（步骤编排见 `SKILL.md` 工作流）
 
 本文件不复述 Step 编号。专规仅三条：
