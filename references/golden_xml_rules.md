@@ -86,7 +86,7 @@
 - 主链：`layout_vertical`，垂直间距 ≥100
 - 是/否分叉：`layout_branch_columns`（是→左列，否→右列，列距 ≥300）；仅「是」时主链继续竖排即可
 - 多路：`layout_multi_columns`
-- 并行：`layout_parallel1` / `layout_parallel2` 仅在布局库中存在；**本 skill / `ir_to_xml` 未接线，禁止使用**（SOP「同时」→ 串行，见 `element_split.md` R5）
+- 并行槽位：本 skill 禁用，见 `element_split.md` R5
 
 **走线：**
 
@@ -106,11 +106,4 @@
 
 ## 6. 强制生成
 
-Skill 路径：IR → `python scripts/ir_to_xml.py ir.json -o out.xml`（内部调用 `LayoutGenerator.assemble_full_xml`）。
-
-```bash
-python scripts/ir_to_xml.py ir.json -o out.xml
-python scripts/validate_bpmn.py out.xml  # 必须通过（含几何）
-```
-
-禁止 Agent 手拼节点 / sequenceFlow / Edge / Diagram。IR 契约见 `ir_schema.md`。
+禁止 Agent 手拼节点 / sequenceFlow / Edge / Diagram。命令见 `SKILL.md` Step 3；IR 契约见 `ir_schema.md`。

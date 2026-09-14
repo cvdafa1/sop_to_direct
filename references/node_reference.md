@@ -280,74 +280,9 @@
 </msg:guide>
 ```
 
-### 12. flow:parallel1（并行容器，竖向）
+### 12. flow:parallel1 / parallel2
 
-> **本 skill 一期禁用：** `ir_to_xml.py` 不支持；SOP「同时」请按 `element_split.md` R5 **串行降级**。下列 XML 仅作平台结构参考，禁止经本 skill 产出。
-
-**结构**：`parallelStart → N 分支 → parallelEnd`。分支节点和连线都在 parallel1 内部。
-
-**连线关系**：
-- 外部节点 → `flow:parallel1`（容器 incoming）
-- `parallelStart` → 各分支首节点（N 条 outgoing）
-- 各分支内部节点间连线
-- 各分支末节点 → `parallelEnd`（N 条 incoming）
-- `flow:parallel1` → 外部节点（容器 outgoing）
-
-#### 12.1 Process XML（以 2 分支为例）
-
-```xml
-<!-- 外部节点（容器前） -->
-<io:dcs id="Activity_prev" name="前序操作" tabKey="basic">
-  <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.MOT.MOT_P707A_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
-  <bpmn2:incoming>Flow_prev_in</bpmn2:incoming>
-  <bpmn2:outgoing>Flow_to_parallel</bpmn2:outgoing>
-</io:dcs>
-
-<!-- 并行容器 -->
-<flow:parallel1 id="Activity_par1" layout="vertical">
-  <bpmn2:incoming>Flow_to_parallel</bpmn2:incoming>
-  <bpmn2:outgoing>Flow_from_parallel</bpmn2:outgoing>
-  <flow:parallelStart id="Activity_par1_start">
-    <bpmn2:outgoing>Flow_branch_a</bpmn2:outgoing>
-    <bpmn2:outgoing>Flow_branch_b</bpmn2:outgoing>
-  </flow:parallelStart>
-  <flow:parallelEnd id="Activity_par1_end">
-    <bpmn2:incoming>Flow_branch_a_end</bpmn2:incoming>
-    <bpmn2:incoming>Flow_branch_b_end</bpmn2:incoming>
-  </flow:parallelEnd>
-  <!-- 分支 A 节点 -->
-  <io:dcs id="Activity_pump_a" name="启动泵A" tabKey="basic">
-    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.MOT.MOT_P707A_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
-    <bpmn2:incoming>Flow_branch_a</bpmn2:incoming>
-    <bpmn2:outgoing>Flow_branch_a_end</bpmn2:outgoing>
-  </io:dcs>
-  <!-- 分支 B 节点 -->
-  <io:dcs id="Activity_pump_b" name="启动泵B" tabKey="basic">
-    <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.MOT.MOT_P707B_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
-    <bpmn2:incoming>Flow_branch_b</bpmn2:incoming>
-    <bpmn2:outgoing>Flow_branch_b_end</bpmn2:outgoing>
-  </io:dcs>
-</flow:parallel1>
-
-<!-- 外部节点（容器后） -->
-<io:dcs id="Activity_next" name="后续操作" tabKey="basic">
-  <ext:data><![CDATA[{"subTitle":"","showDetail":true,"outputMod":"periodic","data":[{"name":"#(M6-2.Device1.VAL.EV_0707A_MANON)","targetValue":"1","lower":0,"tolerance":"0","upper":1000,"deviation":1,"row":0,"type":1}],"checkData":[],"errorHandler":{"handler":"throw"}}]]></ext:data>
-  <bpmn2:incoming>Flow_from_parallel</bpmn2:incoming>
-  <bpmn2:outgoing>Flow_next_out</bpmn2:outgoing>
-</io:dcs>
-
-<!-- 连线：plain 自闭合（见 golden_xml_rules.md） -->
-<bpmn2:sequenceFlow id="Flow_to_parallel" sourceRef="Activity_prev" targetRef="Activity_par1" />
-<bpmn2:sequenceFlow id="Flow_branch_a" sourceRef="Activity_par1_start" targetRef="Activity_pump_a" />
-<bpmn2:sequenceFlow id="Flow_branch_b" sourceRef="Activity_par1_start" targetRef="Activity_pump_b" />
-<bpmn2:sequenceFlow id="Flow_branch_a_end" sourceRef="Activity_pump_a" targetRef="Activity_par1_end" />
-<bpmn2:sequenceFlow id="Flow_branch_b_end" sourceRef="Activity_pump_b" targetRef="Activity_par1_end" />
-<bpmn2:sequenceFlow id="Flow_from_parallel" sourceRef="Activity_par1" targetRef="Activity_next" />
-```
-
-#### 12.2 Diagram / 坐标
-
-并行布局与 Edge/Shape 顺序见 golden_xml_rules.md；坐标用 layout_generator.layout_parallel1()，勿手写。
+本 skill **禁用**（`ir_to_xml` 拒绝）。SOP「同时」见 `element_split.md` R5。平台模板见 `element_schema.json`，勿经本 skill 产出。
 
 ### 13. util:text（文本注释）
 

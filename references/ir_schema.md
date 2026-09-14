@@ -80,43 +80,13 @@ Agent **只产出本文件 + `fixtures/sample_ir.json` 描述的 IR JSON**；XML
 
 普通边不要 `situation`。
 
-**条件边（`or` / `and` / `cond`）— 与 `golden_xml_rules.md` §3 一致：**
-
-- **必须**有一条 `situation: "yes"`
-- **`situation: "no"` 仅当 SOP 有否则/不满足语义时才加**
-- 合法：仅 yes，或 yes+no；禁止只有 no、禁止无依据硬凑空否
-- 入出边由编译器按 `flows` 注入，IR 不要写 `incoming`/`outgoing`
-
+**条件边：** IR 用 `situation`；条数与是否带 no 的规则见 `golden_xml_rules.md` §3。IR 不要写 `incoming`/`outgoing`。
 ---
 
-## timers（可选）
+## timers / variables（可选）
 
-程序内使用 `timer:start` / `stop` / `pause` / `restart` / `cond` 时，save 的 `sfc.timers` 必须声明对应变量（权威字段见 `subprocess.md` §timers）。
-
-IR 可写：
-
-```json
-"timers": ["JSQ1", "$(JSQ_001)"]
-```
-
-或完整项：`{"name":"JSQ1","dataType":3,"defaultValue":"00:00:00"}`。  
-节点 `ext.timer` 用 `$(JSQ1)`；`timers[].name` 为裸名 `JSQ1`，**仅允许字母、数字、下划线**（`[A-Za-z0-9_]`）。非法名在 `ir_to_xml` / save 前会被 sanitize。`timer:wait` / `timer:clock` 不必列入。
-
----
-
-## variables（可选）
-
-`io:var` / `io:calc` 等使用程序变量时，save 的 `sfc.variables` 必须声明（权威见 `subprocess.md` §variables）。计时器只进 `timers`，不要重复进 `variables`。
-
-```json
-"variables": [
-  { "name": "BL", "dataType": 1, "unit": "", "isEnum": false, "defaultValue": "0.000" },
-  { "name": "msg", "dataType": 2, "defaultValue": "" },
-  { "name": "cnt", "dataType": 3, "defaultValue": "0" }
-]
-```
-
-`dataType`：`1`=浮点，`2`=字符串，`3`=整型。`name` 规则与 `timers` 相同：仅 `[A-Za-z0-9_]`。`flow:subproc` 的 `name` 同此规则。
+字段与命名权威：`subprocess.md` §timers / §variables。  
+IR 可写 `timers: ["JSQ1"]` 或完整项；`variables` 同该文件结构。计时器只进 `timers`。`timer:wait` / `timer:clock` 不必列入 `timers`。
 
 ---
 
@@ -134,20 +104,12 @@ IR 可写：
 - 直线；仅 yes；一层 yes+no
 - **`flow:branch` 多路**（situation `0/1/2…`）
 - **支路内再套一层 yes/no**（如三路里每路一个 `flow:and`）
-- 高扇入汇合用共享总线走线；仍过 `assemble` 重叠/交叉门禁与 `validate_bpmn`
+- 高扇入汇合用共享总线走线（几何门禁见 `golden_xml_rules.md`）
 
-**一期不支持 / Skill 禁止产出：** `parallel1` / `parallel2`。  
-SOP「同时」语义按 `element_split.md` R5 **串行降级**（多个操作节点顺序相连）；写入 parallel 节点时 `ir_to_xml` 直接报错。
+`parallel1` / `parallel2`：禁止写入 IR，见 `element_split.md` R5。
 
 ---
 
-## 编译命令 / fixture
+## 编译 / fixture
 
-| 文件 | 覆盖 |
-|------|------|
-| `fixtures/sample_ir.json` | 直线 + 一层是/否 |
-
-```bash
-python scripts/ir_to_xml.py fixtures/sample_ir.json -o out.xml
-python scripts/validate_bpmn.py out.xml
-```
+`fixtures/sample_ir.json`：直线 + 一层是/否。编译命令见 `SKILL.md` Step 3。

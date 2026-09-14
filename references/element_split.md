@@ -15,7 +15,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 
 3. 对每句做语义标注：操作 / 反馈 / 等待 / 判断 / 提示 / 确认 / 报警 / 同时（一期按串行）
 4. 按 R 规则映射为原子元件序列（不得跳过任一类语义）
 5. 覆盖自检：原文动作点数量 ≈ IR 元件数量（允许 start/end 额外存在）
-6. 产出编译 IR JSON（**唯一形态** `fixtures/sample_ir.json` + `ir_schema.md`）+「原文→元件」对照表（对照表仅展示，禁止写入 IR）；`ir_to_xml` 能编过后再向用户展示并进 Step 1.5
+6. 产出编译 IR（形态见 `ir_schema.md`）+ 对照表（只展示、不写入 IR）→ 进 Step 1.5
 ```
 
 ### 0.1 必须单独成元件的语义点（漏一个即解析不合格）
@@ -33,7 +33,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 
 | 仅提示不暂停 | 提示、弹窗告知、显示信息 | `msg:guide` |
 | 暂停等人确认 | 确认是否、点击确认后、同意后继续 | `msg:confirm` |
 | 报警提示 | 报警、告警 | `msg:alarm` |
-| 同时无先后 | 同时、一并、同步 | **一期降级**：按原文出现顺序串行多个 `io:dcs`（等）；**禁止** IR 写 `flow:parallel1/2`（见 `ir_schema.md`） |
+| 同时无先后 | 同时、一并、同步 | 见 R5 |
 | 反馈信号 | 反馈、到位、收到信号、取反 | 通常独立 `flow:or`（见反馈表） |
 | 上/下跳变 | 从0变1、上升沿、下降沿 | `flow:risingEdge` / `flow:fallingEdge` |
 
@@ -46,7 +46,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 
 - ❌ 把「确认」做成 `msg:guide`，或把「仅提示」做成 `msg:confirm`
 - ❌ 枚举 A、B、C 三台设备却只生成 1 个节点
 - ❌ 发明 schema 未定义的元件名
-- ❌ 使用 `flow:parallel1` / `flow:parallel2`（本 skill 编译器一期不支持）
+- ❌ `flow:parallel1` / `parallel2`（见 R5）
 
 ### 0.3 覆盖自检（进入 1.5 前必须做）
 
@@ -59,7 +59,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 
 | 延时 | | `timer:wait` | |
 | 条件/若…否则 | | `flow:or`/`and`/`branch` | |
 | 提示/确认/报警 | | `msg:*` | |
-| 「同时」组 | | 串行多个操作节点（覆盖表注明「并行→串行降级」） | |
+| 「同时」组 | | 见 R5（覆盖表可注「并行→串行」） | |
 
 **任一类原文有而 IR 无 → 必须补拆，不得进入 Step 1.5。**
 
@@ -69,9 +69,9 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 
 
 - [ ] 已逐句拆分，非按段概括  
 - [ ] 覆盖自检无缺口  
-- [ ] 每个原子语义在 `IR.nodes` 有对应项，且 `type` ∈ schema（字段仅 `id`/`type`/`name`/`ext`/`attrs`）  
-- [ ] 无未定义元件名；无 `parallel1`/`parallel2`  
-- [ ] 已展示完整原子元件列表（不只摘要）；对照表未写进 IR  
+- [ ] 每个原子语义在 `IR.nodes` 有对应项（字段见 `ir_schema.md`）  
+- [ ] 无未定义元件名；无 parallel（见 R5）  
+- [ ] 已展示完整对照表（不写入 IR）  
 
 ---
 
@@ -132,37 +132,8 @@ flow:or(YL==0)
   └─ no  → io:dcs(变频0) → flow:or(SI到位) → io:dcs(停风机) → flow:or(YL取反) → msg:guide(结束) → end
 ```
 
-两支都有「否则」语义时才完整展开；若原文无否则，只保留 yes 支。
+两支都有「否则」语义时才完整展开；若原文无否则，只保留 yes 支。出边规则见 `golden_xml_rules.md` §3。
 
----
-
-## 4. 编译 IR（唯一合法形态）
-
-**禁止**把下面这种「解析草稿」当成可编译 IR（旧结构，已废弃）：
-
-```json
-{ "program_name": "...", "main_program": { "steps": [...] }, "subprograms": [] }
-```
-
-**可交给 `ir_to_xml.py` 的 IR 唯一形态**（必须照搬）：
-
-| 权威 | 作用 |
-|------|------|
-| `fixtures/sample_ir.json` | **结构样板**（顶层 `process_id` / `nodes` / `flows`；节点 `id`/`type`/`name`/`ext`；边 `id`/`source`/`target`/`situation`） |
-| `references/ir_schema.md` | 字段契约 |
-| `references/element_schema.json` | `type` 白名单 + 每个元件 `ext` 字段 |
-
-产出前必须 **Read** 上述三份；字段名不得自造。  
-写完后试跑 `ir_to_xml.py`（结构不对会报错），再进 1.5 / 正式编译。
-
-拆分时：主 IR + 各子 IR **各自**都是 `nodes`+`flows` 形态；主 IR 含 `flow:subproc`（见 `subprocess.md`）。
-
-要求：
-
-- 每个原子语义 → 一个 `nodes[]` 项，`type` ∈ schema  
-- 条件边：`situation: "yes"` 必有；`"no"` 仅当原文有否则（见 R10/R11 / `golden_xml_rules.md` §3）  
-- 「同时」语义：**串行降级**（R5）；**禁止** `flow:parallel1` / `parallel2`（`ir_to_xml` 会拒绝）
-
----
+编译 IR 形态见 `ir_schema.md`（对照表不写入 IR）。拆分子程序见 `subprocess.md`。
 
 （解析完成门禁已并入 §0.3，勿在他处复述。）
