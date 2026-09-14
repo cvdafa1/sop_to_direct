@@ -30,6 +30,7 @@ description: >-
 9. **编译重试**：同 appid，≤3 次，只修数据/格式，不改拓扑
 10. **保存前**：`accuracy_checklist.md` + `validate_bpmn.py` 通过（标识符命名见上）
 11. **确认轮次**：仅 1.5 / 2 / 2.5 / 3.5 四轮（见 `interaction.md`）；禁止再拆多轮
+12. **API 配置**：用 `api_reference.py` 的 `BASE_URL` / `AUTH_TOKEN`（环境变量可覆盖；**未设置则用脚本默认值，默认可用**）。禁止因「未配置 DIRECT_* 环境变量」而跳过 create/save；仅当实际 API 调用失败时再报错
 
 ## 工作流
 

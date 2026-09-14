@@ -35,9 +35,12 @@ import requests
 from requests.exceptions import Timeout, ConnectionError, RequestException
 
 
-# 集中配置（可通过环境变量覆盖，勿把真实 token 写入仓库）
-BASE_URL = os.environ.get("DIRECT_BASE_URL", "http://direct-proxy/").rstrip("/") + "/"
-AUTH_TOKEN = os.environ.get("DIRECT_AUTH_TOKEN", "")
+# API 配置：优先环境变量；未设置或为空时用默认值（本环境默认可用，禁止因未设 env 而拒绝 create/save）
+_DEFAULT_BASE_URL = "http://direct-proxy/"
+_DEFAULT_AUTH_TOKEN = ""  # 经 direct-proxy 时由代理侧鉴权
+
+BASE_URL = (os.environ.get("DIRECT_BASE_URL") or _DEFAULT_BASE_URL).rstrip("/") + "/"
+AUTH_TOKEN = os.environ.get("DIRECT_AUTH_TOKEN") or _DEFAULT_AUTH_TOKEN
 REQUEST_TIMEOUT = 60
 HEADERS = {
     "Accept-Language": "zh-CN",
