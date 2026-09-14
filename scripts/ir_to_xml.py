@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from layout_generator import LayoutGenerator
-from schema_loader import layout_type, render_node_xml, resolve_element
+from schema_loader import components_by_element, layout_type, render_node_xml, resolve_element
 from api_reference import (
     ensure_ident_name,
     sanitize_xml_ident_names,
@@ -27,6 +27,103 @@ from api_reference import (
 
 UNSUPPORTED_LAYOUT = frozenset({"parallel1", "parallel2"})
 DECISION_YN_TYPES = frozenset({"or", "and", "cond"})
+
+# 编译 IR 结构门禁（对齐 fixtures/sample_ir.json；拒绝废弃 main_program/steps）
+_FORBIDDEN_TOP = frozenset({"main_program", "subprograms", "coverage", "program_name"})
+_NODE_DRAFT_FIELDS = frozenset(
+    {"step_no", "source_text", "node_type", "equipment", "parameters"}
+)
+
+
+def _validate_ir_structure(ir: Any, *, path: str = "<ir>") -> list[str]:
+    """结构检查；有错返回消息列表（空=通过）。由 compile_ir 强制调用。"""
+    errors: list[str] = []
+    if not isinstance(ir, dict):
+        return [f"{path}: root must be object"]
+
+    for key in _FORBIDDEN_TOP:
+        if key in ir:
+            errors.append(
+                f"{path}: forbidden top-level key {key!r} "
+                f"(use fixtures/sample_ir.json: process_id/nodes/flows)"
+            )
+
+    for key in ("nodes", "flows"):
+        if key not in ir:
+            errors.append(f"{path}: missing required top-level key {key!r}")
+
+    nodes = ir.get("nodes")
+    flows = ir.get("flows")
+    if nodes is not None and not isinstance(nodes, list):
+        errors.append(f"{path}: nodes must be array")
+        nodes = None
+    if flows is not None and not isinstance(flows, list):
+        errors.append(f"{path}: flows must be array")
+        flows = None
+    if isinstance(nodes, list) and len(nodes) < 2:
+        errors.append(f"{path}: nodes must include at least start and end")
+
+    allowed = set(components_by_element())
+    for full in list(allowed):
+        if ":" in full:
+            allowed.add(full.split(":", 1)[1])
+
+    node_ids: set[str] = set()
+    if isinstance(nodes, list):
+        for i, node in enumerate(nodes):
+            if not isinstance(node, dict):
+                errors.append(f"{path}: nodes[{i}] must be object")
+                continue
+            for k in ("id", "type"):
+                if not node.get(k):
+                    errors.append(f"{path}: nodes[{i}] missing {k}")
+            for bad in _NODE_DRAFT_FIELDS:
+                if bad in node:
+                    errors.append(
+                        f"{path}: nodes[{i}] forbidden field {bad!r} "
+                        f"(use id/type/name/ext like sample_ir.json)"
+                    )
+            nid = node.get("id")
+            if isinstance(nid, str):
+                if nid in node_ids:
+                    errors.append(f"{path}: duplicate node id {nid!r}")
+                node_ids.add(nid)
+            ntype = str(node.get("type") or "")
+            if ntype:
+                short = ntype.split(":", 1)[-1]
+                if ntype not in allowed and short not in allowed:
+                    errors.append(
+                        f"{path}: nodes[{i}] type {ntype!r} not in element_schema.json"
+                    )
+            if "ext" in node and node["ext"] is not None and not isinstance(
+                node["ext"], dict
+            ):
+                errors.append(f"{path}: nodes[{i}].ext must be object")
+
+        if not any(
+            isinstance(n, dict) and n.get("type") in ("flow:start", "start")
+            for n in nodes
+        ):
+            errors.append(f"{path}: missing flow:start node")
+        if not any(
+            isinstance(n, dict) and n.get("type") in ("flow:end", "end") for n in nodes
+        ):
+            errors.append(f"{path}: missing flow:end node")
+
+    if isinstance(flows, list):
+        for i, flow in enumerate(flows):
+            if not isinstance(flow, dict):
+                errors.append(f"{path}: flows[{i}] must be object")
+                continue
+            for k in ("id", "source", "target"):
+                if not flow.get(k):
+                    errors.append(f"{path}: flows[{i}] missing {k}")
+            for end in ("source", "target"):
+                ref = flow.get(end)
+                if ref and node_ids and ref not in node_ids:
+                    errors.append(f"{path}: flows[{i}].{end}={ref!r} not in nodes")
+
+    return errors
 
 
 def _rewrite_dollar_refs(text: str, mapping: dict[str, str]) -> str:
@@ -136,6 +233,9 @@ def sanitize_ir_idents(ir: dict[str, Any]) -> dict[str, Any]:
 
 
 def compile_ir(ir: dict[str, Any]) -> str:
+    ir_errs = _validate_ir_structure(ir, path="<compile_ir>")
+    if ir_errs:
+        raise ValueError("IR structure invalid:\n  - " + "\n  - ".join(ir_errs))
     ir = sanitize_ir_idents(ir)
     nodes = ir.get("nodes") or []
     flows = ir.get("flows") or []

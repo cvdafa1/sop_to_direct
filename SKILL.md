@@ -21,7 +21,7 @@ description: >-
 
 1. **步骤门禁**：不得跳步；create/save/compile 前须用户明确同意
 2. **原子拆分**：按 `element_split.md` 执行
-3. **XML**：Agent 只产 IR（`ir_schema.md`）；禁止手写节点/连线/Diagram XML。编译：`python scripts/ir_to_xml.py <ir.json> -o <out.xml>`。**产 IR 前**必读 `fixtures/sample_ir.json` + `element_schema.json`；字段名/结构严格对齐；IR 写成合法 JSON 后再编译；XML 后必须 `validate_bpmn.py`=0
+3. **IR/XML**：只产编译 IR（形态=**`fixtures/sample_ir.json`**，契约=`ir_schema.md`）。写 IR 前必须 **Read** `sample_ir.json` + `element_schema.json`，字段名照搬。**禁止** `main_program`/`steps` 等废弃结构。编译：`ir_to_xml.py`（内含结构校验）→ `validate_bpmn.py` 均须退出码 0；禁止手写 XML
 4. **白名单 / 校验**：仅 schema 元件；save 前 `validate_bpmn.py` 必须通过（含 XML 内子程序/计时器/变量名 `[A-Za-z0-9_]`；非法则改 IR 或 `validate_bpmn.py --fix` 后再校验）
 5. **连线与布局**：仅由 `ir_to_xml` → `LayoutGenerator.assemble_full_xml`（规则见 golden）
 6. **位号**：确认流程见 `interaction.md` Step 2.5；格式见 `node_reference.md`
@@ -51,8 +51,15 @@ description: >-
 
 ### Step 1 — 解析
 
-**Read** `element_split.md` 并执行其强制流程与覆盖自检。  
-写 IR 前另 **Read** `fixtures/sample_ir.json` + `element_schema.json`（字段名/结构照搬，勿自造）；产出合法 JSON IR 并展示完整元件列表后再进 1.5（本步不单独要「同意解析」）。
+**Read（缺一不可，且须在写 IR 之前）**：
+1. `element_split.md` — 原子拆分与覆盖自检  
+2. `fixtures/sample_ir.json` — **编译 IR 结构样板（照抄字段，勿自造）**  
+3. `element_schema.json` — `type` / `ext`  
+4. `ir_schema.md` — 契约  
+
+产出 **仅** `process_id` + `nodes` + `flows`（±可选 layout/timers/variables）形态的合法 JSON；  
+用 `python scripts/ir_to_xml.py <ir.json> -o <tmp.xml>` 试编译（结构不对会直接报错），通过后再展示对照表并进 1.5。  
+**禁止**输出 `main_program` / `steps` / `coverage` 等废弃草稿当 IR。
 
 ### Step 1.5 — 拆分方案
 
@@ -70,15 +77,15 @@ description: >-
 
 ### Step 3 — 生成 XML（确定性编译）
 
-**Read** `ir_schema.md`（IR 已在 Step 1 / 2.5 写好位号；结构须与 `sample_ir.json` / schema 一致）。  
-禁止手搓 XML。先确认 IR 为合法 JSON，再编译；编译后必须跑 `validate_bpmn.py`。
-
-**不拆分**：
+**Read** `ir_schema.md`（IR 已在 Step 1 / 2.5 写好位号；结构须与 `sample_ir.json` 一致）。  
+禁止手搓 XML。
 
 ```bash
-python scripts/ir_to_xml.py <main_ir.json> -o <main.xml>
-python scripts/validate_bpmn.py <main.xml>
+python scripts/ir_to_xml.py <ir.json> -o <out.xml>
+python scripts/validate_bpmn.py <out.xml>
 ```
+
+**不拆分**：上述对主 IR 跑一遍。  
 
 **拆分**（必须主 + 全部子；主须含 `flow:subproc`）：
 
@@ -112,7 +119,7 @@ python scripts/validate_bpmn.py <main.xml> <sub1.xml> … <subN.xml>
 |------|----------|
 | 任务编排 / 门禁 | `SKILL.md` |
 | SOP→IR 原子拆分 | `element_split.md` |
-| IR JSON 契约 | `ir_schema.md` |
+| IR JSON 契约 | `ir_schema.md` + 样板 `fixtures/sample_ir.json` |
 | 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
 | 用户确认文案（1.5/2/2.5/3.5） | `interaction.md` |
 | XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |

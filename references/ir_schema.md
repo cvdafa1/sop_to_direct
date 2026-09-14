@@ -1,7 +1,17 @@
 # IR 契约（SOP → 确定性编译）
 
-Agent **只产出本文件描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` 生成。  
+Agent **只产出本文件 + `fixtures/sample_ir.json` 描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` 生成。  
 禁止在 IR 中写坐标、`incoming`/`outgoing`、sequenceFlow 几何或 Diagram。
+
+## 强制参照（写 IR 前必须 Read，禁止凭记忆）
+
+| 文件 | 作用 |
+|------|------|
+| `fixtures/sample_ir.json` | **唯一结构样板**——顶层与节点/边字段名必须与此一致 |
+| `references/element_schema.json` | `type` 白名单与每个元件 `ext` 字段 |
+
+**禁止**产出废弃结构：`main_program` / `steps` / `subprograms`（包 steps）/ `coverage` / `program_name`。  
+结构门禁内置在 `ir_to_xml.py`（不合规则编译失败）。
 
 元件白名单与 `ext` 字段：`element_schema.json`（唯一来源）。
 

@@ -15,7 +15,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 3. 对每句做语义标注：操作 / 反馈 / 等待 / 判断 / 提示 / 确认 / 报警 / 并行
 4. 按 R 规则映射为原子元件序列（不得跳过任一类语义）
 5. 覆盖自检：原文动作点数量 ≈ IR 元件数量（允许 start/end 额外存在）
-6. 产出 IR JSON（契约见 `ir_schema.md`）+「原文→元件」对照表，向用户展示后再进 Step 1.5
+6. 产出编译 IR JSON（**唯一形态** `fixtures/sample_ir.json` + `ir_schema.md`）+「原文→元件」对照表；`ir_to_xml` 能编过后再向用户展示并进 Step 1.5
 ```
 
 ### 0.1 必须单独成元件的语义点（漏一个即解析不合格）
@@ -135,47 +135,32 @@ flow:or(YL==0)
 
 ---
 
-## 4. IR 结构（每个 step 落到一个 schema 元件）
+## 4. 编译 IR（唯一合法形态）
+
+**禁止**把下面这种「解析草稿」当成可编译 IR（旧结构，已废弃）：
 
 ```json
-{
-  "program_name": "circ_water_shutdown",
-  "description": "...",
-  "version": "v1.0",
-  "coverage": {
-    "source_action_points": 0,
-    "ir_elements": 0,
-    "notes": "覆盖说明/缺口"
-  },
-  "main_program": {
-    "description": "主程序",
-    "steps": [
-      {
-        "step_no": 1,
-        "source_text": "尽量保留对应原文片段",
-        "action": "原子动作描述",
-        "node_type": "io:dcs",
-        "equipment": { "name": "", "tag": "", "action_type": "MANON|MANOF|AUTOOPT|..." },
-        "parameters": [{ "name": "", "targetValue": "", "type": "1|3" }],
-        "condition": {
-          "tag": "", "judge": "==|!=|>|<", "targetValue": "",
-          "branch_yes": [], "branch_no": []
-        },
-        "safety": { "threshold_tag": "", "threshold_value": "", "action": "" }
-      }
-    ]
-  },
-  "subprograms": []
-}
+{ "program_name": "...", "main_program": { "steps": [...] }, "subprograms": [] }
 ```
+
+**可交给 `ir_to_xml.py` 的 IR 唯一形态**（必须照搬）：
+
+| 权威 | 作用 |
+|------|------|
+| `fixtures/sample_ir.json` | **结构样板**（顶层 `process_id` / `nodes` / `flows`；节点 `id`/`type`/`name`/`ext`；边 `id`/`source`/`target`/`situation`） |
+| `references/ir_schema.md` | 字段契约 |
+| `references/element_schema.json` | `type` 白名单 + 每个元件 `ext` 字段 |
+
+产出前必须 **Read** 上述三份；字段名不得自造。  
+写完后试跑 `ir_to_xml.py`（结构不对会报错），再进 1.5 / 正式编译。
+
+拆分时：主 IR + 各子 IR **各自**都是 `nodes`+`flows` 形态；主 IR 含 `flow:subproc`（见 `subprocess.md`）。
 
 要求：
 
-- 每个 step 必须有 `node_type`（∈ schema）与 `source_text`（可追溯）  
-- 分支：`branch_yes` 必填；`branch_no` 仅当原文有否则时填写（见 R10/R11）；出边 XML **唯一来源** `golden_xml_rules.md` §3  
-- 并行：父 step `node_type=flow:parallel1`，子 steps 为各分支序列  
-- 单程序：步骤全在 `main_program.steps`；`subprograms` 为空  
-- **拆分**：`subprograms` 非空；每个子程序有完整 steps；主程序 steps 须含对应 `flow:subproc` 调用点（生成主 XML 时写入 `flow:subproc`，见 `subprocess.md` 硬门禁）
+- 每个原子语义 → 一个 `nodes[]` 项，`type` ∈ schema  
+- 条件边：`situation: "yes"` 必有；`"no"` 仅当原文有否则（见 R10/R11 / `golden_xml_rules.md` §3）  
+- 并行：`flow:parallel1` 等（编译器一期可能仍不支持，见 `ir_schema.md`）
 
 ---
 
