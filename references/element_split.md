@@ -3,7 +3,7 @@
 **核心原则：一个元件 = 一个原子操作或一个独立判断。**  
 复合步骤必须拆分；**禁止合并、禁止跳过、禁止用一句话概括多步。**
 
-SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有对应 `node_type`（且属于 `element_schema.json` 白名单）。
+SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 的 `nodes[]` 中有对应项（`type` ∈ `element_schema.json` 白名单）。
 
 ---
 
@@ -12,10 +12,10 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 ```
 1. 全文通读 → 按阶段/条款切块（保留原文编号）
 2. 逐句切分（逗号、顿号、分号、「后」「然后」「并」「同时」均可能是边界）
-3. 对每句做语义标注：操作 / 反馈 / 等待 / 判断 / 提示 / 确认 / 报警 / 并行
+3. 对每句做语义标注：操作 / 反馈 / 等待 / 判断 / 提示 / 确认 / 报警 / 同时（一期按串行）
 4. 按 R 规则映射为原子元件序列（不得跳过任一类语义）
 5. 覆盖自检：原文动作点数量 ≈ IR 元件数量（允许 start/end 额外存在）
-6. 产出编译 IR JSON（**唯一形态** `fixtures/sample_ir.json` + `ir_schema.md`）+「原文→元件」对照表；`ir_to_xml` 能编过后再向用户展示并进 Step 1.5
+6. 产出编译 IR JSON（**唯一形态** `fixtures/sample_ir.json` + `ir_schema.md`）+「原文→元件」对照表（对照表仅展示，禁止写入 IR）；`ir_to_xml` 能编过后再向用户展示并进 Step 1.5
 ```
 
 ### 0.1 必须单独成元件的语义点（漏一个即解析不合格）
@@ -33,7 +33,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 | 仅提示不暂停 | 提示、弹窗告知、显示信息 | `msg:guide` |
 | 暂停等人确认 | 确认是否、点击确认后、同意后继续 | `msg:confirm` |
 | 报警提示 | 报警、告警 | `msg:alarm` |
-| 同时无先后 | 同时、一并、同步 | `flow:parallel1` 包裹多操作 |
+| 同时无先后 | 同时、一并、同步 | **一期降级**：按原文出现顺序串行多个 `io:dcs`（等）；**禁止** IR 写 `flow:parallel1/2`（见 `ir_schema.md`） |
 | 反馈信号 | 反馈、到位、收到信号、取反 | 通常独立 `flow:or`（见反馈表） |
 | 上/下跳变 | 从0变1、上升沿、下降沿 | `flow:risingEdge` / `flow:fallingEdge` |
 
@@ -46,6 +46,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 - ❌ 把「确认」做成 `msg:guide`，或把「仅提示」做成 `msg:confirm`
 - ❌ 枚举 A、B、C 三台设备却只生成 1 个节点
 - ❌ 发明 schema 未定义的元件名
+- ❌ 使用 `flow:parallel1` / `flow:parallel2`（本 skill 编译器一期不支持）
 
 ### 0.3 覆盖自检（进入 1.5 前必须做）
 
@@ -58,19 +59,19 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 | 延时 | | `timer:wait` | |
 | 条件/若…否则 | | `flow:or`/`and`/`branch` | |
 | 提示/确认/报警 | | `msg:*` | |
-| 「同时」组 | | `flow:parallel1` | |
+| 「同时」组 | | 串行多个操作节点（覆盖表注明「并行→串行降级」） | |
 
 **任一类原文有而 IR 无 → 必须补拆，不得进入 Step 1.5。**
 
-向用户展示：阶段列表 + **全部原子元件**（`node_type` + action + 位号/设备）+ 覆盖自检结果。
+向用户展示：阶段列表 + **全部原子元件对照表**（列：`type` + 动作摘要 + 位号/设备 + 对应原文；**对照表勿写入 IR JSON**）+ 覆盖自检结果。
 
 进入 1.5 前勾选：
 
 - [ ] 已逐句拆分，非按段概括  
 - [ ] 覆盖自检无缺口  
-- [ ] 每个 step 有 `node_type` + `source_text`  
-- [ ] 无未定义元件名  
-- [ ] 已展示完整原子元件列表（不只摘要）
+- [ ] 每个原子语义在 `IR.nodes` 有对应项，且 `type` ∈ schema（字段仅 `id`/`type`/`name`/`ext`/`attrs`）  
+- [ ] 无未定义元件名；无 `parallel1`/`parallel2`  
+- [ ] 已展示完整原子元件列表（不只摘要）；对照表未写进 IR  
 
 ---
 
@@ -82,13 +83,13 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在 IR 中有
 | R2 | "变频调为X，反馈Y后执行Z" | `io:dcs(X)` → `flow:or(Y)` → `io:dcs(Z)` | 操作→反馈→再操作 |
 | R3 | "同一设备同时设多参数" | 1×`io:dcs`（data 多项） | 仅同一设备可合并 |
 | R4 | "依次关闭A、B、C" | `io:dcs(A)`→`io:dcs(B)`→`io:dcs(C)` | 不同设备不合并 |
-| R5 | "同时操作A/B/C，无先后" | `flow:parallel1` 内 3×`io:dcs` | 并行 |
+| R5 | "同时操作A/B/C，无先后" | `io:dcs(A)`→`io:dcs(B)`→`io:dcs(C)`（按原文顺序） | **一期串行降级**；禁止 `parallel1` |
 | R6 | "XX秒/分钟后执行A" | `timer:wait` → 下一步 | 纯等待 |
 | R7 | "XX秒未收到B则提示/报警C" | `io:dcs?` → `timer:cond` → `msg:guide`/`msg:alarm` | 超时分支 |
 | R8 | "弹窗提示XXX"（不等人） | `msg:guide` | |
 | R9 | "确认是否XXX，确认后继续" | `msg:confirm` → 下一步 | |
-| R10 | "若A则…"（无否则） | `flow:or` → IR 仅 `branch_yes` | 不硬凑否；出边 XML → `golden_xml_rules.md` §3 |
-| R11 | "若A则…否则…" | `flow:or`/`and` → yes + no | 仅此时 IR 填 `branch_no`；出边 XML → 同上 |
+| R10 | "若A则…"（无否则） | `flow:or` + 仅一条 `flows[].situation:"yes"` | 不硬凑否；出边 → `golden_xml_rules.md` §3 |
+| R11 | "若A则…否则…" | `flow:or`/`and` + `situation:"yes"` 与 `"no"` | 仅此时加 no 边；出边 → 同上 |
 | R12 | "分别判断三种情况/哪台运行" | `flow:branch`（N 支） | 多选一 |
 | R13 | "全部完成后提示" | 末端 `msg:guide` | |
 | R14 | "报警XXX"（不暂停） | `msg:alarm` | 与 guide 区分 |
@@ -160,7 +161,7 @@ flow:or(YL==0)
 
 - 每个原子语义 → 一个 `nodes[]` 项，`type` ∈ schema  
 - 条件边：`situation: "yes"` 必有；`"no"` 仅当原文有否则（见 R10/R11 / `golden_xml_rules.md` §3）  
-- 并行：`flow:parallel1` 等（编译器一期可能仍不支持，见 `ir_schema.md`）
+- 「同时」语义：**串行降级**（R5）；**禁止** `flow:parallel1` / `parallel2`（`ir_to_xml` 会拒绝）
 
 ---
 

@@ -282,6 +282,8 @@
 
 ### 12. flow:parallel1（并行容器，竖向）
 
+> **本 skill 一期禁用：** `ir_to_xml.py` 不支持；SOP「同时」请按 `element_split.md` R5 **串行降级**。下列 XML 仅作平台结构参考，禁止经本 skill 产出。
+
 **结构**：`parallelStart → N 分支 → parallelEnd`。分支节点和连线都在 parallel1 内部。
 
 **连线关系**：

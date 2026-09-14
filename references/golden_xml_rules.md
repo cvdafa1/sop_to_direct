@@ -85,7 +85,8 @@
 
 - 主链：`layout_vertical`，垂直间距 ≥100
 - 是/否分叉：`layout_branch_columns`（是→左列，否→右列，列距 ≥300）；仅「是」时主链继续竖排即可
-- 并行：`layout_parallel1` / `layout_parallel2`，分支列距 ≥300，容器 padding ≥40
+- 多路：`layout_multi_columns`
+- 并行：`layout_parallel1` / `layout_parallel2` 仅在布局库中存在；**本 skill / `ir_to_xml` 未接线，禁止使用**（SOP「同时」→ 串行，见 `element_split.md` R5）
 
 **走线：**
 

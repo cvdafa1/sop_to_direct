@@ -136,7 +136,8 @@ IR 可写：
 - **支路内再套一层 yes/no**（如三路里每路一个 `flow:and`）
 - 高扇入汇合用共享总线走线；仍过 `assemble` 重叠/交叉门禁与 `validate_bpmn`
 
-一期仍不支持：`parallel1` / `parallel2`。
+**一期不支持 / Skill 禁止产出：** `parallel1` / `parallel2`。  
+SOP「同时」语义按 `element_split.md` R5 **串行降级**（多个操作节点顺序相连）；写入 parallel 节点时 `ir_to_xml` 直接报错。
 
 ---
 

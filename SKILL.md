@@ -58,6 +58,8 @@ description: >-
 4. `ir_schema.md` — 契约  
 
 产出 **仅** `process_id` + `nodes` + `flows`（±可选 layout/timers/variables）形态的合法 JSON；  
+「原文→元件」对照表用对话表格展示，**禁止**把 `source_text`/`node_type`/`step_no` 等写入 IR。  
+「同时」语义按 `element_split.md` R5 **串行**，禁止 `parallel1/2`。  
 用 `python scripts/ir_to_xml.py <ir.json> -o <tmp.xml>` 试编译（结构不对会直接报错），通过后再展示对照表并进 1.5。  
 **禁止**输出 `main_program` / `steps` / `coverage` 等废弃草稿当 IR。
 

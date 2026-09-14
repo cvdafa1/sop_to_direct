@@ -257,8 +257,9 @@ def compile_ir(ir: dict[str, Any]) -> str:
         lt = layout_type(element)
         if lt in UNSUPPORTED_LAYOUT:
             raise ValueError(
-                f"ir_to_xml does not support {element} yet "
-                "(parallel containers); omit or extend compiler"
+                f"ir_to_xml does not support {element}: "
+                "parallel containers are disabled in this skill; "
+                "split SOP '同时' into sequential io:dcs (etc.) per element_split.md R5"
             )
         name = node.get("name") or ""
         gen.add_node(nid, lt, name)
@@ -347,7 +348,10 @@ def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:
                 gap=op.get("gap"),
             )
         elif kind in ("parallel1", "parallel2"):
-            raise ValueError(f"layout op {kind} not supported yet")
+            raise ValueError(
+                f"layout op {kind} disabled: use sequential nodes "
+                "(element_split.md R5), not parallel containers"
+            )
         else:
             raise ValueError(f"unknown layout op: {kind}")
 
