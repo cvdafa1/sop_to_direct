@@ -29,10 +29,11 @@ description: >-
 | 6 | 位号确认与格式 | `interaction.md` Step 2.5 + `node_reference.md` |
 | 7 | 拆分：主+全部子 XML，主含 `flow:subproc` | `subprocess.md` |
 | 8 | 禁止 `deploy_program`；编译二选一 | `interaction.md` Step 3.5 |
-| 9 | 编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
-| 10 | 保存前勾选清单 | `accuracy_checklist.md` |
-| 11 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮 | `interaction.md` |
-| 12 | API：`api_reference.py` 默认值可用；禁止因未设 `DIRECT_*` 而跳过调用 | `api_reference.py` |
+| 9 | 平台编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
+| 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
+| 11 | 保存前勾选清单 | `accuracy_checklist.md` |
+| 12 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮 | `interaction.md` |
+| 13 | API：`api_reference.py` 默认值可用；禁止因未设 `DIRECT_*` 而跳过调用 | `api_reference.py` |
 
 ## 工作流
 
@@ -79,13 +80,21 @@ python scripts/validate_bpmn.py <out.xml>
 
 拆分：每个子 IR 各编译一次；`validate_bpmn.py <main.xml> <sub1.xml> …`（主文件第一位）。须退出码 0。
 
+#### 失败处置（`ir_to_xml` / `validate_bpmn` / 布局重叠交叉）
+
+**禁止**为通过校验而简化 SOP 语义或流程，包括但不限于：删节点、合并多步、去掉分支/否则、改串行以「少连线」、用一句话概括多操作、减少 `flow:subproc`。
+
+**允许**：修 `ext`/位号/标识符；补 `IR.layout`；调间距/走线相关参数；按报错修结构字段；仍失败则向用户说明卡点并请求指示——**不得擅自砍流程**。
+
+覆盖自检与禁止合并见 `element_split.md`。
+
 ### Step 3.5 — 确认并保存 + 编译选择
 
 **Read** `interaction.md` Step 3.5。
 
 ### Step 5 — 编译（若用户选确认编译）
 
-失败：位号再问用户；格式可自修；同 appid ≤3 次；禁止新建、禁止改拓扑。
+失败：位号再问用户；格式可自修；同 appid ≤3 次；禁止新建、禁止改拓扑、**禁止简化流程**（同 Step 3 失败处置）。
 
 ### Step 6 — 报告
 
