@@ -22,7 +22,7 @@ description: >-
 | # | 门禁 | 细则唯一来源 |
 |---|------|----------------|
 | 1 | 不得跳步；create/save/compile 前须用户明确同意 | `interaction.md` |
-| 2 | 原子拆分 | `element_split.md` |
+| 2 | 原子拆分；**全文识别不可忽略**；大文件分块见 `element_split.md` §0.4 | `element_split.md` |
 | 3 | 只产编译 IR；禁止手写 XML；`ir_to_xml` → `validate_bpmn` 退出码 0 | `ir_schema.md` + `fixtures/sample_ir.json` |
 | 4 | 仅 schema 元件；标识符命名 | `element_schema.json` / `subprocess.md` |
 | 5 | 连线与布局仅由编译器组装 | `golden_xml_rules.md` |
@@ -55,7 +55,7 @@ description: >-
 ### Step 1 — 解析
 
 写 IR 前 **Read**：`element_split.md` → `fixtures/sample_ir.json` → `element_schema.json` → `ir_schema.md`。  
-对照表只展示、不写入 IR。产出后进 1.5（本步不单独要「同意解析」）。
+全文识别、大文件分块：`element_split.md` §0.4。对照表只展示、不写入 IR。产出后进 1.5（本步不单独要「同意解析」）。
 
 ### Step 1.5 — 拆分方案
 
