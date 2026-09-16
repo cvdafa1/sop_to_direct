@@ -23,6 +23,7 @@ description: >-
 | 因失败擅自简化 SOP/砍节点 | 见 Step 3「失败处置」与门禁 #10 |
 | 因未设 `DIRECT_*` / 工具不便而跳过 API 或确认 | 用 `api_reference.py` 默认值；确认轮次不得省略 |
 | 手写 BPMN XML 或绕过 `ir_to_xml` / `validate_bpmn` | 只产 IR → 脚本编译 → 退出码 0 才进 3.5 |
+| **自构平台 HTTP/payload**（curl、裸 `requests`、手写 addProcedures 等） | **只**经 `DirectPlatformClient`（create/save/compile/get_*） |
 
 不确定时：**停下来按本文件与唯一来源执行**，不得用「更快/更简单」的替代路径。
 
@@ -48,7 +49,7 @@ description: >-
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
 | 12 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮；**1.5 与 2 严格分开、单独交互**（禁止同屏问拆分+创建） | `interaction.md` |
-| 13 | API：`api_reference.py` 默认值可用；禁止因未设 `DIRECT_*` 而跳过调用 | `api_reference.py` |
+| 13 | API：**只**用 `DirectPlatformClient`；禁止自构 URL/payload/curl；未设 `DIRECT_*` 仍用脚本默认值 | `api_reference.py` |
 
 ## 工作流
 

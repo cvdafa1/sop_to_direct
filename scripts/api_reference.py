@@ -1,4 +1,7 @@
-"""Direct 平台 REST API 客户端参考实现
+"""Direct 平台 REST API 客户端（技能唯一调用入口）
+
+Agent / 脚本对平台的 create / save / compile / 查询，必须经 DirectPlatformClient，
+禁止在技能流程外自构 HTTP URL 或 procedure payload。
 
 用法:
     from api_reference import DirectPlatformClient

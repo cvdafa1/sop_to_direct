@@ -8,6 +8,7 @@
 - **不要依赖 AskUserQuestion / PureShowWidget**（环境可能无此工具）
 - 用对话列表、表格、编号选项完成确认
 - 任何会改平台状态的 API：`create` / `compile` 必须先得到用户明确同意；**`save_program` 在 Step 3 校验通过后自动执行，不与用户确认**
+- **平台调用唯一入口**：只使用 `scripts/api_reference.py` 的 `DirectPlatformClient`（`create_program` / `save_program` / `compile_program` / `get_data_groups` / `get_next_id` / `get_tags` 等）。**禁止**自行拼 URL、手写 `addProcedures`/`updateProcedures` payload、用 curl/裸 `requests` 调 Direct
 - **确认已合并**：整流程只保留本文件下列确认轮次，禁止再拆成多轮重复问
 
 ## 确认轮次（仅 4 轮）
