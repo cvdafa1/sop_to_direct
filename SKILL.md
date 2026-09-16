@@ -36,14 +36,14 @@ description: >-
 | # | 门禁 | 细则唯一来源 |
 |---|------|----------------|
 | 0 | **加载技能后必须严格按本文件流程执行**；禁止跳步/换序/自创路径 | 本文件「绝对执行原则」 |
-| 1 | 不得跳步；create/save/compile 前须用户明确同意 | `interaction.md` |
+| 1 | 不得跳步；**create / compile** 前须用户明确同意；**save 不询问**（3 校验通过后自动保存） | `interaction.md` |
 | 2 | 原子拆分；**全文识别不可忽略**；大文件分块见 `element_split.md` §0.4 | `element_split.md` |
 | 3 | 只产编译 IR；禁止手写 XML；`ir_to_xml` → `validate_bpmn` 退出码 0 | `ir_schema.md` + `fixtures/sample_ir.json` |
 | 4 | 仅 schema 元件；标识符命名 | `element_schema.json` / `subprocess.md` |
 | 5 | 连线与布局仅由编译器组装 | `golden_xml_rules.md` |
 | 6 | 位号确认与格式 | `interaction.md` Step 2.5 + `node_reference.md` |
 | 7 | 拆分：主+全部子 XML，主含 `flow:subproc` | `subprocess.md` |
-| 8 | 禁止 `deploy_program`；编译二选一 | `interaction.md` Step 3.5 |
+| 8 | 禁止 `deploy_program`；保存自动；**仅编译**二选一交互 | `interaction.md` Step 3.5 |
 | 9 | 平台编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
@@ -54,7 +54,7 @@ description: >-
 
 ```
 1 解析 → 1.5 拆分方案 → 2 创建主程序（若拆则随后 get_next_id）
-  → 2.5 位号确认 → 3 生成 XML → 3.5 确认并保存（成功后编译二选一）→ [5 编译] → 6 报告
+  → 2.5 位号确认 → 3 生成 XML → 3.5 自动保存 + 编译二选一 → [5 编译] → 6 报告
 ```
 
 | 未完成 | 不得进入 |
@@ -63,8 +63,8 @@ description: >-
 | 1.5 用户确认拆分方案 | 2 |
 | 2 用户同意创建 | 2.5（若拆分：create 后先 `get_next_id` 再 2.5） |
 | 2.5 位号确认 | 3 |
-| 3 validate 通过 | 3.5 |
-| 3.5 同意保存 | save；保存成功后才能选编译 |
+| 3 validate 通过 + checklist | 3.5（直接 save，不询问） |
+| 3.5 **save 成功**（`code` 为 0/`"0"`） | 才能问编译二选一；失败展示 code/msg 并停止 |
 | 3.5 选「确认编译」 | 5 |
 
 ### Step 1 — 解析
@@ -104,9 +104,9 @@ python scripts/validate_bpmn.py <out.xml>
 
 覆盖自检与禁止合并见 `element_split.md`。
 
-### Step 3.5 — 确认并保存 + 编译选择
+### Step 3.5 — 自动保存 + 编译选择
 
-**Read** `interaction.md` Step 3.5。
+**Read** `interaction.md` Step 3.5。校验通过后**直接 save**（不询问）；须以返回 **`code`/`msg`** 判定成功，**仅成功后**再问是否编译；失败展示 `code`+`msg` 并停止。
 
 ### Step 5 — 编译（若用户选确认编译）
 

@@ -573,9 +573,32 @@ def _handle_api_errors(fn):
     return wrapper
 
 
-def _check_response_code(response: dict, action_name: str):
-    if response.get("code") is not None and response.get("code") != 0:
-        raise RuntimeError(f"{action_name}失败: {response.get('message', '未知错误')}")
+def _response_msg(response: dict) -> str:
+    """平台响应文案：优先 msg，兼容 message 等字段。"""
+    for key in ("msg", "message", "errorMsg", "errorMessage"):
+        val = response.get(key)
+        if val is not None and str(val).strip():
+            return str(val).strip()
+    return "未知错误"
+
+
+def _is_success_code(code) -> bool:
+    return code == 0 or code == "0"
+
+
+def _check_response_code(response: dict, action_name: str, *, require_code: bool = False):
+    """按 code / msg 判定成败。
+
+    require_code=True（如 save）：响应必须带 code，且为 0 / \"0\" 才算成功。
+    """
+    if not isinstance(response, dict):
+        raise RuntimeError(f"{action_name}失败: 响应非对象；msg=未知错误")
+    code = response.get("code")
+    msg = _response_msg(response)
+    if require_code and code is None:
+        raise RuntimeError(f"{action_name}失败: 响应缺少 code；msg={msg}")
+    if code is not None and not _is_success_code(code):
+        raise RuntimeError(f"{action_name}失败: code={code}；msg={msg}")
 
 
 @_handle_api_errors
@@ -801,7 +824,8 @@ class DirectPlatformClient:
         }
         url = BASE_URL + "vxdirect/procedure/all"
         response = make_request("POST", url, json=payload)
-        _check_response_code(response, "主程序保存")
+        # 自动保存门禁：必须 code 成功才返回；失败抛错含 code + msg
+        _check_response_code(response, "主程序保存", require_code=True)
         return response
 
     # 编译主程序
@@ -809,7 +833,7 @@ class DirectPlatformClient:
         payload = {"ids": appid, "cmd": 1}
         url = BASE_URL + "vxdirect/procedureHead/cmd"
         response = make_request("POST", url, json=payload)
-        _check_response_code(response, "主程序编译")
+        _check_response_code(response, "主程序编译", require_code=True)
         return response
 
     # 获取主程序列表
@@ -823,5 +847,5 @@ class DirectPlatformClient:
     def deploy_program(self, *args, **kwargs) -> dict:
         raise RuntimeError(
             "deploy_program 已禁用。请按 skill 流程分步调用："
-            "create_program → save_program →（用户确认后）compile_program"
+            "create_program → save_program（code=0 成功）→（用户确认后）compile_program"
         )

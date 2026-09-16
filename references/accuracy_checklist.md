@@ -1,6 +1,6 @@
 # 准确率检查清单
 
-保存（**Step 3.5**）前全部勾选（本 skill 无独立 Step 4，已并入 3.5）。**细则禁止写在本文件**；只勾选并打开对应唯一来源。
+保存（**Step 3.5**）前全部勾选（本 skill 无独立 Step 4，已并入 3.5；**保存本身不询问用户**）。**细则禁止写在本文件**；只勾选并打开对应唯一来源。
 
 | 域 | 勾选 | 唯一来源 |
 |----|------|----------|
@@ -13,5 +13,5 @@
 | C 子程序 | 若拆分：主 XML + N 子 XML 均已生成；主含 N 个 `flow:subproc`；save 传入全部 `xml_content` | `subprocess.md` 硬门禁 |
 | C timers | 若用 start/stop/pause/restart/cond：`sfc.timers` 已声明 | `subprocess.md` §timers |
 | C variables | 若用程序变量（如 io:var）：`sfc.variables` 已声明且 dataType 正确 | `subprocess.md` §variables |
-| D 门禁 | 3.5 已确认并保存；编译已选；未 deploy | `interaction.md` / `SKILL.md` |
+| D 门禁 | 3.5 save 已成功（code=0）；编译已选；未 deploy | `interaction.md` / `SKILL.md` |
 | E 生成/编译重试 | 未因失败简化流程；平台编译同 appid≤3、不改拓扑 | `SKILL.md` Step 3 失败处置 / §9 |
