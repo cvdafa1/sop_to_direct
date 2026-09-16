@@ -13,7 +13,8 @@ Agent **只产出本文件 + `fixtures/sample_ir.json` 描述的 IR JSON**；XML
 **禁止**产出废弃结构：`main_program` / `steps` / `subprograms`（包 steps）/ `coverage` / `program_name`。  
 结构门禁内置在 `ir_to_xml.py`（不合规则编译失败）。
 
-元件白名单与 `ext` 字段：`element_schema.json`（唯一来源）。
+元件白名单与 `ext` 字段：`element_schema.json`（唯一来源）。  
+写 IR 时每个节点的 `ext` **必须符合该元件 `ext_data_schema`**（required、禁止多余键）。`ir_to_xml` 会按 schema 合并 default/const 后校验；失败则编译失败，禁止自造 `conditions`/`formula` 等非 schema 键。壳字段可省略（由脚本补默认）；业务字段（`data`/`branch`/`message`/`timer`/`url` 等）必须显式填写。表达式与位号用 `#()` / `$()`，禁止中文裸名、禁止 `${Name}`。
 
 ---
 

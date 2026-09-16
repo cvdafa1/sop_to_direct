@@ -1,6 +1,5 @@
 {
   "components": [
-
     {
       "name": "开始 Start",
       "category": "流程控制",
@@ -9,22 +8,30 @@
       "xml": {
         "element": "flow:start",
         "id_pattern": "Event_{7位随机字母数字}",
-        "required_attributes": ["id"],
+        "required_attributes": [
+          "id"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "流出连线ID" }
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "流出连线ID"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 54, "height": 54 }
+          "bounds": {
+            "width": 54,
+            "height": 54
+          }
         },
         "template": "<flow:start id=\"{id}\">\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:start>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"54\" height=\"54\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": null
       }
     },
-
     {
       "name": "子程序",
       "category": "流程控制",
@@ -33,50 +40,114 @@
       "xml": {
         "element": "flow:subproc",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name", "subId"],
+        "required_attributes": [
+          "id",
+          "name",
+          "subId"
+        ],
         "attribute_notes": {
           "name": "子程序 name：仅 [A-Za-z0-9_]（与主程序/timers/variables 同规则）；与 addProcedures.name 一致（详见 subprocess.md）",
           "subId": "等于 get_next_id 返回值"
         },
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json", "description": "扩展配置JSON" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json",
+            "description": "扩展配置JSON"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<flow:subproc id=\"{id}\" name=\"{name}\" subId=\"{subId}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:subproc>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "showQueue", "subTitle2", "data", "interval", "trends", "resourceGroupId", "needPublish", "showInReport", "conditions", "deviceId"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "showQueue",
+            "subTitle2",
+            "data",
+            "interval",
+            "trends",
+            "resourceGroupId",
+            "needPublish",
+            "showInReport",
+            "conditions",
+            "deviceId"
+          ],
           "properties": {
             "subTitle": {
               "type": "string",
               "minLength": 1,
-              "description": "子程序描述/职责（必填非空）；详见 subprocess.md"
+              "description": "子程序描述/职责（必填非空）；详见 subprocess.md",
+              "default": ""
             },
-            "showDetail": { "type": "boolean", "default": true },
-            "showQueue": { "type": "boolean", "default": false },
-            "subTitle2": { "type": "string", "default": "" },
-            "data": { "type": "array", "default": [] },
-            "interval": { "type": "integer", "minimum": 0, "default": 0 },
-            "trends": { "type": "array", "default": [] },
-            "resourceGroupId": { "type": "string", "default": "0" },
-            "needPublish": { "type": "boolean", "default": true },
-            "showInReport": { "type": "boolean", "default": true },
-            "conditions": { "type": "array", "default": [] },
-            "deviceId": { "type": "string", "default": "" }
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "showQueue": {
+              "type": "boolean",
+              "default": false
+            },
+            "subTitle2": {
+              "type": "string",
+              "default": ""
+            },
+            "data": {
+              "type": "array",
+              "default": []
+            },
+            "interval": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "trends": {
+              "type": "array",
+              "default": []
+            },
+            "resourceGroupId": {
+              "type": "string",
+              "default": "0"
+            },
+            "needPublish": {
+              "type": "boolean",
+              "default": true
+            },
+            "showInReport": {
+              "type": "boolean",
+              "default": true
+            },
+            "conditions": {
+              "type": "array",
+              "default": []
+            },
+            "deviceId": {
+              "type": "string",
+              "default": ""
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "结束",
       "category": "流程控制",
@@ -85,22 +156,29 @@
       "xml": {
         "element": "flow:end",
         "id_pattern": "Event_{7位随机字母数字}",
-        "required_attributes": ["id"],
+        "required_attributes": [
+          "id"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "bpmn2:incoming", "type": "text" }
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 54, "height": 54 }
+          "bounds": {
+            "width": 54,
+            "height": 54
+          }
         },
         "template": "<flow:end id=\"{id}\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n</flow:end>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"54\" height=\"54\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": null
       }
     },
-
     {
       "name": "条件与",
       "category": "条件判断",
@@ -110,46 +188,112 @@
         "status": "confirmed",
         "element": "flow:and",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
-        "optional_attributes": ["tabKey"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
+        "optional_attributes": [
+          "tabKey"
+        ],
         "connection_rules": {
-          "outgoing_variants": ["situation_yes", "situation_no"],
+          "outgoing_variants": [
+            "situation_yes",
+            "situation_no"
+          ],
           "description": "必须有 situation=yes；situation=no 仅当 SOP 有否则时添加。禁止 plain。见 golden_xml_rules §3",
           "outgoing_count": "1（仅是）或 2（是+否）"
         },
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）必填" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text",
+            "description": "前置元件 → plain 连线"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "是分支 → situation_yes（name=是）必填"
+          }
         ],
         "optional_children": [
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）；仅原文有否则时" }
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "否分支 → situation_no（name=否）；仅原文有否则时"
+          }
         ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<flow:and id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n</flow:and>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "keep", "data"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "keep",
+            "data"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "description": "步骤描述/位号标识" },
-            "showDetail": { "type": "boolean", "default": true },
-            "keep": { "type": "integer", "default": 0, "description": "保持标志，0=不保持" },
+            "subTitle": {
+              "type": "string",
+              "description": "步骤描述/位号标识",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "keep": {
+              "type": "integer",
+              "default": 0,
+              "description": "保持标志，0=不保持"
+            },
             "data": {
               "type": "array",
               "default": [],
               "items": {
                 "type": "object",
-                "required": ["name", "judge", "targetValue", "row", "type"],
+                "required": [
+                  "name",
+                  "judge",
+                  "targetValue",
+                  "row",
+                  "type"
+                ],
                 "properties": {
-                  "name": { "type": "string", "description": "位号名，如 #(M6.AM.AI.HZI_31)" },
-                  "judge": { "type": "string", "description": "比较运算符: ==, >, <, >=, <=, !=" },
-                  "targetValue": { "type": "string", "description": "目标值" },
-                  "row": { "type": ["integer", "string"], "description": "行号或时间戳" },
-                  "type": { "type": "integer", "description": "1=模拟量, 3=数字量" }
+                  "name": {
+                    "type": "string",
+                    "description": "位号名，如 #(M6.AM.AI.HZI_31)"
+                  },
+                  "judge": {
+                    "type": "string",
+                    "description": "比较运算符: ==, >, <, >=, <=, !="
+                  },
+                  "targetValue": {
+                    "type": "string",
+                    "description": "目标值"
+                  },
+                  "row": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "行号或时间戳"
+                  },
+                  "type": {
+                    "type": "integer",
+                    "description": "1=模拟量, 3=数字量"
+                  }
                 }
               }
             }
@@ -158,7 +302,6 @@
         }
       }
     },
-
     {
       "name": "条件或",
       "category": "条件判断",
@@ -168,45 +311,104 @@
         "status": "confirmed",
         "element": "flow:or",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
-        "optional_attributes": ["tabKey"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
+        "optional_attributes": [
+          "tabKey"
+        ],
         "connection_rules": {
-          "outgoing_variants": ["situation_yes", "situation_no"],
+          "outgoing_variants": [
+            "situation_yes",
+            "situation_no"
+          ],
           "description": "必须有 situation=yes；situation=no 仅当 SOP 有否则时添加。禁止 plain。见 golden_xml_rules §3",
           "outgoing_count": "1（仅是）或 2（是+否）"
         },
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）必填" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text",
+            "description": "前置元件 → plain 连线"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "是分支 → situation_yes（name=是）必填"
+          }
         ],
         "optional_children": [
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）；仅原文有否则时" }
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "否分支 → situation_no（name=否）；仅原文有否则时"
+          }
         ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<flow:or id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n</flow:or>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "keep", "data"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "keep",
+            "data"
+          ],
           "properties": {
-            "subTitle": { "type": "string" },
-            "showDetail": { "type": "boolean", "default": true },
-            "keep": { "type": "integer", "default": 0 },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "keep": {
+              "type": "integer",
+              "default": 0
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["name", "judge", "targetValue", "row", "type"],
+                "required": [
+                  "name",
+                  "judge",
+                  "targetValue",
+                  "row",
+                  "type"
+                ],
                 "properties": {
-                  "name": { "type": "string" },
-                  "judge": { "type": "string" },
-                  "targetValue": { "type": "string" },
-                  "row": { "type": ["integer", "string"] },
-                  "type": { "type": "integer" }
+                  "name": {
+                    "type": "string"
+                  },
+                  "judge": {
+                    "type": "string"
+                  },
+                  "targetValue": {
+                    "type": "string"
+                  },
+                  "row": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
+                  },
+                  "type": {
+                    "type": "integer"
+                  }
                 }
               }
             }
@@ -215,7 +417,6 @@
         }
       }
     },
-
     {
       "name": "择一分支",
       "category": "流程控制",
@@ -225,55 +426,134 @@
         "status": "confirmed",
         "element": "flow:branch",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
-        "optional_attributes": ["tabKey"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
+        "optional_attributes": [
+          "tabKey"
+        ],
         "connection_rules": {
-          "outgoing_variants": ["situation_yes", "situation_no"],
+          "outgoing_variants": [
+            "situation_yes",
+            "situation_no"
+          ],
           "description": "outgoing 必须用 situation 变体；sequenceFlow name 规则见 golden_xml_rules；禁止 plain"
         },
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text",
+            "description": "前置元件 → plain 连线"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "是分支 → situation_yes（name=是）"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "否分支 → situation_no（name=否）"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<flow:branch id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <!-- 每个分支一个 outgoing，数量必须与 branch 数组长度一致 -->\n  <bpmn2:outgoing>{outgoing_0}</bpmn2:outgoing>\n  <bpmn2:outgoing>{outgoing_1}</bpmn2:outgoing>\n</flow:branch>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "keep", "branch"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "keep",
+            "branch"
+          ],
           "properties": {
-            "subTitle": { "type": "string" },
-            "showDetail": { "type": "boolean", "default": true },
-            "keep": { "type": "integer", "default": 0 },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "keep": {
+              "type": "integer",
+              "default": 0
+            },
             "branch": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["relation", "desc", "data", "row"],
+                "required": [
+                  "relation",
+                  "desc",
+                  "data",
+                  "row"
+                ],
                 "properties": {
-                  "relation": { "type": "string", "enum": ["and", "or"], "description": "分支内条件关系" },
-                  "desc": { "type": "string", "description": "分支描述，如'判断为A泵'" },
+                  "relation": {
+                    "type": "string",
+                    "enum": [
+                      "and",
+                      "or"
+                    ],
+                    "description": "分支内条件关系"
+                  },
+                  "desc": {
+                    "type": "string",
+                    "description": "分支描述，如'判断为A泵'"
+                  },
                   "data": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "required": ["name", "judge", "targetValue", "row", "type"],
+                      "required": [
+                        "name",
+                        "judge",
+                        "targetValue",
+                        "row",
+                        "type"
+                      ],
                       "properties": {
-                        "name": { "type": "string" },
-                        "judge": { "type": "string" },
-                        "targetValue": { "type": "string" },
-                        "row": { "type": ["integer", "string"] },
-                        "type": { "type": "integer" }
+                        "name": {
+                          "type": "string"
+                        },
+                        "judge": {
+                          "type": "string"
+                        },
+                        "targetValue": {
+                          "type": "string"
+                        },
+                        "row": {
+                          "type": [
+                            "integer",
+                            "string"
+                          ]
+                        },
+                        "type": {
+                          "type": "integer"
+                        }
                       }
                     }
                   },
-                  "row": { "type": ["integer", "string"] }
+                  "row": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
+                  }
                 }
               }
             }
@@ -282,7 +562,6 @@
         }
       }
     },
-
     {
       "name": "写位号",
       "category": "操作执行",
@@ -292,51 +571,126 @@
         "status": "confirmed",
         "element": "io:dcs",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<io:dcs id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:dcs>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "outputMod", "data", "checkData", "errorHandler"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "outputMod",
+            "data",
+            "checkData",
+            "errorHandler"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "outputMod": { "type": "string", "const": "periodic", "description": "输出模式" },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "outputMod": {
+              "type": "string",
+              "const": "periodic",
+              "description": "输出模式"
+            },
             "data": {
               "type": "array",
               "maxItems": 5,
               "items": {
                 "type": "object",
-                "required": ["name", "targetValue", "row", "type"],
+                "required": [
+                  "name",
+                  "targetValue",
+                  "row",
+                  "type"
+                ],
                 "properties": {
-                  "name": { "type": "string", "description": "位号名，如 #(M6.AM.DO.C301_STOP)" },
-                  "targetValue": { "type": "string", "description": "写入值" },
-                  "lower": { "type": "integer", "default": 0 },
-                  "tolerance": { "type": "string", "default": "0" },
-                  "upper": { "type": "integer", "default": 1000 },
-                  "deviation": { "type": "integer", "default": 1 },
-                  "row": { "type": ["integer", "string"] },
-                  "type": { "type": "integer", "description": "1=模拟量, 3=数字量" }
+                  "name": {
+                    "type": "string",
+                    "description": "位号名，如 #(M6.AM.DO.C301_STOP)"
+                  },
+                  "targetValue": {
+                    "type": "string",
+                    "description": "写入值"
+                  },
+                  "lower": {
+                    "type": "integer",
+                    "default": 0
+                  },
+                  "tolerance": {
+                    "type": "string",
+                    "default": "0"
+                  },
+                  "upper": {
+                    "type": "integer",
+                    "default": 1000
+                  },
+                  "deviation": {
+                    "type": "integer",
+                    "default": 1
+                  },
+                  "row": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
+                  },
+                  "type": {
+                    "type": "integer",
+                    "description": "1=模拟量, 3=数字量"
+                  }
                 }
               }
             },
-            "checkData": { "type": "array", "default": [] },
+            "checkData": {
+              "type": "array",
+              "default": []
+            },
             "errorHandler": {
               "type": "object",
-              "required": ["handler"],
+              "required": [
+                "handler"
+              ],
               "properties": {
-                "handler": { "type": "string", "const": "throw", "description": "错误处理方式" }
+                "handler": {
+                  "type": "string",
+                  "const": "throw",
+                  "description": "错误处理方式"
+                }
+              },
+              "default": {
+                "handler": "throw"
               }
             }
           },
@@ -344,7 +698,6 @@
         }
       }
     },
-
     {
       "name": "计时器判断",
       "category": "时间控制",
@@ -354,45 +707,97 @@
         "status": "confirmed",
         "element": "timer:cond",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "connection_rules": {
-          "outgoing_variants": ["situation_yes", "situation_no"],
+          "outgoing_variants": [
+            "situation_yes",
+            "situation_no"
+          ],
           "description": "必须有 situation=yes；situation=no 仅当 SOP 有否则时添加。禁止 plain。见 golden_xml_rules §3",
           "outgoing_count": "1（仅是）或 2（是+否）",
           "note": "sequenceFlow name 必须为 是/否（与 situation yes/no 对应），禁止 条件成立/条件不成立"
         },
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text", "description": "前置元件 → plain 连线" },
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "是分支 → situation_yes（name=是）必填" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text",
+            "description": "前置元件 → plain 连线"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "是分支 → situation_yes（name=是）必填"
+          }
         ],
         "optional_children": [
-          { "tag": "bpmn2:outgoing", "type": "text", "description": "否分支 → situation_no（name=否）；仅原文有否则时" }
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text",
+            "description": "否分支 → situation_no（name=否）；仅原文有否则时"
+          }
         ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<timer:cond id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n</timer:cond>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "version", "showDetail", "timer", "type", "integerTime", "specifiedTime"],
+          "required": [
+            "subTitle",
+            "version",
+            "showDetail",
+            "timer",
+            "type",
+            "integerTime",
+            "specifiedTime"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "version": { "type": "integer", "const": 1 },
-            "showDetail": { "type": "boolean", "default": true },
-            "timer": { "type": "string", "description": "计时器变量，如 $(JSQ_001)" },
-            "type": { "type": "string", "const": "specifiedTime" },
-            "integerTime": { "type": "integer", "description": "整数秒数（备用）" },
-            "specifiedTime": { "type": "string", "description": "目标时间 HH:mm:ss" }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "version": {
+              "type": "integer",
+              "const": 1
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "timer": {
+              "type": "string",
+              "description": "计时器变量，如 $(JSQ_001)"
+            },
+            "type": {
+              "type": "string",
+              "const": "specifiedTime"
+            },
+            "integerTime": {
+              "type": "integer",
+              "description": "整数秒数（备用）"
+            },
+            "specifiedTime": {
+              "type": "string",
+              "description": "目标时间 HH:mm:ss"
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "开始计时器",
       "category": "时间控制",
@@ -402,33 +807,60 @@
         "status": "confirmed",
         "element": "timer:start",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<timer:start id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:start>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "timer"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "timer"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "timer": { "type": "string", "description": "计时器变量，如 $(JSQ_002)" }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "timer": {
+              "type": "string",
+              "description": "计时器变量，如 $(JSQ_002)"
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "等待",
       "category": "时间控制",
@@ -438,36 +870,75 @@
         "status": "confirmed",
         "element": "timer:wait",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<timer:wait id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:wait>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "version", "showDetail", "type", "integerTime", "specifiedTime"],
+          "required": [
+            "subTitle",
+            "version",
+            "showDetail",
+            "type",
+            "integerTime",
+            "specifiedTime"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "version": { "type": "integer", "const": 1 },
-            "showDetail": { "type": "boolean", "default": true },
-            "type": { "type": "string", "const": "specifiedTime" },
-            "integerTime": { "type": "integer", "description": "整数秒数" },
-            "specifiedTime": { "type": "string", "description": "等待时长 HH:mm:ss" }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "version": {
+              "type": "integer",
+              "const": 1
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "type": {
+              "type": "string",
+              "const": "specifiedTime"
+            },
+            "integerTime": {
+              "type": "integer",
+              "description": "整数秒数"
+            },
+            "specifiedTime": {
+              "type": "string",
+              "description": "等待时长 HH:mm:ss"
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "确认消息",
       "category": "人机交互",
@@ -477,61 +948,162 @@
         "status": "confirmed",
         "element": "msg:confirm",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<msg:confirm id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</msg:confirm>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["set", "showDetail", "isMute", "data", "select", "labelIds", "subTitle", "message", "type", "display", "resourceGroupId", "needPhoto", "needPublish", "needHandWritting", "partialConfirmLevel", "messageLevel", "version"],
+          "required": [
+            "set",
+            "showDetail",
+            "isMute",
+            "data",
+            "select",
+            "labelIds",
+            "subTitle",
+            "message",
+            "type",
+            "display",
+            "resourceGroupId",
+            "needPhoto",
+            "needPublish",
+            "needHandWritting",
+            "partialConfirmLevel",
+            "messageLevel",
+            "version"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "message": { "type": "string", "description": "提示消息文本" },
-            "type": { "type": "string", "description": "only=仅确认" },
-            "display": { "type": "string", "default": "yes" },
-            "version": { "type": "string", "default": "1" },
-            "showDetail": { "type": "boolean", "default": true },
-            "isMute": { "type": "boolean", "default": false },
-            "needPhoto": { "type": "boolean", "default": false },
-            "needPublish": { "type": "boolean", "default": true },
-            "needHandWritting": { "type": "boolean", "default": false },
-            "partialConfirmLevel": { "type": "integer", "default": 0 },
-            "messageLevel": { "type": "integer", "default": 0 },
-            "resourceGroupId": { "type": "string", "default": "0" },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "message": {
+              "type": "string",
+              "description": "提示消息文本"
+            },
+            "type": {
+              "type": "string",
+              "description": "only=仅确认",
+              "default": "only"
+            },
+            "display": {
+              "type": "string",
+              "default": "yes"
+            },
+            "version": {
+              "type": "string",
+              "default": "1"
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "isMute": {
+              "type": "boolean",
+              "default": false
+            },
+            "needPhoto": {
+              "type": "boolean",
+              "default": false
+            },
+            "needPublish": {
+              "type": "boolean",
+              "default": true
+            },
+            "needHandWritting": {
+              "type": "boolean",
+              "default": false
+            },
+            "partialConfirmLevel": {
+              "type": "integer",
+              "default": 0
+            },
+            "messageLevel": {
+              "type": "integer",
+              "default": 0
+            },
+            "resourceGroupId": {
+              "type": "string",
+              "default": "0"
+            },
             "set": {
               "type": "array",
               "default": [],
               "description": "人工输入变量配置数组，每项含 upper/lower/targetVar/row",
               "items": {
                 "type": "object",
-                "required": ["upper", "lower", "targetVar", "row"],
+                "required": [
+                  "upper",
+                  "lower",
+                  "targetVar",
+                  "row"
+                ],
                 "properties": {
-                  "upper": { "type": "integer", "description": "上限值" },
-                  "lower": { "type": "integer", "description": "下限值" },
-                  "targetVar": { "type": "string", "description": "目标变量名 $(XXX)" },
-                  "row": { "type": ["integer", "string"], "description": "行标识/时间戳" }
+                  "upper": {
+                    "type": "integer",
+                    "description": "上限值"
+                  },
+                  "lower": {
+                    "type": "integer",
+                    "description": "下限值"
+                  },
+                  "targetVar": {
+                    "type": "string",
+                    "description": "目标变量名 $(XXX)"
+                  },
+                  "row": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ],
+                    "description": "行标识/时间戳"
+                  }
                 }
               }
             },
-            "data": { "type": "array", "default": [] },
-            "select": { "type": "array", "default": [] },
-            "labelIds": { "type": "array", "default": [] }
+            "data": {
+              "type": "array",
+              "default": []
+            },
+            "select": {
+              "type": "array",
+              "default": []
+            },
+            "labelIds": {
+              "type": "array",
+              "default": []
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "提示消息",
       "category": "人机交互",
@@ -541,41 +1113,100 @@
         "status": "confirmed",
         "element": "msg:guide",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": 200, "height": 60 }
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
         },
         "template": "<msg:guide id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</msg:guide>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "isMute", "isPersistent", "message", "display", "data", "needPublish", "resourceGroupId", "needPhoto", "needHandWritting"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "isMute",
+            "isPersistent",
+            "message",
+            "display",
+            "data",
+            "needPublish",
+            "resourceGroupId",
+            "needPhoto",
+            "needHandWritting"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "message": { "type": "string", "description": "提示消息文本" },
-            "display": { "type": "string", "default": "yes" },
-            "showDetail": { "type": "boolean", "default": true },
-            "isMute": { "type": "boolean", "default": false },
-            "isPersistent": { "type": "boolean", "default": false },
-            "needPhoto": { "type": "boolean", "default": false },
-            "needPublish": { "type": "boolean", "default": true },
-            "needHandWritting": { "type": "boolean", "default": false },
-            "resourceGroupId": { "type": "string", "default": "0" },
-            "data": { "type": "array", "default": [] }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "message": {
+              "type": "string",
+              "description": "提示消息文本"
+            },
+            "display": {
+              "type": "string",
+              "default": "yes"
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "isMute": {
+              "type": "boolean",
+              "default": false
+            },
+            "isPersistent": {
+              "type": "boolean",
+              "default": false
+            },
+            "needPhoto": {
+              "type": "boolean",
+              "default": false
+            },
+            "needPublish": {
+              "type": "boolean",
+              "default": true
+            },
+            "needHandWritting": {
+              "type": "boolean",
+              "default": false
+            },
+            "resourceGroupId": {
+              "type": "string",
+              "default": "0"
+            },
+            "data": {
+              "type": "array",
+              "default": []
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "并行分支1",
       "category": "流程控制",
@@ -585,42 +1216,77 @@
         "status": "confirmed",
         "element": "flow:parallel1",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id"],
-        "optional_attributes": ["layout"],
+        "required_attributes": [
+          "id"
+        ],
+        "optional_attributes": [
+          "layout"
+        ],
         "required_children": [
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" },
-          { "tag": "flow:parallelStart", "type": "element", "description": "并行起点，内含 N 个 outgoing（N = 分支数）",
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          },
+          {
+            "tag": "flow:parallelStart",
+            "type": "element",
+            "description": "并行起点，内含 N 个 outgoing（N = 分支数）",
             "diagram": {
               "element": "bpmndi:BPMNShape",
-              "bounds": { "width": "container_inner_width", "height": 5 },
+              "bounds": {
+                "width": "container_inner_width",
+                "height": 5
+              },
               "position": "container_top_inner_padding",
               "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"5\"/>\n</bpmndi:BPMNShape>"
             },
             "child_schema": {
               "required_children": [
-                { "tag": "bpmn2:outgoing", "type": "text", "count": "N（=分支数）" }
+                {
+                  "tag": "bpmn2:outgoing",
+                  "type": "text",
+                  "count": "N（=分支数）"
+                }
               ]
             }
           },
-          { "tag": "flow:parallelEnd", "type": "element", "description": "并行终点，内含 M 个 incoming（M = 分支数）",
+          {
+            "tag": "flow:parallelEnd",
+            "type": "element",
+            "description": "并行终点，内含 M 个 incoming（M = 分支数）",
             "diagram": {
               "element": "bpmndi:BPMNShape",
-              "bounds": { "width": "container_inner_width", "height": 5 },
+              "bounds": {
+                "width": "container_inner_width",
+                "height": 5
+              },
               "position": "container_bottom_inner_padding",
               "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"{w}\" height=\"5\"/>\n</bpmndi:BPMNShape>"
             },
             "child_schema": {
               "required_children": [
-                { "tag": "bpmn2:incoming", "type": "text", "count": "M（=分支数）" }
+                {
+                  "tag": "bpmn2:incoming",
+                  "type": "text",
+                  "count": "M（=分支数）"
+                }
               ]
             }
           }
         ],
-        "optional_children": ["内部子元件"],
+        "optional_children": [
+          "内部子元件"
+        ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": "auto", "height": "auto" },
+          "bounds": {
+            "width": "auto",
+            "height": "auto"
+          },
           "isExpanded": true
         },
         "template": "<flow:parallel1 id=\"{id}\" layout=\"vertical\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n  <flow:parallelStart id=\"{id}_start\">\n    <bpmn2:outgoing>{branch_flow_a}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_flow_b}</bpmn2:outgoing>\n  </flow:parallelStart>\n  <flow:parallelEnd id=\"{id}_end\">\n    <bpmn2:incoming>{branch_flow_a_end}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_flow_b_end}</bpmn2:incoming>\n  </flow:parallelEnd>\n  <!-- 分支节点放在 parallelStart 和 parallelEnd 之间 -->\n  <!-- 每个分支首节点 incoming = parallelStart 的 outgoing -->\n  <!-- 每个分支末节点 outgoing = parallelEnd 的 incoming -->\n</flow:parallel1>",
@@ -638,7 +1304,6 @@
         "ext_data_schema": null
       }
     },
-
     {
       "name": "并行分支2",
       "category": "流程控制",
@@ -648,42 +1313,77 @@
         "status": "confirmed",
         "element": "flow:parallel2",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id"],
-        "optional_attributes": ["layout"],
+        "required_attributes": [
+          "id"
+        ],
+        "optional_attributes": [
+          "layout"
+        ],
         "required_children": [
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" },
-          { "tag": "flow:parallelStart", "type": "element", "description": "并行起点，内含 N 个 outgoing（N = 分支数）",
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          },
+          {
+            "tag": "flow:parallelStart",
+            "type": "element",
+            "description": "并行起点，内含 N 个 outgoing（N = 分支数）",
             "diagram": {
               "element": "bpmndi:BPMNShape",
-              "bounds": { "width": 5, "height": "container_inner_height" },
+              "bounds": {
+                "width": 5,
+                "height": "container_inner_height"
+              },
               "position": "container_left_inner_padding",
               "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"5\" height=\"{h}\"/>\n</bpmndi:BPMNShape>"
             },
             "child_schema": {
               "required_children": [
-                { "tag": "bpmn2:outgoing", "type": "text", "count": "N（=分支数）" }
+                {
+                  "tag": "bpmn2:outgoing",
+                  "type": "text",
+                  "count": "N（=分支数）"
+                }
               ]
             }
           },
-          { "tag": "flow:parallelEnd", "type": "element", "description": "并行终点，内含 M 个 incoming（M = 分支数）",
+          {
+            "tag": "flow:parallelEnd",
+            "type": "element",
+            "description": "并行终点，内含 M 个 incoming（M = 分支数）",
             "diagram": {
               "element": "bpmndi:BPMNShape",
-              "bounds": { "width": 5, "height": "container_inner_height" },
+              "bounds": {
+                "width": 5,
+                "height": "container_inner_height"
+              },
               "position": "container_right_inner_padding",
               "template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"5\" height=\"{h}\"/>\n</bpmndi:BPMNShape>"
             },
             "child_schema": {
               "required_children": [
-                { "tag": "bpmn2:incoming", "type": "text", "count": "M（=分支数）" }
+                {
+                  "tag": "bpmn2:incoming",
+                  "type": "text",
+                  "count": "M（=分支数）"
+                }
               ]
             }
           }
         ],
-        "optional_children": ["内部子元件（按分支水平排列）"],
+        "optional_children": [
+          "内部子元件（按分支水平排列）"
+        ],
         "diagram": {
           "element": "bpmndi:BPMNShape",
-          "bounds": { "width": "auto", "height": "auto" },
+          "bounds": {
+            "width": "auto",
+            "height": "auto"
+          },
           "isExpanded": true
         },
         "template": "<flow:parallel2 id=\"{id}\" layout=\"horizontal\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n  <flow:parallelStart id=\"{id}_start\">\n    <bpmn2:outgoing>{branch_a_entry}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_b_entry}</bpmn2:outgoing>\n    <bpmn2:outgoing>{branch_c_entry}</bpmn2:outgoing>\n  </flow:parallelStart>\n  <flow:parallelEnd id=\"{id}_end\">\n    <bpmn2:incoming>{branch_a_exit}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_b_exit}</bpmn2:incoming>\n    <bpmn2:incoming>{branch_c_exit}</bpmn2:incoming>\n  </flow:parallelEnd>\n  <!-- 内部子元件按分支水平排列 -->\n  <!-- 每个分支首节点 incoming = parallelStart 的 outgoing -->\n  <!-- 每个分支末节点 outgoing = parallelEnd 的 incoming -->\n</flow:parallel2>",
@@ -701,7 +1401,6 @@
         "ext_data_schema": null
       }
     },
-
     {
       "name": "写变量",
       "category": "操作执行",
@@ -711,33 +1410,80 @@
         "status": "confirmed",
         "element": "io:var",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<io:var id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:var>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "data"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "data"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["name", "type", "targetValue", "row"],
+                "required": [
+                  "name",
+                  "type",
+                  "targetValue",
+                  "row"
+                ],
                 "properties": {
-                  "name": { "type": "string", "description": "变量名 $(XXX)" },
-                  "type": { "type": "integer", "description": "1=模拟量, 3=数字量" },
-                  "targetValue": { "type": "string", "description": "写入值或引用" },
-                  "row": { "type": ["integer", "string"] }
+                  "name": {
+                    "type": "string",
+                    "description": "变量名 $(XXX)"
+                  },
+                  "type": {
+                    "type": "integer",
+                    "description": "1=模拟量, 3=数字量"
+                  },
+                  "targetValue": {
+                    "type": "string",
+                    "description": "写入值或引用"
+                  },
+                  "row": {
+                    "type": [
+                      "integer",
+                      "string"
+                    ]
+                  }
                 }
               }
             }
@@ -746,7 +1492,6 @@
         }
       }
     },
-
     {
       "name": "数值计算",
       "category": "操作执行",
@@ -756,33 +1501,77 @@
         "status": "confirmed",
         "element": "io:calc",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<io:calc id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:calc>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "version", "showDetail", "data"],
+          "required": [
+            "subTitle",
+            "version",
+            "showDetail",
+            "data"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "version": { "type": "integer", "const": 1 },
-            "showDetail": { "type": "boolean", "default": true },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "version": {
+              "type": "integer",
+              "const": 1
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["targetVar", "express"],
+                "required": [
+                  "targetVar",
+                  "express"
+                ],
                 "properties": {
-                  "desc": { "type": "string", "default": "" },
-                  "targetVar": { "type": "string", "description": "目标变量 $(XXX)" },
-                  "express": { "type": "string", "description": "计算表达式" }
+                  "desc": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "targetVar": {
+                    "type": "string",
+                    "description": "目标变量 $(XXX)"
+                  },
+                  "express": {
+                    "type": "string",
+                    "description": "计算表达式"
+                  }
                 }
               }
             }
@@ -791,7 +1580,6 @@
         }
       }
     },
-
     {
       "name": "重启计时器",
       "category": "时间控制",
@@ -801,30 +1589,60 @@
         "status": "confirmed",
         "element": "timer:restart",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<timer:restart id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:restart>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "timer"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "timer"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "timer": { "type": "string", "description": "$(计时器ID)" }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "timer": {
+              "type": "string",
+              "description": "$(计时器ID)"
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "停止计时器",
       "category": "时间控制",
@@ -834,20 +1652,34 @@
         "status": "confirmed",
         "element": "timer:stop",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "bpmn2:incoming", "type": "text[]" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text[]"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<timer:stop id=\"{id}\" name=\"{name}\">\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:stop>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": null
       }
     },
-
     {
       "name": "上跳变",
       "category": "信号检测",
@@ -857,35 +1689,91 @@
         "status": "confirmed",
         "element": "flow:risingEdge",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id"],
-        "optional_attributes": ["name"],
+        "required_attributes": [
+          "id"
+        ],
+        "optional_attributes": [
+          "name"
+        ],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<flow:risingEdge id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:risingEdge>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "keep", "relation", "data"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "keep",
+            "relation",
+            "data"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "keep": { "type": "integer", "default": 0 },
-            "relation": { "type": "string", "enum": ["and", "or"], "default": "and" },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "keep": {
+              "type": "integer",
+              "default": 0
+            },
+            "relation": {
+              "type": "string",
+              "enum": [
+                "and",
+                "or"
+              ],
+              "default": "and"
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["name", "row", "type"],
+                "required": [
+                  "name",
+                  "row",
+                  "type"
+                ],
                 "properties": {
-                  "name": { "type": "string", "description": "位号路径 #(xxx)" },
-                  "desc": { "type": "string", "default": "" },
-                  "row": { "type": "integer" },
-                  "type": { "type": "integer", "description": "3=数字量" }
+                  "name": {
+                    "type": "string",
+                    "description": "位号路径 #(xxx)"
+                  },
+                  "desc": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "row": {
+                    "type": "integer"
+                  },
+                  "type": {
+                    "type": "integer",
+                    "description": "3=数字量"
+                  }
                 }
               }
             }
@@ -894,7 +1782,6 @@
         }
       }
     },
-
     {
       "name": "下跳变",
       "category": "信号检测",
@@ -904,35 +1791,91 @@
         "status": "confirmed",
         "element": "flow:fallingEdge",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id"],
-        "optional_attributes": ["name"],
+        "required_attributes": [
+          "id"
+        ],
+        "optional_attributes": [
+          "name"
+        ],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<flow:fallingEdge id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:fallingEdge>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "keep", "relation", "data"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "keep",
+            "relation",
+            "data"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "keep": { "type": "integer", "default": 0 },
-            "relation": { "type": "string", "enum": ["and", "or"], "default": "and" },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "keep": {
+              "type": "integer",
+              "default": 0
+            },
+            "relation": {
+              "type": "string",
+              "enum": [
+                "and",
+                "or"
+              ],
+              "default": "and"
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["name", "row", "type"],
+                "required": [
+                  "name",
+                  "row",
+                  "type"
+                ],
                 "properties": {
-                  "name": { "type": "string", "description": "位号路径 #(xxx)" },
-                  "desc": { "type": "string", "default": "" },
-                  "row": { "type": "integer" },
-                  "type": { "type": "integer", "description": "3=数字量" }
+                  "name": {
+                    "type": "string",
+                    "description": "位号路径 #(xxx)"
+                  },
+                  "desc": {
+                    "type": "string",
+                    "default": ""
+                  },
+                  "row": {
+                    "type": "integer"
+                  },
+                  "type": {
+                    "type": "integer",
+                    "description": "3=数字量"
+                  }
                 }
               }
             }
@@ -941,7 +1884,6 @@
         }
       }
     },
-
     {
       "name": "字符串操作",
       "category": "操作执行",
@@ -951,38 +1893,81 @@
         "status": "confirmed",
         "element": "io:concat",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<io:concat id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:concat>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "version", "showDetail", "data"],
+          "required": [
+            "subTitle",
+            "version",
+            "showDetail",
+            "data"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "version": { "type": "integer", "const": 1 },
-            "showDetail": { "type": "boolean", "default": true },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "version": {
+              "type": "integer",
+              "const": 1
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["targetVar", "express"],
+                "required": [
+                  "targetVar",
+                  "express"
+                ],
                 "properties": {
-                  "targetVar": { "type": "string", "description": "目标变量 $$$(XXX)" },
+                  "targetVar": {
+                    "type": "string",
+                    "description": "目标变量 $$$(XXX)"
+                  },
                   "express": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "required": ["value"],
+                      "required": [
+                        "value"
+                      ],
                       "properties": {
-                        "value": { "type": "string", "description": "拼接值或变量引用" }
+                        "value": {
+                          "type": "string",
+                          "description": "拼接值或变量引用"
+                        }
                       }
                     }
                   }
@@ -994,7 +1979,6 @@
         }
       }
     },
-
     {
       "name": "文件导出",
       "category": "操作执行",
@@ -1004,35 +1988,90 @@
         "status": "confirmed",
         "element": "io:fileExport",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<io:fileExport id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:fileExport>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["version", "showDetail", "fileFormat", "path", "data"],
+          "required": [
+            "version",
+            "showDetail",
+            "fileFormat",
+            "path",
+            "data"
+          ],
           "properties": {
-            "version": { "type": "string", "default": "1" },
-            "showDetail": { "type": "boolean", "default": true },
-            "fileFormat": { "type": "string", "enum": ["csv", "xlsx"] },
-            "path": { "type": "string", "description": "文件路径" },
+            "version": {
+              "type": "string",
+              "default": "1"
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "fileFormat": {
+              "type": "string",
+              "enum": [
+                "csv",
+                "xlsx"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "description": "文件路径"
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["col", "rowNumber", "value", "row"],
+                "required": [
+                  "col",
+                  "rowNumber",
+                  "value",
+                  "row"
+                ],
                 "properties": {
-                  "col": { "type": "string", "description": "列标识" },
-                  "rowNumber": { "type": "string", "description": "行号" },
-                  "value": { "type": "string", "description": "变量引用 $(XXX)" },
-                  "row": { "type": "integer" }
+                  "col": {
+                    "type": "string",
+                    "description": "列标识"
+                  },
+                  "rowNumber": {
+                    "type": "string",
+                    "description": "行号"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "变量引用 $(XXX)"
+                  },
+                  "row": {
+                    "type": "integer"
+                  }
                 }
               }
             }
@@ -1041,7 +2080,6 @@
         }
       }
     },
-
     {
       "name": "文件导入",
       "category": "操作执行",
@@ -1051,35 +2089,90 @@
         "status": "confirmed",
         "element": "io:fileImport",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<io:fileImport id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:fileImport>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["version", "showDetail", "fileFormat", "path", "data"],
+          "required": [
+            "version",
+            "showDetail",
+            "fileFormat",
+            "path",
+            "data"
+          ],
           "properties": {
-            "version": { "type": "string", "default": "1" },
-            "showDetail": { "type": "boolean", "default": true },
-            "fileFormat": { "type": "string", "enum": ["csv", "xlsx"] },
-            "path": { "type": "string", "description": "文件路径" },
+            "version": {
+              "type": "string",
+              "default": "1"
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "fileFormat": {
+              "type": "string",
+              "enum": [
+                "csv",
+                "xlsx"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "description": "文件路径"
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["col", "rowNumber", "value", "row"],
+                "required": [
+                  "col",
+                  "rowNumber",
+                  "value",
+                  "row"
+                ],
                 "properties": {
-                  "col": { "type": "string", "description": "列标识" },
-                  "rowNumber": { "type": "string", "description": "行号" },
-                  "value": { "type": "string", "description": "变量引用 $(XXX)" },
-                  "row": { "type": "integer" }
+                  "col": {
+                    "type": "string",
+                    "description": "列标识"
+                  },
+                  "rowNumber": {
+                    "type": "string",
+                    "description": "行号"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "变量引用 $(XXX)"
+                  },
+                  "row": {
+                    "type": "integer"
+                  }
                 }
               }
             }
@@ -1088,7 +2181,6 @@
         }
       }
     },
-
     {
       "name": "修改标签",
       "category": "操作执行",
@@ -1098,42 +2190,90 @@
         "status": "confirmed",
         "element": "io:modifyLabel",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<io:modifyLabel id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:modifyLabel>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "data", "errorHandler"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "data",
+            "errorHandler"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
             "data": {
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["desc", "currentLabelId", "targetLabelId"],
+                "required": [
+                  "desc",
+                  "currentLabelId",
+                  "targetLabelId"
+                ],
                 "properties": {
-                  "desc": { "type": "string", "description": "修改描述" },
-                  "currentLabelId": { "type": "string", "description": "当前标签ID" },
-                  "targetLabelId": { "type": "string", "description": "目标标签ID" }
+                  "desc": {
+                    "type": "string",
+                    "description": "修改描述"
+                  },
+                  "currentLabelId": {
+                    "type": "string",
+                    "description": "当前标签ID"
+                  },
+                  "targetLabelId": {
+                    "type": "string",
+                    "description": "目标标签ID"
+                  }
                 }
               }
             },
-            "errorHandler": { "type": "object", "properties": { "handler": { "type": "integer" } } }
+            "errorHandler": {
+              "type": "object",
+              "properties": {
+                "handler": {
+                  "type": "integer"
+                }
+              }
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "修改属性",
       "category": "操作执行",
@@ -1143,30 +2283,60 @@
         "status": "confirmed",
         "element": "io:modifyProps",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<io:modifyProps id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</io:modifyProps>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "customField"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "customField"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "customField": { "type": "string", "description": "自定义字段值 $(XXX)" }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "customField": {
+              "type": "string",
+              "description": "自定义字段值 $(XXX)"
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "引用主程序",
       "category": "流程控制",
@@ -1176,34 +2346,81 @@
         "status": "confirmed",
         "element": "flow:otherMainProc",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name", "subId"],
+        "required_attributes": [
+          "id",
+          "name",
+          "subId"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<flow:otherMainProc id=\"{id}\" name=\"{name}\" subId=\"{subId}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:otherMainProc>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "subTitle2", "showDetail", "mainProcedure", "showQueue", "interval", "trends"],
+          "required": [
+            "subTitle",
+            "subTitle2",
+            "showDetail",
+            "mainProcedure",
+            "showQueue",
+            "interval",
+            "trends"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "subTitle2": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "mainProcedure": { "type": "string", "description": "主程序名称[版本]，如 BXCS[V1.1]" },
-            "showQueue": { "type": "boolean", "default": false },
-            "interval": { "type": "integer", "default": 0 },
-            "trends": { "type": "array", "default": [] }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "subTitle2": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "mainProcedure": {
+              "type": "string",
+              "description": "主程序名称[版本]，如 BXCS[V1.1]"
+            },
+            "showQueue": {
+              "type": "boolean",
+              "default": false
+            },
+            "interval": {
+              "type": "integer",
+              "default": 0
+            },
+            "trends": {
+              "type": "array",
+              "default": []
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "请求",
       "category": "流程控制",
@@ -1213,38 +2430,114 @@
         "status": "confirmed",
         "element": "flow:request",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<flow:request id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</flow:request>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "url", "method", "version", "authType", "headerData", "requestData", "responseData", "errorHandler", "retryCount"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "url",
+            "method",
+            "version",
+            "authType",
+            "headerData",
+            "requestData",
+            "responseData",
+            "errorHandler",
+            "retryCount"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "url": { "type": "string", "description": "请求URL" },
-            "method": { "type": "string", "enum": ["get", "post", "put", "delete"] },
-            "version": { "type": "integer", "const": 1 },
-            "authType": { "type": "integer", "description": "1=无认证" },
-            "headerData": { "type": "array", "default": [] },
-            "requestData": { "type": "array", "default": [] },
-            "responseData": { "type": "array", "default": [] },
-            "errorHandler": { "type": "object", "properties": { "handler": { "type": "string", "enum": ["retry", "throw", "ignore"] } } },
-            "retryCount": { "type": "integer", "default": 5 }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "url": {
+              "type": "string",
+              "description": "请求URL"
+            },
+            "method": {
+              "type": "string",
+              "enum": [
+                "get",
+                "post",
+                "put",
+                "delete"
+              ]
+            },
+            "version": {
+              "type": "integer",
+              "const": 1
+            },
+            "authType": {
+              "type": "integer",
+              "description": "1=无认证"
+            },
+            "headerData": {
+              "type": "array",
+              "default": []
+            },
+            "requestData": {
+              "type": "array",
+              "default": []
+            },
+            "responseData": {
+              "type": "array",
+              "default": []
+            },
+            "errorHandler": {
+              "type": "object",
+              "properties": {
+                "handler": {
+                  "type": "string",
+                  "enum": [
+                    "retry",
+                    "throw",
+                    "ignore"
+                  ]
+                }
+              }
+            },
+            "retryCount": {
+              "type": "integer",
+              "default": 5
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "报警消息",
       "category": "消息交互",
@@ -1254,37 +2547,97 @@
         "status": "confirmed",
         "element": "msg:alarm",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
-        "optional_attributes": ["tabKey"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
+        "optional_attributes": [
+          "tabKey"
+        ],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<msg:alarm id=\"{id}\" name=\"{name}\" tabKey=\"basic\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</msg:alarm>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "isMute", "isPersistent", "message", "display", "data", "resourceGroupId", "needPhoto", "needHandWritting"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "isMute",
+            "isPersistent",
+            "message",
+            "display",
+            "data",
+            "resourceGroupId",
+            "needPhoto",
+            "needHandWritting"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "isMute": { "type": "boolean", "default": false },
-            "isPersistent": { "type": "boolean", "default": false },
-            "message": { "type": "string", "description": "报警消息文本" },
-            "display": { "type": "string", "default": "yes" },
-            "data": { "type": "array", "default": [] },
-            "resourceGroupId": { "type": "string", "default": "0" },
-            "needPhoto": { "type": "boolean", "default": false },
-            "needHandWritting": { "type": "boolean", "default": false }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "isMute": {
+              "type": "boolean",
+              "default": false
+            },
+            "isPersistent": {
+              "type": "boolean",
+              "default": false
+            },
+            "message": {
+              "type": "string",
+              "description": "报警消息文本"
+            },
+            "display": {
+              "type": "string",
+              "default": "yes"
+            },
+            "data": {
+              "type": "array",
+              "default": []
+            },
+            "resourceGroupId": {
+              "type": "string",
+              "default": "0"
+            },
+            "needPhoto": {
+              "type": "boolean",
+              "default": false
+            },
+            "needHandWritting": {
+              "type": "boolean",
+              "default": false
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "暂停计时器",
       "category": "时间控制",
@@ -1294,30 +2647,60 @@
         "status": "confirmed",
         "element": "timer:pause",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<timer:pause id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:pause>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "timer"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "timer"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "timer": { "type": "string", "description": "$(计时器ID)" }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "timer": {
+              "type": "string",
+              "description": "$(计时器ID)"
+            }
           },
           "additionalProperties": false
         }
       }
     },
-
     {
       "name": "时钟",
       "category": "时间控制",
@@ -1327,35 +2710,81 @@
         "status": "confirmed",
         "element": "timer:clock",
         "id_pattern": "Activity_{7位随机字母数字}",
-        "required_attributes": ["id", "name"],
+        "required_attributes": [
+          "id",
+          "name"
+        ],
         "optional_attributes": [],
         "required_children": [
-          { "tag": "ext:data", "type": "cdata_json" },
-          { "tag": "bpmn2:incoming", "type": "text" },
-          { "tag": "bpmn2:outgoing", "type": "text" }
+          {
+            "tag": "ext:data",
+            "type": "cdata_json"
+          },
+          {
+            "tag": "bpmn2:incoming",
+            "type": "text"
+          },
+          {
+            "tag": "bpmn2:outgoing",
+            "type": "text"
+          }
         ],
         "optional_children": [],
-        "diagram": { "element": "bpmndi:BPMNShape", "bounds": { "width": 200, "height": 60 } },
+        "diagram": {
+          "element": "bpmndi:BPMNShape",
+          "bounds": {
+            "width": 200,
+            "height": 60
+          }
+        },
         "template": "<timer:clock id=\"{id}\" name=\"{name}\">\n  <ext:data><![CDATA[{ext_json}]]></ext:data>\n  <bpmn2:incoming>{incoming}</bpmn2:incoming>\n  <bpmn2:outgoing>{outgoing}</bpmn2:outgoing>\n</timer:clock>",
         "diagram_template": "<bpmndi:BPMNShape id=\"{id}_di\" bpmnElement=\"{id}\">\n  <dc:Bounds x=\"{x}\" y=\"{y}\" width=\"200\" height=\"60\"/>\n</bpmndi:BPMNShape>",
         "ext_data_schema": {
           "type": "object",
-          "required": ["subTitle", "showDetail", "type", "everyday", "everyHour", "everyMinute"],
+          "required": [
+            "subTitle",
+            "showDetail",
+            "type",
+            "everyday",
+            "everyHour",
+            "everyMinute"
+          ],
           "properties": {
-            "subTitle": { "type": "string", "default": "" },
-            "showDetail": { "type": "boolean", "default": true },
-            "type": { "type": "string", "enum": ["everyday", "everyHour", "everyMinute"], "description": "触发模式" },
-            "everyday": { "type": "string", "description": "每日触发时间 HH:MM:SS" },
-            "everyHour": { "type": "string", "description": "每小时触发 MM:SS" },
-            "everyMinute": { "type": "string", "description": "每分钟触发（分钟数）" }
+            "subTitle": {
+              "type": "string",
+              "default": ""
+            },
+            "showDetail": {
+              "type": "boolean",
+              "default": true
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "everyday",
+                "everyHour",
+                "everyMinute"
+              ],
+              "description": "触发模式"
+            },
+            "everyday": {
+              "type": "string",
+              "description": "每日触发时间 HH:MM:SS"
+            },
+            "everyHour": {
+              "type": "string",
+              "description": "每小时触发 MM:SS"
+            },
+            "everyMinute": {
+              "type": "string",
+              "description": "每分钟触发（分钟数）"
+            }
           },
           "additionalProperties": false
         }
       }
     }
-
   ],
-
   "sequenceFlow_template": {
     "description": "连接任意两个元件的标准连线，放在 <bpmn2:process> 内",
     "selection_rules": {

@@ -711,6 +711,9 @@ class DirectPlatformClient:
                      variables: list = None) -> dict:
         """保存主程序，可选同时保存子程序。
 
+        请求平台前必须通过本地 `validate_bpmn.check_xml_text`（结构/几何/ext schema）。
+        未通过则抛 ValueError，不发 HTTP。
+
         :param appid: 主程序ID
         :param xml_content: 主程序XML；拆分时必须含全部 flow:subproc 引用
         :param description: 程序描述
@@ -798,6 +801,25 @@ class DirectPlatformClient:
         if split_errs:
             raise ValueError(
                 "split save rejected:\n  - " + "\n  - ".join(split_errs)
+            )
+
+        # 硬门禁：未过本地结构/几何/ext schema 不得请求平台
+        from validate_bpmn import check_xml_text
+
+        local_errs: list[str] = []
+        for e in check_xml_text(xml_content):
+            local_errs.append(f"main: {e}")
+        if subprograms:
+            for i, sub in enumerate(subprograms):
+                sub_xml = sub.get("xml_content") or ""
+                label = sub.get("name") or sub.get("id") or str(i)
+                for e in check_xml_text(sub_xml):
+                    local_errs.append(f"sub[{label}]: {e}")
+        if local_errs:
+            raise ValueError(
+                "save rejected: local XML validation failed "
+                "(fix IR / ir_to_xml / validate_bpmn before save):\n  - "
+                + "\n  - ".join(local_errs[:40])
             )
 
         main_timers = resolve_timers(timers, xml_content)

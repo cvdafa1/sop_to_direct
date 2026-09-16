@@ -14,6 +14,7 @@ flow:parallelStart / flow:parallelEnd）。未定义元件一律报错。
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -23,7 +24,7 @@ from api_reference import (
     find_invalid_xml_idents,
     sanitize_xml_ident_names,
 )
-from schema_loader import components_by_element
+from schema_loader import components_by_element, validate_ext
 
 
 FORBIDDEN_PATTERNS = [
@@ -65,9 +66,9 @@ def _check_undefined_elements(text: str, allowed: frozenset[str]) -> list[str]:
     return errors
 
 
-def _check_file(path: Path) -> list[str]:
+def check_xml_text(text: str) -> list[str]:
+    """结构 + 几何 + ext schema。保存到平台前必须通过。"""
     errors: list[str] = []
-    text = path.read_text(encoding="utf-8")
     allowed = _load_allowed_elements()
 
     if not text.strip().startswith("<bpmn2:process"):
@@ -244,7 +245,48 @@ def _check_file(path: Path) -> list[str]:
                 errors.append(f"{tag} with 2 outgoing must include situation=no: {nid_s}")
 
     errors.extend(_check_layout_geometry(text))
+    errors.extend(_check_ext_cdata(text))
     return errors
+
+
+def _check_ext_cdata(text: str) -> list[str]:
+    """对每个业务元件的 ext:data JSON 按 element_schema 再验一遍（保存前门禁）。"""
+    errors: list[str] = []
+    comps = components_by_element()
+    for m in re.finditer(
+        r"<(flow|io|msg|timer):([A-Za-z][A-Za-z0-9]*)\b([^>]*)>(.*?)</\1:\2>",
+        text,
+        re.DOTALL,
+    ):
+        element = f"{m.group(1)}:{m.group(2)}"
+        if element in NESTED_ALLOWED:
+            continue
+        comp = comps.get(element)
+        if not comp:
+            continue
+        schema = (comp.get("xml") or {}).get("ext_data_schema")
+        attrs = m.group(3)
+        body = m.group(4)
+        nid_m = re.search(r'\bid="([^"]+)"', attrs)
+        nid = nid_m.group(1) if nid_m else "?"
+        if schema is None:
+            continue
+        cdata = re.search(r"<ext:data>\s*<!\[CDATA\[(.*?)\]\]>\s*</ext:data>", body, re.DOTALL)
+        if not cdata:
+            errors.append(f"{nid} ({element}): missing ext:data CDATA")
+            continue
+        raw = cdata.group(1).strip()
+        try:
+            ext = json.loads(raw)
+        except Exception as e:
+            errors.append(f"{nid} ({element}): ext:data is not JSON: {e}")
+            continue
+        errors.extend(validate_ext(element, ext, node_id=nid))
+    return errors
+
+
+def _check_file(path: Path) -> list[str]:
+    return check_xml_text(path.read_text(encoding="utf-8"))
 
 
 def _parse_bounds(text: str) -> dict[str, tuple[float, float, float, float]]:

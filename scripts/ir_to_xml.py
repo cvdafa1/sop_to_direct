@@ -16,7 +16,14 @@ from pathlib import Path
 from typing import Any
 
 from layout_generator import LayoutGenerator
-from schema_loader import components_by_element, layout_type, render_node_xml, resolve_element
+from schema_loader import (
+    collect_program_vars_from_ext,
+    components_by_element,
+    layout_type,
+    normalize_ext_strings,
+    render_node_xml,
+    resolve_element,
+)
 from api_reference import (
     ensure_ident_name,
     sanitize_xml_ident_names,
@@ -271,6 +278,26 @@ def compile_ir(ir: dict[str, Any]) -> str:
             attrs=node.get("attrs"),
         )
         meta[nid] = {"element": element, "layout_type": lt}
+
+    declared_vars: set[str] = set()
+    for item in ir.get("variables") or []:
+        if isinstance(item, str):
+            declared_vars.add(strip_var_ref(item))
+        elif isinstance(item, dict) and item.get("name"):
+            declared_vars.add(strip_var_ref(str(item["name"])))
+    if declared_vars:
+        used_vars: set[str] = set()
+        for node in nodes:
+            ext = node.get("ext")
+            if ext:
+                used_vars |= collect_program_vars_from_ext(normalize_ext_strings(ext))
+        missing_vars = sorted(used_vars - declared_vars)
+        if missing_vars:
+            raise ValueError(
+                "IR.variables missing program vars used in ext: "
+                + ", ".join(missing_vars)
+                + " (see subprocess.md §variables / element_schema.json)"
+            )
 
     for flow in flows:
         fid = flow.get("id")

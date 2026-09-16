@@ -103,7 +103,9 @@ type：取值见 `node_reference.md` §二（唯一来源：`1` / `3`）
 
 前置：Step 3 已对主（及拆分时全部子）`ir_to_xml` + `validate_bpmn.py main.xml [sub….xml]` 退出码 0；`accuracy_checklist.md` 已勾选。
 
-**保存：不与用户交互，但必须成功后才能向下。**  
+**禁止**跳过 Step 3 直接 save。`save_program` 内部会再验一遍 XML（结构、几何、全部元件 `ext` schema）；未通过则抛错、**不调用平台接口**。
+
+**保存：不与用户交互，但必须先过本地校验、再保存成功后才能向下。**  
 前置满足后直接调用 `save_program`（拆分必须带齐 `subprograms[].xml_content`，见 `subprocess.md`）。禁止再问「是否同意保存」。
 
 ### 保存成功判定（硬门禁）

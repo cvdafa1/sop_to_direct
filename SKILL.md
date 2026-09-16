@@ -39,7 +39,7 @@ description: >-
 | 0 | **加载技能后必须严格按本文件流程执行**；禁止跳步/换序/自创路径 | 本文件「绝对执行原则」 |
 | 1 | 不得跳步；**create / compile** 前须用户明确同意；**save 不询问**（3 校验通过后自动保存） | `interaction.md` |
 | 2 | 原子拆分；**全文识别不可忽略**；大文件分块见 `element_split.md` §0.4 | `element_split.md` |
-| 3 | 只产编译 IR；禁止手写 XML；`ir_to_xml` → `validate_bpmn` 退出码 0 | `ir_schema.md` + `fixtures/sample_ir.json` |
+| 3 | 只产编译 IR；禁止手写 XML；`ir_to_xml` → `validate_bpmn` 退出码 0；**save 前必须再过同一套本地校验** | `ir_schema.md` + `fixtures/sample_ir.json` |
 | 4 | 仅 schema 元件；标识符命名 | `element_schema.json` / `subprocess.md` |
 | 5 | 连线与布局仅由编译器组装 | `golden_xml_rules.md` |
 | 6 | 位号确认与格式 | `interaction.md` Step 2.5 + `node_reference.md` |
@@ -88,7 +88,8 @@ description: >-
 
 ### Step 3 — 生成 XML
 
-禁止手搓 XML。**Read** `ir_schema.md`（位号已在 2.5 写好）。
+禁止手搓 XML。**Read** `ir_schema.md`（位号已在 2.5 写好）。  
+`ir_to_xml` 按 `element_schema.json` 全量校验每个元件 `ext`；失败则按报错改 IR 字段，禁止简化流程。
 
 ```bash
 python scripts/ir_to_xml.py <ir.json> -o <out.xml>
@@ -107,7 +108,7 @@ python scripts/validate_bpmn.py <out.xml>
 
 ### Step 3.5 — 自动保存 + 编译选择
 
-**Read** `interaction.md` Step 3.5。校验通过后**直接 save**（不询问）；须以返回 **`code`/`msg`** 判定成功，**仅成功后**再问是否编译；失败展示 `code`+`msg` 并停止。
+**Read** `interaction.md` Step 3.5。须 **Step 3 本地校验已通过**；`save_program` 会再次跑 `validate_bpmn`（结构/几何/`ext` schema），失败则 **不请求平台**。校验通过后直接 save（不询问）；须以返回 **`code`/`msg`** 判定成功，**仅成功后**再问是否编译。
 
 ### Step 5 — 编译（若用户选确认编译）
 
