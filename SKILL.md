@@ -47,7 +47,7 @@ description: >-
 | 9 | 平台编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
-| 12 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮 | `interaction.md` |
+| 12 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮；**1.5 与 2 严格分开、单独交互**（禁止同屏问拆分+创建） | `interaction.md` |
 | 13 | API：`api_reference.py` 默认值可用；禁止因未设 `DIRECT_*` 而跳过调用 | `api_reference.py` |
 
 ## 工作流
@@ -74,11 +74,12 @@ description: >-
 
 ### Step 1.5 — 拆分方案
 
-**Read** `subprocess.md` + `interaction.md` Step 1.5。
+**Read** `subprocess.md` + `interaction.md` Step 1.5。  
+**仅**确认拆/不拆（及子程序草案）；禁止夹带创建字段；用户确认前不得进入 Step 2。
 
 ### Step 2 — 创建主程序
 
-**Read** `interaction.md` Step 2。同意后 `create_program`。拆分时序见 `subprocess.md`。
+**Read** `interaction.md` Step 2。须在 1.5 已确认之后另开一轮；同意后 `create_program`。拆分时序见 `subprocess.md`。
 
 ### Step 2.5 — 位号
 

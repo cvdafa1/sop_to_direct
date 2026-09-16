@@ -4,7 +4,7 @@
 
 | 域 | 勾选 | 唯一来源 |
 |----|------|----------|
-| 0 流程 | 已严格按 `SKILL.md` 工作流执行；未跳步/换序/自创路径 | `SKILL.md`「绝对执行原则」 |
+| 0 流程 | 已严格按 `SKILL.md` 工作流执行；未跳步/换序/自创路径；**1.5 与 2 已分轮确认** | `SKILL.md`「绝对执行原则」+ `interaction.md` |
 | A 语义 | 全文识别 + 逐句拆分 + 覆盖自检 + 完整列表已展示 | `element_split.md` |
 | A IR 形态 | `ir_to_xml.py` 能编过；结构= `sample_ir.json`（无 main_program/steps） | `ir_schema.md` + `fixtures/sample_ir.json` |
 | B 位号 | 已确认；`#()`/`$()`；type；无 PLACEHOLDER | `interaction.md` Step 2.5 + `node_reference.md` §一/二 |
