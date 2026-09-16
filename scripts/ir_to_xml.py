@@ -449,9 +449,13 @@ def _auto_layout(gen: LayoutGenerator, meta: dict[str, dict[str, Any]]) -> None:
         return last.bottom + gen.VERTICAL_GAP
 
     def place_yn_decision(
-        decision_id: str, cx: int, y0: int, stop: str | None, col_gap: int = 140
+        decision_id: str, cx: int, y0: int, stop: str | None, col_gap: int = 200
     ) -> int:
-        """放置 and/or/cond 的是/否分叉（支路可为线性，遇嵌套分叉再递归）。"""
+        """放置 and/or/cond 的是/否分叉。
+
+        必须先由调用方传入正确的 stop（=汇合点或外层边界），避免臂展开吞掉后续菱形。
+        臂内若再遇二分/多路，则对该臂递归 place_from。
+        """
         node = gen.nodes[decision_id]
         node.x = cx - node.w // 2
         node.y = y0
@@ -465,30 +469,66 @@ def _auto_layout(gen: LayoutGenerator, meta: dict[str, dict[str, Any]]) -> None:
         if not no_f:
             raise ValueError(f"decision {decision_id} missing situation=no")
 
-        yes_nodes = _expand_arm(yes_f.target, stop, cx)
-        no_nodes = _expand_arm(no_f.target, stop, cx)
-        yes_ids = [n for n in yes_nodes if n not in placed]
-        no_ids = [n for n in no_nodes if n not in placed]
-        gen.layout_branch_columns(
-            decision_id=decision_id,
-            yes_ids=yes_ids,
-            no_ids=no_ids,
-            merge_id=None,
-            center_x=cx,
-            col_gap=col_gap,
-        )
-        placed.update(yes_ids)
-        placed.update(no_ids)
-        bottoms = [gen.nodes[decision_id].bottom + gen.VERTICAL_GAP]
-        for nid in yes_ids + no_ids:
-            bottoms.append(gen.nodes[nid].bottom + gen.VERTICAL_GAP)
-        return max(bottoms)
+        def _arm_recursive(head: str | None) -> bool:
+            if not head or head == stop:
+                return False
+            hlt = meta[head]["layout_type"]
+            houts = outgoing.get(head, [])
+            if hlt in DECISION_YN_TYPES and len(houts) == 2:
+                return True
+            if hlt == "branch" and len(houts) >= 2:
+                return True
+            path = collect_linear(head, stop)
+            if not path:
+                return False
+            last = path[-1]
+            llt = meta[last]["layout_type"]
+            louts = outgoing.get(last, [])
+            if llt in DECISION_YN_TYPES and len(louts) == 2:
+                return True
+            if llt == "branch" and len(louts) >= 2:
+                return True
+            return False
 
-    def _expand_arm(start: str | None, stop: str | None, cx: int) -> list[str]:
-        """返回臂上应出现在该列的节点列表（线性前缀）；嵌套分叉节点含在内由 place 处理。"""
-        if not start or start == stop:
-            return []
-        return collect_linear(start, stop)
+        yes_rec = _arm_recursive(yes_f.target)
+        no_rec = _arm_recursive(no_f.target)
+        gap = 720 if (yes_rec or no_rec) else col_gap
+        start_y = node.bottom + gen.VERTICAL_GAP
+        yes_cx = int(cx - gap)
+        no_cx = int(cx + gap)
+        bottoms = [start_y]
+
+        def _place_linear_arm(head: str | None, arm_cx: int) -> int:
+            if not head or head == stop:
+                return start_y
+            ids = [n for n in collect_linear(head, stop) if n not in placed]
+            # collect_linear 若停在嵌套分叉上，分叉本身留给递归；纯线性则整列放下
+            if ids and (
+                (
+                    meta[ids[-1]]["layout_type"] in DECISION_YN_TYPES
+                    and len(outgoing.get(ids[-1], [])) == 2
+                )
+                or meta[ids[-1]]["layout_type"] == "branch"
+            ):
+                # 不应走到这里：_arm_recursive 应为 True
+                ids = ids[:-1]
+            if not ids:
+                return start_y
+            gen.layout_vertical(ids, center_x=arm_cx, start_y=start_y)
+            placed.update(ids)
+            return gen.nodes[ids[-1]].bottom + gen.VERTICAL_GAP
+
+        if yes_rec:
+            bottoms.append(place_from(yes_f.target, yes_cx, start_y, stop))
+        else:
+            bottoms.append(_place_linear_arm(yes_f.target, yes_cx))
+
+        if no_rec:
+            bottoms.append(place_from(no_f.target, no_cx, start_y, stop))
+        else:
+            bottoms.append(_place_linear_arm(no_f.target, no_cx))
+
+        return max(bottoms)
 
     def place_from(nid: str | None, cx: int, y0: int, stop: str | None) -> int:
         """从 nid 布局到 stop 之前，返回新的 y 游标。"""
@@ -532,9 +572,28 @@ def _auto_layout(gen: LayoutGenerator, meta: dict[str, dict[str, Any]]) -> None:
                     if hlt in DECISION_YN_TYPES and len(houts) == 2:
                         groups.append([])  # 列内递归，不预填线性
                         arm_meta.append((head, True))
+                    elif hlt == "branch" and len(houts) >= 2:
+                        groups.append([])
+                        arm_meta.append((head, True))
                     else:
-                        groups.append(collect_linear(head, merge))
-                        arm_meta.append((head, False))
+                        # 线性前缀若以嵌套分叉结尾，整臂递归（先竖排前缀再分叉易丢节点）
+                        path = collect_linear(head, merge)
+                        nest = bool(
+                            path
+                            and (
+                                (
+                                    meta[path[-1]]["layout_type"] in DECISION_YN_TYPES
+                                    and len(outgoing.get(path[-1], [])) == 2
+                                )
+                                or meta[path[-1]]["layout_type"] == "branch"
+                            )
+                        )
+                        if nest:
+                            groups.append([])
+                            arm_meta.append((head, True))
+                        else:
+                            groups.append(path)
+                            arm_meta.append((head, False))
 
                 # 先用 multi_columns 放线性组 + decision；递归臂稍后按列坐标放
                 linear_groups = []
@@ -607,14 +666,15 @@ def _auto_layout(gen: LayoutGenerator, meta: dict[str, dict[str, Any]]) -> None:
                 nonlocal_y = bottom
                 break
 
-            # 是/否二分
+            # 是/否二分：先算汇合点，再放置（禁止 stop=None 时吞掉后续菱形）
             if lt in DECISION_YN_TYPES and len(outs) == 2:
-                by = place_yn_decision(cur, cx, nonlocal_y, stop, col_gap=200)
                 yes_f = next(f for f in outs if f.situation == "yes")
                 no_f = next(f for f in outs if f.situation == "no")
                 merge = find_merge([yes_f.target, no_f.target])
                 if stop and merge is None:
                     merge = stop
+                arm_stop = merge if merge else stop
+                by = place_yn_decision(cur, cx, nonlocal_y, arm_stop, col_gap=200)
                 # 外层指定了 stop 时，不在这里放置 stop（交给上层多路布局）
                 if merge and merge == stop:
                     nonlocal_y = by
@@ -628,6 +688,16 @@ def _auto_layout(gen: LayoutGenerator, meta: dict[str, dict[str, Any]]) -> None:
                     mout = outgoing.get(merge, [])
                     cur = mout[0].target if len(mout) == 1 else None
                     continue
+                if merge and merge in placed:
+                    m = gen.nodes[merge]
+                    m.x = cx - m.w // 2
+                    m.y = max(m.y, by)
+                    nonlocal_y = m.bottom + gen.VERTICAL_GAP
+                    mout = outgoing.get(merge, [])
+                    cur = mout[0].target if len(mout) == 1 else None
+                    if cur and cur not in placed:
+                        continue
+                    break
                 nonlocal_y = by
                 break
 

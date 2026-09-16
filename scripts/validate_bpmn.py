@@ -354,8 +354,12 @@ def _seg_touches_port(seg, bounds_map, node_id, port: str) -> bool:
     return _point_near(sx1, sy1, cx, py) or _point_near(sx2, sy2, cx, py)
 
 
+# 与 layout_generator.EDGE_OVERLAP_MIN_LEN 对齐
+_EDGE_OVERLAP_MIN_LEN = 12.0
+
+
 def _check_layout_geometry(text: str) -> list[str]:
-    """节点重叠、连线穿节点、正交边交叉、连线共线重叠。"""
+    """节点重叠、连线穿节点、正交边交叉、无关连线长距离共线重叠。"""
     errors: list[str] = []
     bounds = _parse_bounds(text)
     edges = _parse_edge_waypoints(text)
@@ -421,20 +425,15 @@ def _check_layout_geometry(text: str) -> list[str]:
             src_b, tgt_b = flow_ends.get(eids[j], (None, None))
             crossed = False
             overlapped = False
+            share_tgt = bool(tgt_a and tgt_a == tgt_b)
+            share_src = bool(src_a and src_a == src_b)
             for sa in segs_a:
                 for sb in segs_b:
                     if _hv_proper_cross(*sa, *sb):
                         crossed = True
-                    if _hv_collinear_overlap(*sa, *sb):
-                        share_tgt = tgt_a and tgt_a == tgt_b
-                        share_src = src_a and src_a == src_b
-                        if share_tgt and _seg_touches_port(
-                            sa, bounds, tgt_a, "top"
-                        ) and _seg_touches_port(sb, bounds, tgt_b, "top"):
-                            pass
-                        elif share_src and _seg_touches_port(
-                            sa, bounds, src_a, "bottom"
-                        ) and _seg_touches_port(sb, bounds, src_b, "bottom"):
+                    if _hv_collinear_overlap(*sa, *sb, min_len=_EDGE_OVERLAP_MIN_LEN):
+                        # 同宿汇合总线 / 同源扇出：允许共线
+                        if share_tgt or share_src:
                             pass
                         else:
                             overlapped = True

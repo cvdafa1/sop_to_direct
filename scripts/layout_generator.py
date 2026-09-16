@@ -785,8 +785,14 @@ class LayoutGenerator:
                     issues.append(f"edge_cross:{id_a}×{id_b}")
         return issues
 
+    # 共线重叠：短于该长度视为数值噪声；同源扇出/同宿汇合总线整段豁免
+    EDGE_OVERLAP_MIN_LEN = 12.0
+
     def check_edge_overlaps(self):
-        """不同连线不得共线重叠；仅豁免同源/同宿端口处的汇合短重合。"""
+        """无关连线不得长距离共线重叠。
+
+        豁免：同源扇出、同宿汇合总线、端口短重合、以及短于 EDGE_OVERLAP_MIN_LEN 的重叠。
+        """
         issues = []
         prepared = []
         for flow in self.flows:
@@ -801,15 +807,12 @@ class LayoutGenerator:
                 overlapped = False
                 for sa in segs_a:
                     for sb in segs_b:
-                        if not self._hv_collinear_overlap(*sa, *sb):
+                        if not self._hv_collinear_overlap(
+                            *sa, *sb, min_len=self.EDGE_OVERLAP_MIN_LEN
+                        ):
                             continue
-                        if share_tgt and self._seg_touches_node_port(
-                            sa, fa.target, "top"
-                        ) and self._seg_touches_node_port(sb, fb.target, "top"):
-                            continue
-                        if share_src and self._seg_touches_node_port(
-                            sa, fa.source, "bottom"
-                        ) and self._seg_touches_node_port(sb, fb.source, "bottom"):
+                        # 同宿汇合总线 / 同源扇出：允许共线
+                        if share_tgt or share_src:
                             continue
                         overlapped = True
                         break

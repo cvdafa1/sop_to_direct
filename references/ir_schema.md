@@ -102,9 +102,10 @@ IR 可写 `timers: ["JSQ1"]` 或完整项；`variables` 同该文件结构。计
 **自动布局（省略 `layout` 时）已支持：**
 
 - 直线；仅 yes；一层 yes+no
+- **嵌套是/否**与**菱形链**（先定汇合点再展臂，臂内递归）
 - **`flow:branch` 多路**（situation `0/1/2…`）
 - **支路内再套一层 yes/no**（如三路里每路一个 `flow:and`）
-- 高扇入汇合用共享总线走线（几何门禁见 `golden_xml_rules.md`）
+- 高扇入汇合用共享总线走线（同源/同宿共线允许，见 `golden_xml_rules.md`）
 
 `parallel1` / `parallel2`：禁止写入 IR，见 `element_split.md` R5。
 
