@@ -19,7 +19,7 @@ description: >-
 | 禁止 | 要求 |
 |------|------|
 | 跳步、并步、换序 | 严格按 `1 → 1.5 → 2 → 2.5 → 3 → 3.5 → [5] → 6` |
-| 凭经验/习惯代替文档 | 进入某步前 **Read** 该步指定参考；细则以「参考索引」唯一来源为准 |
+| 凭经验/习惯代替文档 | 进入某步前须**阅读**该步指定参考；细则以「参考索引」唯一来源为准 |
 | 因失败擅自简化 SOP/砍节点 | 见 Step 3「失败处置」与门禁 #10 |
 | 因未设 `DIRECT_*` / 工具不便而跳过 API 或确认 | 用 `api_reference.py` 默认值；确认轮次不得省略 |
 | 手写 BPMN XML 或绕过 `ir_to_xml` / `validate_bpmn` | 只产 IR → 脚本编译 → 退出码 0 才进 3.5 |
@@ -48,7 +48,7 @@ description: >-
 | 9 | 平台编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
-| 12 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮；**1.5 与 2 严格分开、单独交互**（禁止同屏问拆分+创建） | `interaction.md` |
+| 12 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮；**1.5 与 2 严格分开**；**1.5 须对话编号二选一并标唯一推荐**（禁止宿主单选控件），未确认不得进 2 | `interaction.md` |
 | 13 | API：**只**用 `DirectPlatformClient`；禁止自构 URL/payload/curl；未设 `DIRECT_*` 仍用脚本默认值 | `api_reference.py` |
 
 ## 工作流
@@ -70,26 +70,26 @@ description: >-
 
 ### Step 1 — 解析
 
-写 IR 前 **Read**：`element_split.md` → `fixtures/sample_ir.json` → `element_schema.json` → `ir_schema.md`。  
+写 IR 前须阅读：`element_split.md` → `fixtures/sample_ir.json` → `element_schema.json` → `ir_schema.md`。  
 全文识别、大文件分块：`element_split.md` §0.4。对照表只展示、不写入 IR。产出后进 1.5（本步不单独要「同意解析」）。
 
 ### Step 1.5 — 拆分方案
 
-**Read** `subprocess.md` + `interaction.md` Step 1.5。  
-**仅**确认拆/不拆（及子程序草案）；**必须标注推荐项**并附一句理由；禁止夹带创建字段；用户确认前不得进入 Step 2。
+阅读 `subprocess.md` + `interaction.md` Step 1.5。  
+**仅**对话编号确认拆/不拆（及子程序草案）；**必须**标唯一推荐并附一句理由；禁止宿主单选控件；禁止夹带创建字段；用户确认前不得进入 Step 2。
 
 ### Step 2 — 创建主程序
 
-**Read** `interaction.md` Step 2。须在 1.5 已确认之后另开一轮；同意后 `create_program`。  
+阅读 `interaction.md` Step 2。须在 1.5 已确认之后另开一轮；同意后 `create_program`。  
 `program_name`：对话已有则用用户的，否则按文档生成；`description`：按文档生成。拆分时序与子程序 name/描述见 `subprocess.md`。
 
 ### Step 2.5 — 位号
 
-**Read** `interaction.md` Step 2.5。单独一轮，不与其它合并。
+阅读 `interaction.md` Step 2.5。单独一轮，不与其它合并。
 
 ### Step 3 — 生成 XML
 
-禁止手搓 XML。**Read** `ir_schema.md`（位号已在 2.5 写好）。  
+禁止手搓 XML。阅读 `ir_schema.md`（位号已在 2.5 写好）。  
 `ir_to_xml` 按 `element_schema.json` 全量校验每个元件 `ext`；失败则按报错改 IR 字段，禁止简化流程。
 
 ```bash
@@ -109,7 +109,7 @@ python scripts/validate_bpmn.py <out.xml>
 
 ### Step 3.5 — 自动保存 + 编译选择
 
-**Read** `interaction.md` Step 3.5。须 **Step 3 本地校验已通过**；`save_program` 会再次跑 `validate_bpmn`（结构/几何/`ext` schema），失败则 **不请求平台**。校验通过后直接 save（不询问）；须以返回 **`code`/`msg`** 判定成功，**仅成功后**再问是否编译。
+阅读 `interaction.md` Step 3.5。须 **Step 3 本地校验已通过**；`save_program` 会再次跑 `validate_bpmn`（结构/几何/`ext` schema），失败则 **不请求平台**。校验通过后直接 save（不询问）；须以返回 **`code`/`msg`** 判定成功，**仅成功后**再问是否编译。
 
 ### Step 5 — 编译（若用户选确认编译）
 
