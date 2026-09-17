@@ -48,7 +48,7 @@ description: >-
 | 9 | 平台编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
-| 12 | 确认仅 1.5 / 2.5 / 3.5 **三轮**；**1.5 须对话编号二选一并标唯一推荐**；**Step 2 无交互**；未确认 1.5 不得 create | `interaction.md` |
+| 12 | 确认仅 1.5 / 2.5 / 3.5 **三轮**；**1.5 仅拆/不拆+唯一推荐**（子 name/描述自动生成）；**Step 2 无交互**；未确认 1.5 不得 create | `interaction.md` |
 | 13 | API：**只**用 `DirectPlatformClient`；禁止自构 URL/payload/curl；未设 `DIRECT_*` 仍用脚本默认值 | `api_reference.py` |
 
 ## 工作流
@@ -76,7 +76,7 @@ description: >-
 ### Step 1.5 — 拆分方案
 
 阅读 `subprocess.md` + `interaction.md` Step 1.5。  
-**仅**对话编号确认拆/不拆（及子程序草案）；**必须**标唯一推荐并附一句理由；禁止宿主单选控件；禁止夹带创建字段；用户确认前不得进入 Step 2。
+**仅**对话编号确认拆/不拆并标唯一推荐；**不问**子程序 name/描述。用户选拆后，name/描述按各子划分文档内容自动生成。禁止宿主单选控件；禁止夹带创建字段；未确认前不得进入 Step 2。
 
 ### Step 2 — 创建主程序（无交互）
 
