@@ -237,6 +237,7 @@ def check_split_bundle(main_xml: str, subprograms: list | None) -> list[str]:
         )
 
     by_id: dict[str, dict] = {}
+    seen_sub_names: set[str] = set()
     for i, sub in enumerate(subs):
         sid = str(sub.get("id") or "").strip()
         sname = str(sub.get("name") or "").strip()
@@ -246,6 +247,14 @@ def check_split_bundle(main_xml: str, subprograms: list | None) -> list[str]:
             continue
         if not sname:
             errors.append(f"subprograms[{i}] missing name")
+        else:
+            norm = ensure_ident_name(sname, fallback_prefix="sub")
+            if norm in seen_sub_names:
+                errors.append(
+                    f"duplicate subprocess name {sname!r} (normalized {norm!r}); "
+                    f"subprocess names must be unique"
+                )
+            seen_sub_names.add(norm)
         if not str(sxml).strip():
             errors.append(f"subprograms[{i}] ({sname or sid}) missing xml_content")
         if sid in by_id:
@@ -253,10 +262,19 @@ def check_split_bundle(main_xml: str, subprograms: list | None) -> list[str]:
         by_id[sid] = sub
 
     seen_ids: set[str] = set()
+    seen_ref_names: set[str] = set()
     for i, ref in enumerate(refs):
         name, sid = ref["name"], ref["subId"]
         if not name:
             errors.append(f"flow:subproc[{i}] missing name")
+        else:
+            ref_norm = ensure_ident_name(name, fallback_prefix="sub")
+            if ref_norm in seen_ref_names:
+                errors.append(
+                    f"duplicate flow:subproc name={name!r}; "
+                    f"subprocess names must be unique"
+                )
+            seen_ref_names.add(ref_norm)
         if not sid:
             errors.append(f"flow:subproc[{i}] missing subId")
             continue

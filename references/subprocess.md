@@ -32,7 +32,7 @@
 | 对象 | 名称 | 描述 |
 |------|------|------|
 | **主程序** | 对话能提取 → 用提取名（规范为 `[A-Za-z0-9_]`）；提取不到 → 按文档标题/内容生成 | 对话能提取则用；否则按文档内容生成（Step 2 **不展示确认**） |
-| **子程序** | 用户确认拆分后，按**该子划分文档内容**生成 name（`[A-Za-z0-9_]`）；**不请用户填写** | 按该子划分文档内容生成；写入 `subTitle`；**不请用户填写** |
+| **子程序** | 用户确认拆分后，**尽量依据该子划分文档的主题/设备/操作内容**生成可辨识 name（`[A-Za-z0-9_]`，可用英文或拼音转写）；禁止空洞占位名（如 `sub1`/`proc_a`，除非内容实在无法提炼且已用后缀保证唯一）；**不请用户填写**；各子 name 互不重复，且不得与主程序 `program_name` 相同；撞名时加 `_2` 等后缀 | **尽量依据该子文档内容**生成可读职责说明（写清对象/阶段/目的），写入 `subTitle`；禁止空串或与内容无关的套话；**不请用户填写** |
 
 细则与确认文案见 `interaction.md` Step 1.5 / 2。
 
@@ -55,9 +55,10 @@
 2. **主程序必须引用**：主 XML 内须有 **恰好 N 个** `flow:subproc`，每个对应一个子程序；`name` / `subId` 与 `get_next_id` + save `subprograms[]` 一致  
 3. **子程序完整 XML**：每个子程序独立 `ir_to_xml` → 完整 `flow:start`…`flow:end`；子 XML **禁止**再嵌套 `flow:subproc`  
 4. **一次保存**：`save_program(..., xml_content=主XML, subprograms=[{id,name,xml_content}, ...])`；缺任一子 XML 或主未引用 → 拒绝保存  
-5. **校验**：`python scripts/validate_bpmn.py main.xml sub1.xml ... subN.xml`（须把主文件放第一位）
+5. **校验**：`python scripts/validate_bpmn.py main.xml sub1.xml ... subN.xml`（须把主文件放第一位）  
+6. **子 name 唯一**：全部子程序 `name`（及主 XML 中各 `flow:subproc/@name`）两两不同；`save_program` / `check_split_bundle` 遇重复名则失败
 
-禁止：把子步骤全部塞进主程序却无 `flow:subproc`；或有 `flow:subproc` 却未生成/未传入对应子 XML。
+禁止：把子步骤全部塞进主程序却无 `flow:subproc`；或有 `flow:subproc` 却未生成/未传入对应子 XML；或子程序重名。
 
 ## 时序专规（步骤编排见 `SKILL.md` 工作流）
 
@@ -172,8 +173,8 @@
 
 | 字段 | 写入位置 | 规则 |
 |------|----------|------|
-| `name` | XML 属性 `name`，且与 save 子程序 `name` 一致 | 仅 `[A-Za-z0-9_]`；**由该子文档内容生成** |
-| `描述/职责` | `ext:data.subTitle`（必填，禁止 `""`） | **由该子文档内容生成** |
+| `name` | XML 属性 `name`，且与 save 子程序 `name` 一致 | 仅 `[A-Za-z0-9_]`；**尽量按该子文档内容提炼**；全部分子间唯一（亦不得与主程序名相同） |
+| `描述/职责` | `ext:data.subTitle`（必填，禁止 `""`） | **尽量按该子文档内容提炼**可读职责（对象/阶段/目的） |
 
 ```xml
 <flow:subproc id="Activity_xxx" name="load_down" subId="<real_id>">
