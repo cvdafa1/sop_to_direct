@@ -19,6 +19,7 @@ description: >-
 | 禁止 | 要求 |
 |------|------|
 | 跳步、并步、换序 | 严格按 `1 → 1.5 → 2 → 2.5 → 3 → 3.5 → [5] → 6` |
+| **`create_program` 成功前生成 XML** | Step 1–2.5 只允许 IR；**禁止**调用 `ir_to_xml` / 手写或落盘 BPMN XML |
 | 凭经验/习惯代替文档 | 进入某步前须**阅读**该步指定参考；细则以「参考索引」唯一来源为准 |
 | 因失败擅自简化 SOP/砍节点 | 见 Step 3「失败处置」与门禁 #10 |
 | 因未设 `DIRECT_*` / 工具不便而跳过 API 或确认 | 用 `api_reference.py` 默认值；确认轮次不得省略 |
@@ -39,7 +40,7 @@ description: >-
 | 0 | **加载技能后必须严格按本文件流程执行**；禁止跳步/换序/自创路径 | 本文件「绝对执行原则」 |
 | 1 | 不得跳步；**仅 compile** 前须用户明确同意；**create / save 不询问**（字段自动填；3 校验通过后自动保存） | `interaction.md` |
 | 2 | 原子拆分；**全文识别不可忽略**；大文件分块见 `element_split.md` §0.4 | `element_split.md` |
-| 3 | 只产编译 IR；禁止手写 XML；`ir_to_xml` → `validate_bpmn` 退出码 0；**save 前必须再过同一套本地校验** | `ir_schema.md` + `fixtures/sample_ir.json` |
+| 3 | 只产编译 IR；禁止手写 XML；**须 `create_program` 成功且 2.5 位号确认后**才允许 `ir_to_xml`；再 `validate_bpmn`=0；save 前再验 | `ir_schema.md` + `fixtures/sample_ir.json` |
 | 4 | 仅 schema 元件；标识符命名 | `element_schema.json` / `subprocess.md` |
 | 5 | 连线与布局仅由编译器组装 | `golden_xml_rules.md` |
 | 6 | 位号确认与格式 | `interaction.md` Step 2.5 + `node_reference.md` |
@@ -63,7 +64,7 @@ description: >-
 | Step 1 | 1.5 |
 | 1.5 用户确认拆分方案 | 2（自动 create，不询问） |
 | 2 `create_program` 成功 | 2.5（若拆分：create 后先 `get_next_id` 再 2.5） |
-| 2.5 位号确认 | 3 |
+| 2.5 位号确认 | 3（**此前禁止** `ir_to_xml` / 生成 XML） |
 | 3 validate 通过 + checklist | 3.5（直接 save，不询问） |
 | 3.5 **save 成功**（`code` 为 0/`"0"`） | 才能问编译二选一；失败展示 code/msg 并停止 |
 | 3.5 选「确认编译」 | 5 |
@@ -71,7 +72,8 @@ description: >-
 ### Step 1 — 解析
 
 写 IR 前须阅读：`element_split.md` → `fixtures/sample_ir.json` → `element_schema.json` → `ir_schema.md`。  
-全文识别、大文件分块：`element_split.md` §0.4。对照表只展示、不写入 IR。产出后进 1.5（本步不单独要「同意解析」）。
+全文识别、大文件分块：`element_split.md` §0.4。对照表只展示、不写入 IR。产出后进 1.5（本步不单独要「同意解析」）。  
+**禁止**本步调用 `ir_to_xml` 或生成/落盘任何 BPMN XML。
 
 ### Step 1.5 — 拆分方案
 
@@ -81,13 +83,16 @@ description: >-
 ### Step 2 — 创建主程序（无交互）
 
 阅读 `interaction.md` Step 2。1.5 确认后**直接**按规则填字段并 `create_program`，**不询问用户**。  
-字段：对话能提取则用对话；否则 `group_id`/`version` 用默认，`program_name`/`description` 结合文档生成。拆分时序见 `subprocess.md`。
+字段：对话能提取则用对话；否则 `group_id`/`version` 用默认，`program_name`/`description` 结合文档生成。拆分时序见 `subprocess.md`。  
+**禁止**在 `create_program` 成功前调用 `ir_to_xml` 或生成 XML。
 
 ### Step 2.5 — 位号
 
 阅读 `interaction.md` Step 2.5。单独一轮，不与其它合并。
 
 ### Step 3 — 生成 XML
+
+**前置硬门禁**：`create_program` 已成功（已有主 appid）；Step 2.5 位号已确认。**此前禁止**跑 `ir_to_xml`、手写 XML、或预生成 XML「备用」。
 
 禁止手搓 XML。阅读 `ir_schema.md`（位号已在 2.5 写好）。  
 `ir_to_xml` 按 `element_schema.json` 全量校验每个元件 `ext`；失败则按报错改 IR 字段，禁止简化流程。

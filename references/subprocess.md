@@ -61,11 +61,12 @@
 
 ## 时序专规（步骤编排见 `SKILL.md` 工作流）
 
-本文件不复述 Step 编号。专规仅三条：
+本文件不复述 Step 编号。专规仅：
 
 1. `get_next_id` 必须在 Step 1.5 用户确认拆分方案、且 Step 2 `create_program` 成功之后、生成 XML 之前  
-2. 主程序 `flow:subproc` 字段映射见下方 §flow:subproc  
-3. 一次 `save_program`；payload 见下方；编译用主 appid（询问文案见 `interaction.md` Step 3.5）
+2. **禁止**在 `create_program` 成功前对主/子调用 `ir_to_xml` 或落盘 BPMN XML（与 `SKILL.md` 绝对原则一致）  
+3. 主程序 `flow:subproc` 字段映射见下方 §flow:subproc  
+4. 一次 `save_program`；payload 见下方；编译用主 appid（询问文案见 `interaction.md` Step 3.5）
 
 ## save_program payload（权威，以此为准）
 
