@@ -80,7 +80,8 @@ description: >-
 
 ### Step 2 — 创建主程序
 
-**Read** `interaction.md` Step 2。须在 1.5 已确认之后另开一轮；同意后 `create_program`。拆分时序见 `subprocess.md`。
+**Read** `interaction.md` Step 2。须在 1.5 已确认之后另开一轮；同意后 `create_program`。  
+`program_name`：对话已有则用用户的，否则按文档生成；`description`：按文档生成。拆分时序与子程序 name/描述见 `subprocess.md`。
 
 ### Step 2.5 — 位号
 
