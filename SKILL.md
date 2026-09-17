@@ -37,7 +37,7 @@ description: >-
 | # | 门禁 | 细则唯一来源 |
 |---|------|----------------|
 | 0 | **加载技能后必须严格按本文件流程执行**；禁止跳步/换序/自创路径 | 本文件「绝对执行原则」 |
-| 1 | 不得跳步；**create / compile** 前须用户明确同意；**save 不询问**（3 校验通过后自动保存） | `interaction.md` |
+| 1 | 不得跳步；**仅 compile** 前须用户明确同意；**create / save 不询问**（字段自动填；3 校验通过后自动保存） | `interaction.md` |
 | 2 | 原子拆分；**全文识别不可忽略**；大文件分块见 `element_split.md` §0.4 | `element_split.md` |
 | 3 | 只产编译 IR；禁止手写 XML；`ir_to_xml` → `validate_bpmn` 退出码 0；**save 前必须再过同一套本地校验** | `ir_schema.md` + `fixtures/sample_ir.json` |
 | 4 | 仅 schema 元件；标识符命名 | `element_schema.json` / `subprocess.md` |
@@ -48,7 +48,7 @@ description: >-
 | 9 | 平台编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
-| 12 | 确认仅 1.5 / 2 / 2.5 / 3.5 四轮；**1.5 与 2 严格分开**；**1.5 须对话编号二选一并标唯一推荐**（禁止宿主单选控件），未确认不得进 2 | `interaction.md` |
+| 12 | 确认仅 1.5 / 2.5 / 3.5 **三轮**；**1.5 须对话编号二选一并标唯一推荐**；**Step 2 无交互**；未确认 1.5 不得 create | `interaction.md` |
 | 13 | API：**只**用 `DirectPlatformClient`；禁止自构 URL/payload/curl；未设 `DIRECT_*` 仍用脚本默认值 | `api_reference.py` |
 
 ## 工作流
@@ -61,8 +61,8 @@ description: >-
 | 未完成 | 不得进入 |
 |--------|----------|
 | Step 1 | 1.5 |
-| 1.5 用户确认拆分方案 | 2 |
-| 2 用户同意创建 | 2.5（若拆分：create 后先 `get_next_id` 再 2.5） |
+| 1.5 用户确认拆分方案 | 2（自动 create，不询问） |
+| 2 `create_program` 成功 | 2.5（若拆分：create 后先 `get_next_id` 再 2.5） |
 | 2.5 位号确认 | 3 |
 | 3 validate 通过 + checklist | 3.5（直接 save，不询问） |
 | 3.5 **save 成功**（`code` 为 0/`"0"`） | 才能问编译二选一；失败展示 code/msg 并停止 |
@@ -78,10 +78,10 @@ description: >-
 阅读 `subprocess.md` + `interaction.md` Step 1.5。  
 **仅**对话编号确认拆/不拆（及子程序草案）；**必须**标唯一推荐并附一句理由；禁止宿主单选控件；禁止夹带创建字段；用户确认前不得进入 Step 2。
 
-### Step 2 — 创建主程序
+### Step 2 — 创建主程序（无交互）
 
-阅读 `interaction.md` Step 2。须在 1.5 已确认之后另开一轮；同意后 `create_program`。  
-`program_name`：对话已有则用用户的，否则按文档生成；`description`：按文档生成。拆分时序与子程序 name/描述见 `subprocess.md`。
+阅读 `interaction.md` Step 2。1.5 确认后**直接**按规则填字段并 `create_program`，**不询问用户**。  
+字段：对话能提取则用对话；否则 `group_id`/`version` 用默认，`program_name`/`description` 结合文档生成。拆分时序见 `subprocess.md`。
 
 ### Step 2.5 — 位号
 
@@ -127,7 +127,7 @@ python scripts/validate_bpmn.py <out.xml>
 | SOP→IR 原子拆分 | `element_split.md` |
 | IR JSON 契约 | `ir_schema.md` + 样板 `fixtures/sample_ir.json` |
 | 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
-| 用户确认文案（1.5/2/2.5/3.5） | `interaction.md` |
+| 用户确认文案（1.5 / 2.5 / 3.5；Step 2 无交互） | `interaction.md` |
 | XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |
 | 元件与 ext:data schema | `element_schema.json` |
 | 节点示例 / 位号路径 / type | `node_reference.md` |
