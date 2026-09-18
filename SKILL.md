@@ -89,7 +89,7 @@ description: >-
 
 ### Step 2.5 — 位号
 
-阅读 `interaction.md` Step 2.5。单独一轮：用**表格**展示；能识别的位号预填、不能识别的留空；用户可改；提交时不得空；**整表一次提交**后写回 IR。
+阅读 `interaction.md` Step 2.5。单独一轮，不与其它合并。
 
 ### Step 3 — 生成 XML
 
