@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inject tag_confirm.json into editable HTML (chat embed or local open).
+"""Inject tag_confirm.json into editable HTML for local browser open.
 
   python scripts/make_tag_confirm_editor.py artifacts/run/tag_confirm.json \\
       -o artifacts/run/tag_confirm.html
@@ -67,12 +67,14 @@ def main(argv: list[str] | None = None) -> int:
 
     payload = load_payload(args.json_path)
     html = inject(args.template.read_text(encoding="utf-8"), payload)
+    out_path = args.output.resolve()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(html, encoding="utf-8")
-    print(f"[OK]   {args.output} ({len(payload['items'])} items)")
+    print(f"[OK]   {out_path} ({len(payload['items'])} items)")
+    print(f"[PATH] {out_path}")
     print(
-        "[HINT] Prefer embedding this HTML in the Step 2.5 message. "
-        "User only edits and submits; system rewrites tag_confirm.json then IR."
+        "[HINT] Prefer scripts/serve_tag_confirm.py in Step 2.5 "
+        "(blocks until browser submit; do not continue before exit 0)."
     )
     return 0
 

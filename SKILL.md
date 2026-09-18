@@ -90,8 +90,9 @@ description: >-
 ### Step 2.5 — 位号
 
 阅读 `interaction.md` Step 2.5 + `tag_confirm_template.md`。  
-**系统**：预写 JSON → 跑脚本出 HTML → 内嵌 → 用户提交后按行合并重写 JSON → 写回 IR。  
-**用户**：仅改位号 / type / 设定值并提交；三者须完整非空；**禁止**增删行。
+**系统**：预写 JSON → 运行 `serve_tag_confirm.py`（本机 HTTP + 自动打开浏览器）→ **阻塞至浏览器「提交确认」且退出码 0** → 写回 IR。  
+**用户**：在浏览器仅改位号 / type / 设定值并提交确认。  
+**硬门禁**：用户未浏览器确认前 **禁止**进入 Step 3；禁止内嵌 HTML；禁止用口头确认/贴 JSON 替代。
 
 ### Step 3 — 生成 XML
 
@@ -136,7 +137,7 @@ python scripts/validate_bpmn.py <out.xml>
 | IR JSON 契约 | `ir_schema.md` + 样板 `fixtures/sample_ir.json` |
 | 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
 | 用户确认文案（1.5 / 2.5 / 3.5；Step 2 无交互） | `interaction.md` |
-| 位号确认 JSON/内嵌 HTML | `fixtures/tag_confirm_template.json` + `tag_confirm_editor.html` + `make_tag_confirm_editor.py` |
+| 位号确认（本机 HTTP） | `serve_tag_confirm.py` + `tag_confirm_editor.html` + `tag_confirm_template.json` |
 | XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |
 | 元件与 ext:data schema | `element_schema.json` |
 | 节点示例 / 位号路径 / type | `node_reference.md` |

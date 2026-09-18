@@ -5,7 +5,7 @@
 - **流程**：加载本技能后严格按 `SKILL.md` 工作流执行（见「绝对执行原则」）；本文件只规定确认文案与轮次
 - 用中文向用户提问；每次不超过 4 个问题
 - 提供可选建议 +「我来手动填写」
-- **交互载体**：对话正文为主；Step 2.5 **内嵌可编辑 HTML**（系统负责 JSON/HTML；用户只改表提交）；禁止依赖宿主专用 Ask/单选 SDK
+- **交互载体**：对话正文为主；Step 2.5 **本机 HTTP 打开可编辑页**（可点的 `http://127.0.0.1:…/`）；系统负责 JSON/HTML/服务；**用户未在浏览器点「提交确认」前禁止进入 Step 3**；禁止依赖宿主专用 Ask/单选 SDK；**禁止**把 HTML 内嵌进对话/工作流
 - 任何会改平台状态的 API：仅 **`compile` 前须用户明确同意**；**`create_program` / `save_program` 不询问用户**（字段按本文件规则自动填）
 - **平台调用唯一入口**：只使用 `scripts/api_reference.py` 的 `DirectPlatformClient`（`create_program` / `save_program` / `compile_program` / `get_data_groups` / `get_next_id` / `get_tags` 等）。**禁止**自行拼 URL、手写 `addProcedures`/`updateProcedures` payload、用 curl/裸 `requests` 调 Direct
 - **确认已合并**：整流程只保留本文件下列确认轮次，禁止再拆成多轮重复问
@@ -15,7 +15,7 @@
 | 轮次 | 步骤 | 内容 |
 |------|------|------|
 | ① | 1.5 | **仅**对话编号二选一：不拆分 / 拆分 + **唯一推荐**（不问子程序 name/描述） |
-| ② | 2.5 | **仅**改位号/type/设定值并提交（不可增删行） |
+| ② | 2.5 | 打开 `http://127.0.0.1:…/` → 改位号/type/设定值 → **提交确认**（未确认不往下） |
 | ③ | 3.5 | **仅**编译二选一（创建与保存均不询问） |
 
 **说明：** Step 2 创建主程序 **无用户交互**（见下）。1.5 确认前禁止创建；1.5 确认后直接进入 Step 2 自动创建，再进 2.5。
@@ -84,45 +84,48 @@
 
 无论 SOP 是否已有位号，都必须汇总确认。**禁止**与 1.5 / 2 / 3.5 合并。
 
-### 职责划分（严格）
+### 硬门禁（严格）
+
+- **用户未在浏览器点击「提交确认」之前，禁止进入 Step 3**（禁止 `ir_to_xml` / 生成 XML / save）
+- 必须以 `serve_tag_confirm.py` **退出码 0** 为已确认依据；脚本在收到合法 POST 前会阻塞；超时/中断/非 0 → **停止本步**，不得假装已确认继续
+- 禁止用「用户口头说确认了」或贴 JSON 替代浏览器提交
+
+### 职责划分
 
 | 谁 | 做什么 |
 |----|--------|
-| **系统** | 预写 JSON → 跑脚本出 HTML → 内嵌对话 → 收到提交后**重新生成** `tag_confirm.json` → 校验 → 写回 IR |
-| **用户** | **仅**改「位号 / type / 设定值」并点提交（本轮唯一交互） |
+| **系统** | 预写 JSON → 启动 `serve_tag_confirm.py`（生成 HTML、起本机服务、自动打开浏览器、**阻塞等待**）→ 退出码 0 后读确认 JSON → 写回 IR |
+| **用户** | 在浏览器中 **仅**改「位号 / type / 设定值」并点「提交确认」 |
 
-用户**不**手写/手改预填 JSON，**不**跑脚本，**不**自己落盘 HTML。  
-**禁止**新增/删除行；`id`/`program`/`step`/`usage`/`note` 只读，由系统预写锁定。
+用户**不**手写 JSON、**不**跑脚本、**不**自己写 HTML。  
+**禁止**新增/删除行；`id`/`program`/`step`/`usage`/`note` 只读。
 
 ### 契约与呈现
 
-- 内部文件：`artifacts/<run>/tag_confirm.json`（字段见 `tag_confirm_template.md`）
-- 呈现：可编辑 HTML，**优先嵌在本轮对话**
-- 规则：能识别的 `tag` 预填；识别不到留 `""`；**提交时 `tag`/`type`/`value` 三者皆须完整非空**（`type` 仅 `"1"` 或 `"3"`）；主+子一张表；**整表一次提交**
-- **可改字段仅**：`tag`、`type`、`value`；行数与锁定字段须与预写一致；任一行这三字段缺一则拒绝
+- 预写：`artifacts/<run>/tag_confirm.json`；确认后：同文件被服务端覆盖，并写 `tag_confirm.confirmed.json` + `.done`
+- 呈现：对话给出可点击的 **`http://127.0.0.1:<port>/`**（脚本也会尝试自动打开）；**禁止**内嵌 HTML 正文
+- **可改字段仅**：`tag`、`type`、`value`；三者提交时须完整非空；行数与锁定字段须与预写一致
 
-### 系统强制步骤（对用户只暴露「改表→提交」）
+### 系统强制步骤
 
 1. **预写 JSON**：从 IR 生成预填 `artifacts/<run>/tag_confirm.json`（禁止 PLACEHOLDER）
-2. **跑脚本出 HTML**：
+2. **启动并阻塞等待浏览器确认**（本步核心硬门禁）：
    ```bash
-   python scripts/make_tag_confirm_editor.py artifacts/<run>/tag_confirm.json -o artifacts/<run>/tag_confirm.html
+   python -u scripts/serve_tag_confirm.py artifacts/<run>/tag_confirm.json \
+     --html-out artifacts/<run>/tag_confirm.html \
+     --confirmed-out artifacts/<run>/tag_confirm.confirmed.json
    ```
-3. **内嵌**：把该 HTML 嵌入本轮对话（宿主不能内嵌则给路径请用户浏览器打开；提交契约不变）
-4. **等待用户**：提示「改完点提交」；未提交前禁止进 Step 3
-5. **重新生成 JSON**：按**预写行序**合并提交：只覆盖每行的 `tag`/`type`/`value`；`id`/`program`/`step`/`usage`/`note` 保持预写；行数必须与预写相同（多行/少行一律拒绝）
-6. **写回 IR**：校验 `items` 非空且行数=预写；每行 `program`/`step` 非空；**`tag`/`type`/`value` 信息完整**（均非空；`type`∈{`"1"`,`"3"`}）→ 写回 IR → 才进 Step 3
-   - 任一行缺位号、非法 type、或缺设定值 → **拒绝**，指出行号，要求用户补全后再提交；禁止半填进 Step 3
-
-提交投递：用户点提交后，将页面产出的 JSON **一次贴回对话**（或下载后告知路径）；系统据此执行步骤 5–6。禁止让用户手工拼 JSON。
+   - 向用户展示脚本打印的 `[URL]`；提示在浏览器改完后点「提交确认」
+   - **在该命令退出码为 0 之前，禁止执行后续任何 Step 3 动作**
+3. **写回 IR**：读取确认后的 JSON（`tag_confirm.confirmed.json` 或已覆盖的 `tag_confirm.json`）；按行合并结果已由服务端校验 → 写回 IR → 才进 Step 3
 
 ### 禁止
 
-- 允许用户新增/删除行，或改锁定字段
-- 接受缺位号 / 非法 type / 缺设定值的半填提交
-- 把预写 JSON / 跑脚本 / 生成 HTML 说成用户步骤
-- 默认退回「Markdown 清单 + 逐条文字改」
-- 未收到合法提交就进 Step 3；跳过「重新生成 json」直接写 IR
+- 未等 `serve_tag_confirm.py` 退出码 0 就进 Step 3
+- 把 HTML 内嵌进对话或工作流
+- 允许用户新增/删除行，或改锁定字段；接受半填提交
+- 把预写 JSON / 起服务说成用户步骤
+- 默认退回「Markdown 清单 + 逐条文字改」或要求用户贴 JSON
 - 本步或更早生成 XML
 
 写入 IR 的 `#()`/`$()`：`node_reference.md` §一。
