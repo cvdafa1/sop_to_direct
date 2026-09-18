@@ -51,7 +51,7 @@
 
 ### 拆分硬门禁（用户确认「拆分」后必须满足）
 
-1. **产物齐全**：生成 **1 份主程序 IR/XML + N 份子程序 IR/XML**（N = Step 1.5 表行数）；禁止只出主程序或只出子程序  
+1. **产物齐全**：生成 **1 份主程序 IR + N 份子程序 IR**，再在 Step 3 各编 XML（N = 划分出的子文档数）；禁止只出主程序或只出子程序；**禁止 create 前编 XML**
 2. **主程序必须引用**：主 XML 内须有 **恰好 N 个** `flow:subproc`，每个对应一个子程序；`name` / `subId` 与 `get_next_id` + save `subprograms[]` 一致  
 3. **子程序完整 XML**：每个子程序独立 `ir_to_xml` → 完整 `flow:start`…`flow:end`；子 XML **禁止**再嵌套 `flow:subproc`  
 4. **一次保存**：`save_program(..., xml_content=主XML, subprograms=[{id,name,xml_content}, ...])`；缺任一子 XML 或主未引用 → 拒绝保存  

@@ -2,9 +2,10 @@
 name: sop-to-direct
 description: >-
   Converts chemical-industry SOP documents into InPlant Direct BPMN process
-  programs via REST API (parse → confirm tags → generate XML → save → compile).
-  Use when the user provides SOP (.docx/.pdf/.txt/.md) or asks to create/convert
-  a Direct flow program, 主程序, or 流程程序 from an operating procedure.
+  programs via REST API (parse → split confirm → create → confirm tags →
+  generate XML → save → compile). Use when the user provides SOP
+  (.docx/.pdf/.txt/.md) or asks to create/convert a Direct flow program,
+  主程序, or 流程程序 from an operating procedure.
 ---
 
 # SOP 转 Direct 平台流程程序
@@ -23,7 +24,7 @@ description: >-
 | 凭经验/习惯代替文档 | 进入某步前须**阅读**该步指定参考；细则以「参考索引」唯一来源为准 |
 | 因失败擅自简化 SOP/砍节点 | 见 Step 3「失败处置」与门禁 #10 |
 | 因未设 `DIRECT_*` / 工具不便而跳过 API 或确认 | 用 `api_reference.py` 默认值；确认轮次不得省略 |
-| 手写 BPMN XML 或绕过 `ir_to_xml` / `validate_bpmn` | 只产 IR → 脚本编译 → 退出码 0 才进 3.5 |
+| 手写 BPMN XML 或绕过 `ir_to_xml` / `validate_bpmn` | **仅 Step 3**（create 成功且 2.5 完成后）才脚本编译；退出码 0 才进 3.5 |
 | **自构平台 HTTP/payload**（curl、裸 `requests`、手写 addProcedures 等） | **只**经 `DirectPlatformClient`（create/save/compile/get_*） |
 
 不确定时：**停下来按本文件与唯一来源执行**，不得用「更快/更简单」的替代路径。

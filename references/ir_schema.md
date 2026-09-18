@@ -1,6 +1,6 @@
 # IR 契约（SOP → 确定性编译）
 
-Agent **只产出本文件 + `fixtures/sample_ir.json` 描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` 生成。  
+Agent **只产出本文件 + `fixtures/sample_ir.json` 描述的 IR JSON**；XML 由 `scripts/ir_to_xml.py` 生成（**时机**：须已 `create_program` 成功且 Step 2.5 位号确认后，见 `SKILL.md`；禁止提前试编）。
 禁止在 IR 中写坐标、`incoming`/`outgoing`、sequenceFlow 几何或 Diagram。
 
 ## 强制参照（写 IR 前必须 Read，禁止凭记忆）
