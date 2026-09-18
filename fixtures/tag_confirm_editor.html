@@ -52,9 +52,9 @@
 <body>
   <main>
     <h1>位号确认</h1>
-    <p class="hint">仅可修改「确认位号 / type / 设定值」，三者提交前均须填齐。行数固定，不可新增或删除。点「提交确认」后立即生效；未确认前流程不会继续。</p>
+    <p class="hint">仅可修改「确认位号 / type / 设定值」，三者提交前均须填齐。行数固定，不可新增或删除。改完点「提交」。</p>
     <div class="toolbar">
-      <button type="button" class="primary" id="submitBtn">提交确认</button>
+      <button type="button" class="primary" id="submitBtn">提交</button>
       <button type="button" id="downloadBtn">下载备份</button>
     </div>
     <p id="msg" class="msg" role="status"></p>
@@ -69,8 +69,8 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="foot">提交后由本机服务写入确认结果；无需再贴回对话。</p>
-    <textarea id="out" readonly placeholder="提交载荷预览"></textarea>
+    <p class="foot">提交载荷预览（贴回对话用；复制失败时可手动全选）：</p>
+    <textarea id="out" readonly placeholder="提交后这里显示完整 JSON"></textarea>
   </main>
   <script>
     const INITIAL = /*__TAG_CONFIRM_DATA__*/{
@@ -187,7 +187,7 @@
         setMsg(errors.join("；"), "err");
         return false;
       }
-      setMsg("校验通过，正在提交…", "ok");
+      setMsg("校验通过。请将下方内容贴回对话完成提交。", "ok");
       return true;
     }
 
@@ -196,27 +196,11 @@
       const text = JSON.stringify(data, null, 2);
       out.value = text;
       if (!validate(data)) return;
-      const btn = document.getElementById("submitBtn");
-      btn.disabled = true;
       try {
-        const res = await fetch("/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json; charset=utf-8" },
-          body: text,
-        });
-        const body = await res.json().catch(() => ({}));
-        if (!res.ok || !body.ok) {
-          setMsg(body.error || ("提交失败 HTTP " + res.status), "err");
-          btn.disabled = false;
-          return;
-        }
-        setMsg("已确认生效。可回到对话；流程将继续。", "ok");
-      } catch (err) {
-        setMsg(
-          "无法提交到本机服务。请通过对话中的 http://127.0.0.1:… 地址打开本页（不要直接双击本地文件）。",
-          "err"
-        );
-        btn.disabled = false;
+        await navigator.clipboard.writeText(text);
+        setMsg("已提交就绪：内容已复制，请在对话中粘贴发送。系统将据此重新生成 JSON 并写回。", "ok");
+      } catch {
+        setMsg("请全选下方内容复制后贴回对话，完成提交。", "err");
       }
     }
 

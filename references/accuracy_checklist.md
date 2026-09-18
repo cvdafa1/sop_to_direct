@@ -7,7 +7,7 @@
 | 0 流程 | 已严格按 `SKILL.md` 工作流执行；未跳步/换序/自创路径；**1.5 已确认拆分；Step 2 已自动创建（无交互）** | `SKILL.md`「绝对执行原则」+ `interaction.md` |
 | A 语义 | 全文识别 + 逐句拆分 + 覆盖自检 + 完整列表已展示 | `element_split.md` |
 | A IR 形态 | IR 结构= `sample_ir.json`（无 main_program/steps）；各节点 `ext` 符合 schema；**在 Step 3（create+2.5 之后）**经 `ir_to_xml` 编过 | `ir_schema.md` + `element_schema.json` + `SKILL.md` |
-| B 位号 | `serve_tag_confirm.py` 退出码 0 才算确认；用户浏览器仅改 tag/type/value；未确认禁止 Step 3；无 PLACEHOLDER；禁止内嵌 HTML | `interaction.md` Step 2.5 + `tag_confirm_template.md` + `node_reference.md` §一/二 |
+| B 位号 | 系统预写 JSON→HTML→内嵌；用户仅改 tag/type/value（不可增删行）；三者均须完整非空；系统按行合并重写 json 后写回 IR；无 PLACEHOLDER | `interaction.md` Step 2.5 + `tag_confirm_template.md` + `node_reference.md` §一/二 |
 | C XML | **create 成功且 2.5 完成后**才 `ir_to_xml`；`validate_bpmn`=0；**save 前再验通过** | `ir_schema.md` / `golden_xml_rules.md` / `validate_bpmn.py` / `SKILL.md` |
 | C 标识符 | XML 内子程序/计时器/变量名均为 `[A-Za-z0-9_]`；非法已改 | `subprocess.md` + `validate_bpmn.py` |
 | C 子程序 | 若拆分：主 XML + N 子 XML 均已生成；主含 N 个 `flow:subproc`；save 传入全部 `xml_content` | `subprocess.md` 硬门禁 |
