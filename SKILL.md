@@ -89,7 +89,8 @@ description: >-
 
 ### Step 2.5 — 位号
 
-阅读 `interaction.md` Step 2.5。单独一轮，不与其它合并。
+阅读 `interaction.md` Step 2.5 + `tag_confirm_template.md`。  
+预填 JSON → `make_tag_confirm_editor.py` 生成 HTML → **对话内嵌** → 用户改完一次回传 JSON → 写回 IR。
 
 ### Step 3 — 生成 XML
 
@@ -134,6 +135,7 @@ python scripts/validate_bpmn.py <out.xml>
 | IR JSON 契约 | `ir_schema.md` + 样板 `fixtures/sample_ir.json` |
 | 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
 | 用户确认文案（1.5 / 2.5 / 3.5；Step 2 无交互） | `interaction.md` |
+| 位号确认 JSON/内嵌 HTML | `fixtures/tag_confirm_template.json` + `tag_confirm_editor.html` + `make_tag_confirm_editor.py` |
 | XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |
 | 元件与 ext:data schema | `element_schema.json` |
 | 节点示例 / 位号路径 / type | `node_reference.md` |

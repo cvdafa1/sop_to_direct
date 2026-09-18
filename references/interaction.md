@@ -5,7 +5,7 @@
 - **流程**：加载本技能后严格按 `SKILL.md` 工作流执行（见「绝对执行原则」）；本文件只规定确认文案与轮次
 - 用中文向用户提问；每次不超过 4 个问题
 - 提供可选建议 +「我来手动填写」
-- **交互载体**：仅用对话正文（编号选项、表格、列表）；**禁止**依赖宿主专用选择控件（单选框、下拉框、选择卡片等），以保证可移植
+- **交互载体**：对话正文为主；Step 2.5 **内嵌可编辑 HTML**（系统契约为 JSON 一次回传）；禁止依赖宿主专用 Ask/单选 SDK
 - 任何会改平台状态的 API：仅 **`compile` 前须用户明确同意**；**`create_program` / `save_program` 不询问用户**（字段按本文件规则自动填）
 - **平台调用唯一入口**：只使用 `scripts/api_reference.py` 的 `DirectPlatformClient`（`create_program` / `save_program` / `compile_program` / `get_data_groups` / `get_next_id` / `get_tags` 等）。**禁止**自行拼 URL、手写 `addProcedures`/`updateProcedures` payload、用 curl/裸 `requests` 调 Direct
 - **确认已合并**：整流程只保留本文件下列确认轮次，禁止再拆成多轮重复问
@@ -15,7 +15,7 @@
 | 轮次 | 步骤 | 内容 |
 |------|------|------|
 | ① | 1.5 | **仅**对话编号二选一：不拆分 / 拆分 + **唯一推荐**（不问子程序 name/描述） |
-| ② | 2.5 | 位号与缺失信息（单独，不与其它合并） |
+| ② | 2.5 | **内嵌可编辑 HTML 位号表** → 一次回传 JSON |
 | ③ | 3.5 | **仅**编译二选一（创建与保存均不询问） |
 
 **说明：** Step 2 创建主程序 **无用户交互**（见下）。1.5 确认前禁止创建；1.5 确认后直接进入 Step 2 自动创建，再进 2.5。
@@ -84,29 +84,30 @@
 
 无论 SOP 是否已有位号，都必须汇总确认。**禁止**与 1.5 / 2 / 3.5 合并。
 
-子程序场景顺序：主程序位号（通常可跳过）→ 逐个子程序位号。
+### 契约与呈现
 
-### 位号确认清单格式
+- **系统内部**：`artifacts/<run>/tag_confirm.json`（字段见 `tag_confirm_template.md` / `fixtures/tag_confirm_template.json`）
+- **呈现给用户**：可编辑 HTML（即时改表）；**优先嵌在本轮对话消息中**
+- 规则：能识别的 `tag` 预填；识别不到留 `""`；提交时 `tag`/`type` 不得空；主+子一张表；**整表一次提交**
 
-| # | 步骤 | 用途 | 建议位号 | type | 用户确认值 |
-|---|------|------|----------|------|------------|
-| 1 | Step3 启泵 | MANON | P0801A_MANON | 3 | |
+### Agent 强制步骤
 
-type：取值见 `node_reference.md` §二（唯一来源：`1` / `3`）
+1. 从 IR 生成预填 `tag_confirm.json`（禁止 PLACEHOLDER）
+2. 生成 HTML：
+   ```bash
+   python scripts/make_tag_confirm_editor.py artifacts/<run>/tag_confirm.json -o artifacts/<run>/tag_confirm.html
+   ```
+3. **在本轮对话中嵌入该 HTML**（宿主若不能内嵌交互 HTML，则给出文件路径请用户浏览器打开——契约仍是回传 JSON）
+4. 提示用户：改完点「提交并复制 JSON」，将 JSON **一次**贴回（或覆盖保存 json 文件后告知）
+5. 校验回传 JSON：`items` 非空；每行 `program`/`step`/`tag` 非空；`type` 为 `"1"` 或 `"3"` → 写回 IR → 才进 Step 3
 
-### 位号填写方式
+### 禁止
 
-1. 用户直接回复修正值  
-2. `get_tags` / `search_tags_by_name` 列候选供选  
-3. 从 SOP 原文再核对  
+- 默认退回「Markdown 清单 + 逐条文字改」
+- 未收到合法 JSON 就进 Step 3
+- 本步或更早生成 XML
 
-写入 IR/`#()`/`$()` 格式：**唯一来源** `node_reference.md` §一。
-
-### 其他缺失项
-
-- 参数值 / 安全阈值 / 模糊描述 → 请用户补全  
-
-全部确认并写回 IR 后才能进入 Step 3。**禁止**在本步或更早步骤生成 XML。
+写入 IR 的 `#()`/`$()`：`node_reference.md` §一。
 
 ---
 

@@ -1,0 +1,238 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>位号确认</title>
+  <style>
+    :root {
+      --bg: #f7f7f5; --fg: #1a1a1a; --muted: #5c5c5c; --line: #d8d8d4;
+      --card: #fff; --accent: #0b5fff; --danger: #b42318; --ok: #067647;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 14px/1.45 system-ui, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--fg); background: var(--bg);
+    }
+    main { max-width: 1100px; margin: 0 auto; padding: 20px 14px 40px; }
+    h1 { font-size: 18px; font-weight: 600; margin: 0 0 6px; }
+    .hint { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    button {
+      border: 1px solid var(--line); background: var(--card); color: var(--fg);
+      padding: 8px 12px; border-radius: 6px; cursor: pointer; font: inherit;
+    }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .msg { min-height: 1.3em; margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+    .msg.err { color: var(--danger); }
+    .msg.ok { color: var(--ok); }
+    .wrap {
+      overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+    }
+    table { border-collapse: collapse; width: 100%; min-width: 900px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 7px; vertical-align: top; text-align: left; }
+    th { font-weight: 600; background: #efefec; position: sticky; top: 0; }
+    td.num { width: 40px; color: var(--muted); }
+    input[type="text"], select, textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 4px;
+      padding: 6px 8px; font: inherit; background: #fff;
+    }
+    textarea { min-height: 40px; resize: vertical; }
+    tr.bad td { background: #fff5f4; }
+    #out {
+      margin-top: 12px; width: 100%; min-height: 120px; font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 10px;
+      background: #fff; white-space: pre; overflow: auto;
+    }
+    .foot { margin-top: 8px; color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>位号确认（可编辑）</h1>
+    <p class="hint">在表中直接修改。点「提交并复制 JSON」校验后一次交回 Agent（整段 JSON 贴回对话）。</p>
+    <div class="toolbar">
+      <button type="button" id="addRow">新增行</button>
+      <button type="button" class="primary" id="submitBtn">提交并复制 JSON</button>
+      <button type="button" id="downloadBtn">下载 JSON</button>
+    </div>
+    <p id="msg" class="msg" role="status"></p>
+    <div class="wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>程序</th><th>步骤或节点</th><th>用途</th>
+            <th>确认位号</th><th>type</th><th>设定值</th><th>备注</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <p class="foot">提交载荷预览（复制失败时可手动全选粘贴）：</p>
+    <textarea id="out" readonly placeholder="提交后这里显示完整 JSON"></textarea>
+  </main>
+  <script>
+    const INITIAL = /*__TAG_CONFIRM_DATA__*/{
+      "version": 1,
+      "items": [
+        {"id":1,"program":"main","step":"开泵","usage":"MANON","tag":"#(pidtest232.MVH)","type":"3","value":"1","note":"示例预填"},
+        {"id":2,"program":"main","step":"运行反馈","usage":"反馈判断","tag":"","type":"3","value":"","note":"示例留空"}
+      ]
+    }/*__END_DATA__*/;
+
+    let version = Number(INITIAL.version) || 1;
+    let rows = (INITIAL.items || []).map((r, i) => normalize(r, i));
+    const tbody = document.getElementById("tbody");
+    const msg = document.getElementById("msg");
+    const out = document.getElementById("out");
+
+    function normalize(r, i) {
+      return {
+        id: Number(r.id) || i + 1,
+        program: String(r.program ?? "main"),
+        step: String(r.step ?? ""),
+        usage: String(r.usage ?? ""),
+        tag: String(r.tag ?? ""),
+        type: String(r.type ?? ""),
+        value: String(r.value ?? ""),
+        note: String(r.note ?? ""),
+      };
+    }
+    function setMsg(t, k) {
+      msg.textContent = t || "";
+      msg.className = "msg" + (k ? " " + k : "");
+    }
+    function esc(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    function render() {
+      tbody.innerHTML = "";
+      rows.forEach((row, idx) => {
+        const tr = document.createElement("tr");
+        tr.dataset.idx = String(idx);
+        tr.innerHTML =
+          `<td class="num">${idx + 1}</td>` +
+          `<td><input type="text" data-k="program" data-i="${idx}" value="${esc(row.program)}" /></td>` +
+          `<td><input type="text" data-k="step" data-i="${idx}" value="${esc(row.step)}" /></td>` +
+          `<td><input type="text" data-k="usage" data-i="${idx}" value="${esc(row.usage)}" /></td>` +
+          `<td style="min-width:160px"><input type="text" data-k="tag" data-i="${idx}" value="${esc(row.tag)}" /></td>` +
+          `<td><select data-k="type" data-i="${idx}">
+            <option value=""></option>
+            <option value="1"${row.type==="1"?" selected":""}>1 模拟量</option>
+            <option value="3"${row.type==="3"?" selected":""}>3 数字量</option>
+          </select></td>` +
+          `<td><input type="text" data-k="value" data-i="${idx}" value="${esc(row.value)}" /></td>` +
+          `<td><textarea data-k="note" data-i="${idx}">${String(row.note).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</textarea></td>` +
+          `<td><button type="button" data-del="${idx}">删除</button></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function readDom() {
+      tbody.querySelectorAll("[data-k]").forEach((el) => {
+        const i = Number(el.getAttribute("data-i"));
+        const k = el.getAttribute("data-k");
+        if (rows[i] && k) rows[i][k] = el.value;
+      });
+      rows.forEach((r, i) => { r.id = i + 1; });
+    }
+
+    function payload() {
+      readDom();
+      return {
+        version,
+        items: rows.map((r, i) => ({
+          id: i + 1,
+          program: String(r.program).trim(),
+          step: String(r.step).trim(),
+          usage: String(r.usage).trim(),
+          tag: String(r.tag).trim(),
+          type: String(r.type).trim(),
+          value: String(r.value).trim(),
+          note: String(r.note).trim(),
+        })),
+      };
+    }
+
+    function validate(data) {
+      tbody.querySelectorAll("tr").forEach((tr) => tr.classList.remove("bad"));
+      const errors = [];
+      if (!data.items.length) errors.push("至少一行");
+      data.items.forEach((r, i) => {
+        const miss = [];
+        if (!r.program) miss.push("program");
+        if (!r.step) miss.push("step");
+        if (!r.tag) miss.push("tag");
+        if (r.type !== "1" && r.type !== "3") miss.push("type");
+        if (miss.length) {
+          errors.push(`第 ${i + 1} 行缺/非法：${miss.join(",")}`);
+          const tr = tbody.querySelector(`tr[data-idx="${i}"]`);
+          if (tr) tr.classList.add("bad");
+        }
+      });
+      if (errors.length) {
+        setMsg(errors.join("；"), "err");
+        return false;
+      }
+      setMsg("校验通过。请将下方 JSON 一次贴回对话。", "ok");
+      return true;
+    }
+
+    async function submit() {
+      const data = payload();
+      const text = JSON.stringify(data, null, 2);
+      out.value = text;
+      if (!validate(data)) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setMsg("已复制 JSON。请在对话中粘贴发送（一次提交）。", "ok");
+      } catch {
+        setMsg("自动复制失败：请全选下方 JSON 手动复制后贴回对话。", "err");
+      }
+    }
+
+    function download() {
+      const data = payload();
+      const text = JSON.stringify(data, null, 2);
+      out.value = text;
+      if (!validate(data)) return;
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([text], { type: "application/json;charset=utf-8" }));
+      a.download = "tag_confirm.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    document.getElementById("submitBtn").onclick = submit;
+    document.getElementById("downloadBtn").onclick = download;
+    document.getElementById("addRow").onclick = () => {
+      readDom();
+      rows.push(normalize({ program: "main" }, rows.length));
+      render();
+    };
+    tbody.addEventListener("click", (e) => {
+      const d = e.target.getAttribute && e.target.getAttribute("data-del");
+      if (d == null) return;
+      readDom();
+      rows.splice(Number(d), 1);
+      render();
+    });
+    tbody.addEventListener("input", (e) => {
+      const el = e.target;
+      const i = Number(el.getAttribute("data-i"));
+      const k = el.getAttribute("data-k");
+      if (rows[i] && k) rows[i][k] = el.value;
+    });
+    tbody.addEventListener("change", (e) => {
+      const el = e.target;
+      const i = Number(el.getAttribute("data-i"));
+      const k = el.getAttribute("data-k");
+      if (rows[i] && k) rows[i][k] = el.value;
+    });
+
+    render();
+  </script>
+</body>
+</html>
