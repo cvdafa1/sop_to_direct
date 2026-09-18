@@ -27,7 +27,7 @@ def load_payload(path: Path) -> dict:
     for i, it in enumerate(items):
         if not isinstance(it, dict):
             raise SystemExit(f"items[{i}] must be object")
-        for key in ("program", "step", "usage", "tag", "type", "value"):
+        for key in ("program", "step", "usage", "tag", "type"):
             if key not in it:
                 raise SystemExit(f"items[{i}] missing {key}")
     if "version" not in data:
@@ -72,7 +72,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[OK]   {args.output} ({len(payload['items'])} items)")
     print(
         "[HINT] Prefer embedding this HTML in the Step 2.5 message. "
-        "User only edits and submits; system rewrites tag_confirm.json then IR."
+        "User submits by pasting the copied JSON once."
     )
     return 0
 

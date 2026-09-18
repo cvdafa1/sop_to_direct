@@ -90,8 +90,7 @@ description: >-
 ### Step 2.5 — 位号
 
 阅读 `interaction.md` Step 2.5 + `tag_confirm_template.md`。  
-**系统**：预写 JSON → 跑脚本出 HTML → 内嵌 → 用户提交后按行合并重写 JSON → 写回 IR。  
-**用户**：仅改位号 / type / 设定值并提交；三者须完整非空；**禁止**增删行。
+预填 JSON → `make_tag_confirm_editor.py` 生成 HTML → **对话内嵌** → 用户改完一次回传 JSON → 写回 IR。
 
 ### Step 3 — 生成 XML
 

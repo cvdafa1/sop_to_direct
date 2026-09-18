@@ -8,7 +8,6 @@
     :root {
       --bg: #f7f7f5; --fg: #1a1a1a; --muted: #5c5c5c; --line: #d8d8d4;
       --card: #fff; --accent: #0b5fff; --danger: #b42318; --ok: #067647;
-      --locked: #f3f3f0;
     }
     * { box-sizing: border-box; }
     body {
@@ -31,15 +30,15 @@
     .wrap {
       overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
     }
-    table { border-collapse: collapse; width: 100%; min-width: 820px; }
+    table { border-collapse: collapse; width: 100%; min-width: 900px; }
     th, td { border-bottom: 1px solid var(--line); padding: 7px; vertical-align: top; text-align: left; }
     th { font-weight: 600; background: #efefec; position: sticky; top: 0; }
     td.num { width: 40px; color: var(--muted); }
-    td.locked { background: var(--locked); color: var(--fg); }
-    input[type="text"], select {
+    input[type="text"], select, textarea {
       width: 100%; border: 1px solid var(--line); border-radius: 4px;
       padding: 6px 8px; font: inherit; background: #fff;
     }
+    textarea { min-height: 40px; resize: vertical; }
     tr.bad td { background: #fff5f4; }
     #out {
       margin-top: 12px; width: 100%; min-height: 120px; font-family: ui-monospace, Consolas, monospace;
@@ -51,11 +50,12 @@
 </head>
 <body>
   <main>
-    <h1>位号确认</h1>
-    <p class="hint">仅可修改「确认位号 / type / 设定值」，三者提交前均须填齐。行数固定，不可新增或删除。改完点「提交」。</p>
+    <h1>位号确认（可编辑）</h1>
+    <p class="hint">在表中直接修改。点「提交并复制 JSON」校验后一次交回 Agent（整段 JSON 贴回对话）。</p>
     <div class="toolbar">
-      <button type="button" class="primary" id="submitBtn">提交</button>
-      <button type="button" id="downloadBtn">下载备份</button>
+      <button type="button" id="addRow">新增行</button>
+      <button type="button" class="primary" id="submitBtn">提交并复制 JSON</button>
+      <button type="button" id="downloadBtn">下载 JSON</button>
     </div>
     <p id="msg" class="msg" role="status"></p>
     <div class="wrap">
@@ -63,13 +63,13 @@
         <thead>
           <tr>
             <th>#</th><th>程序</th><th>步骤或节点</th><th>用途</th>
-            <th>确认位号</th><th>type</th><th>设定值</th><th>备注</th>
+            <th>确认位号</th><th>type</th><th>设定值</th><th>备注</th><th></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
     </div>
-    <p class="foot">提交载荷预览（贴回对话用；复制失败时可手动全选）：</p>
+    <p class="foot">提交载荷预览（复制失败时可手动全选粘贴）：</p>
     <textarea id="out" readonly placeholder="提交后这里显示完整 JSON"></textarea>
   </main>
   <script>
@@ -81,7 +81,6 @@
       ]
     }/*__END_DATA__*/;
 
-    const EDITABLE = new Set(["tag", "type", "value"]);
     let version = Number(INITIAL.version) || 1;
     let rows = (INITIAL.items || []).map((r, i) => normalize(r, i));
     const tbody = document.getElementById("tbody");
@@ -115,9 +114,9 @@
         tr.dataset.idx = String(idx);
         tr.innerHTML =
           `<td class="num">${idx + 1}</td>` +
-          `<td class="locked">${esc(row.program)}</td>` +
-          `<td class="locked">${esc(row.step)}</td>` +
-          `<td class="locked">${esc(row.usage)}</td>` +
+          `<td><input type="text" data-k="program" data-i="${idx}" value="${esc(row.program)}" /></td>` +
+          `<td><input type="text" data-k="step" data-i="${idx}" value="${esc(row.step)}" /></td>` +
+          `<td><input type="text" data-k="usage" data-i="${idx}" value="${esc(row.usage)}" /></td>` +
           `<td style="min-width:160px"><input type="text" data-k="tag" data-i="${idx}" value="${esc(row.tag)}" /></td>` +
           `<td><select data-k="type" data-i="${idx}">
             <option value=""></option>
@@ -125,7 +124,8 @@
             <option value="3"${row.type==="3"?" selected":""}>3 数字量</option>
           </select></td>` +
           `<td><input type="text" data-k="value" data-i="${idx}" value="${esc(row.value)}" /></td>` +
-          `<td class="locked">${esc(row.note)}</td>`;
+          `<td><textarea data-k="note" data-i="${idx}">${String(row.note).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</textarea></td>` +
+          `<td><button type="button" data-del="${idx}">删除</button></td>`;
         tbody.appendChild(tr);
       });
     }
@@ -134,8 +134,9 @@
       tbody.querySelectorAll("[data-k]").forEach((el) => {
         const i = Number(el.getAttribute("data-i"));
         const k = el.getAttribute("data-k");
-        if (rows[i] && EDITABLE.has(k)) rows[i][k] = el.value;
+        if (rows[i] && k) rows[i][k] = el.value;
       });
+      rows.forEach((r, i) => { r.id = i + 1; });
     }
 
     function payload() {
@@ -143,7 +144,7 @@
       return {
         version,
         items: rows.map((r, i) => ({
-          id: Number(r.id) || i + 1,
+          id: i + 1,
           program: String(r.program).trim(),
           step: String(r.step).trim(),
           usage: String(r.usage).trim(),
@@ -158,27 +159,15 @@
     function validate(data) {
       tbody.querySelectorAll("tr").forEach((tr) => tr.classList.remove("bad"));
       const errors = [];
-      if (data.items.length !== rows.length) {
-        errors.push("行数不可增减");
-      }
+      if (!data.items.length) errors.push("至少一行");
       data.items.forEach((r, i) => {
         const miss = [];
-        const base = rows[i];
-        if (!base) {
-          errors.push(`第 ${i + 1} 行非法（不可新增）`);
-          return;
-        }
-        if (r.program !== String(base.program).trim() ||
-            r.step !== String(base.step).trim() ||
-            r.usage !== String(base.usage).trim() ||
-            r.note !== String(base.note).trim()) {
-          miss.push("锁定字段被改");
-        }
-        if (!r.tag) miss.push("位号");
+        if (!r.program) miss.push("program");
+        if (!r.step) miss.push("step");
+        if (!r.tag) miss.push("tag");
         if (r.type !== "1" && r.type !== "3") miss.push("type");
-        if (!r.value) miss.push("设定值");
         if (miss.length) {
-          errors.push(`第 ${i + 1} 行：${miss.join(",")}`);
+          errors.push(`第 ${i + 1} 行缺/非法：${miss.join(",")}`);
           const tr = tbody.querySelector(`tr[data-idx="${i}"]`);
           if (tr) tr.classList.add("bad");
         }
@@ -187,7 +176,7 @@
         setMsg(errors.join("；"), "err");
         return false;
       }
-      setMsg("校验通过。请将下方内容贴回对话完成提交。", "ok");
+      setMsg("校验通过。请将下方 JSON 一次贴回对话。", "ok");
       return true;
     }
 
@@ -198,9 +187,9 @@
       if (!validate(data)) return;
       try {
         await navigator.clipboard.writeText(text);
-        setMsg("已提交就绪：内容已复制，请在对话中粘贴发送。系统将据此重新生成 JSON 并写回。", "ok");
+        setMsg("已复制 JSON。请在对话中粘贴发送（一次提交）。", "ok");
       } catch {
-        setMsg("请全选下方内容复制后贴回对话，完成提交。", "err");
+        setMsg("自动复制失败：请全选下方 JSON 手动复制后贴回对话。", "err");
       }
     }
 
@@ -218,17 +207,29 @@
 
     document.getElementById("submitBtn").onclick = submit;
     document.getElementById("downloadBtn").onclick = download;
+    document.getElementById("addRow").onclick = () => {
+      readDom();
+      rows.push(normalize({ program: "main" }, rows.length));
+      render();
+    };
+    tbody.addEventListener("click", (e) => {
+      const d = e.target.getAttribute && e.target.getAttribute("data-del");
+      if (d == null) return;
+      readDom();
+      rows.splice(Number(d), 1);
+      render();
+    });
     tbody.addEventListener("input", (e) => {
       const el = e.target;
       const i = Number(el.getAttribute("data-i"));
       const k = el.getAttribute("data-k");
-      if (rows[i] && EDITABLE.has(k)) rows[i][k] = el.value;
+      if (rows[i] && k) rows[i][k] = el.value;
     });
     tbody.addEventListener("change", (e) => {
       const el = e.target;
       const i = Number(el.getAttribute("data-i"));
       const k = el.getAttribute("data-k");
-      if (rows[i] && EDITABLE.has(k)) rows[i][k] = el.value;
+      if (rows[i] && k) rows[i][k] = el.value;
     });
 
     render();
