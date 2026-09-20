@@ -39,7 +39,7 @@
 ## 拆分决策与交互时机
 
 评估后倾向：独立子系统≥2 且步骤>10 → 推荐拆分；仅 1 个子系统或步骤≤10 → 推荐不拆分。  
-**Step 1.5**：仅对话编号确认拆/不拆并标唯一推荐；子程序 name/描述在选定「拆分」后由 Agent 按子文档生成（不问用户）。文案见 `interaction.md`。本文件只规定评估、拆分原则、save 与 `flow:subproc`。
+**Step 1.5**：仅确认拆/不拆并标唯一推荐（优先 `request_interaction_select.py`，否则对话编号；见 `interaction.md`）；子程序 name/描述在选定「拆分」后由 Agent 按子文档生成（不问用户）。本文件只规定评估、拆分原则、save 与 `flow:subproc`。
 
 ## 拆分原则
 
