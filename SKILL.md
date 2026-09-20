@@ -50,7 +50,7 @@ description: >-
 | 9 | 平台编译：错误信息**含格式类**则只修格式类（同 appid ≤3，**仅 `save_program` 更新原程序**，禁止 `create_program`）；**禁止为通过编译而简化程序**；不含格式类或超过 3 次仍失败 → **必须 Step 6 出报告**；不改位号 | 本文件 Step 5 |
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
-| 12 | 确认仅 1.5 / 2.5 / 3.5 **三轮**；1.5/3.5 **优先** `request_interaction_select.py`，失败则对话编号；**不得替用户选**；未选不得继续；**Step 2 无交互**；未确认 1.5 不得 create | `interaction.md` |
+| 12 | 确认仅 1.5 / 2.5 / 3.5 **三轮**；**1.5 仅拆/不拆+唯一推荐**（子 name/描述自动生成）；**Step 2 无交互**；未确认 1.5 不得 create | `interaction.md` |
 | 13 | API：**只**用 `DirectPlatformClient`；禁止自构 URL/payload/curl；未设 `DIRECT_*` 仍用脚本默认值 | `api_reference.py` |
 
 ## 工作流
@@ -79,14 +79,7 @@ description: >-
 ### Step 1.5 — 拆分方案
 
 阅读 `subprocess.md` + `interaction.md` Step 1.5。  
-**仅**确认拆/不拆并标唯一推荐；**不问**子程序 name/描述。  
-**优先**：
-
-```bash
-python scripts/request_interaction_select.py split --reason "<理由>" --recommend no_split|split
-```
-
-退出码 0 且 `value` 为 `no_split`/`split` 则继续；退出码 2 → 回退对话编号 `1`/`2`。**禁止**替用户选择；未明确选择前不得进入 Step 2。用户选拆后，name/描述按子文档生成；禁止夹带创建字段。
+**仅**对话编号确认拆/不拆并标唯一推荐；**不问**子程序 name/描述。用户选拆后，name/描述**尽量根据各子划分文档内容**提炼生成（禁止空洞占位名）。禁止宿主单选控件；禁止夹带创建字段；未确认前不得进入 Step 2。
 
 ### Step 2 — 创建主程序（无交互）
 
@@ -122,8 +115,7 @@ python scripts/validate_bpmn.py <out.xml>
 
 ### Step 3.5 — 自动保存 + 编译选择
 
-阅读 `interaction.md` Step 3.5。须 **Step 3 本地校验已通过**；`save_program` 会再次跑 `validate_bpmn`（结构/几何/`ext` schema），失败则 **不请求平台**。校验通过后直接 save（不询问）；须以返回 **`code`/`msg`** 判定成功，**仅成功后**再问是否编译。  
-编译选择：**优先** `python scripts/request_interaction_select.py compile`（`compile` / `skip_compile`）；退出码 2 则对话编号。**禁止**替用户选择；未明确选择前禁止 `compile_program`。
+阅读 `interaction.md` Step 3.5。须 **Step 3 本地校验已通过**；`save_program` 会再次跑 `validate_bpmn`（结构/几何/`ext` schema），失败则 **不请求平台**。校验通过后直接 save（不询问）；须以返回 **`code`/`msg`** 判定成功，**仅成功后**再问是否编译。
 
 ### Step 5 — 编译（若用户选确认编译）
 
@@ -163,7 +155,6 @@ python scripts/validate_bpmn.py <out.xml>
 | IR JSON 契约 | `ir_schema.md` + 样板 `fixtures/sample_ir.json` |
 | 拆分评估 / save payload / `flow:subproc` | `subprocess.md` |
 | 用户确认文案（1.5 / 2.5 / 3.5；Step 2 无交互） | `interaction.md` |
-| 1.5/3.5 select 脚本 | `scripts/request_interaction_select.py` |
 | XML 结构 / 连线 / 布局通则 | `golden_xml_rules.md` |
 | 元件与 ext:data schema | `element_schema.json` |
 | 节点示例 / 位号路径 / type | `node_reference.md` |
