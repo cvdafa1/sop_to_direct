@@ -28,6 +28,7 @@ Agent / 脚本对平台的 create / save / compile / 查询，必须经 DirectPl
 
 # 标准库导入
 import hashlib
+import json
 import os
 import re
 import time
@@ -607,6 +608,262 @@ def _is_success_code(code) -> bool:
     return code == 0 or code == "0"
 
 
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_ERROR_CODES_PATH = os.path.normpath(
+    os.path.join(_SCRIPT_DIR, "..", "references", "direct_compile_error_codes.txt")
+)
+_ERROR_CODES_CACHE = None  # type: dict | None
+
+# 位号类 / 格式类关键词（用于 Step 5 分类；以查表中文为准）
+_TAG_HINTS = ("位号", "别名", "TAG", "tag", "校验位号", "被校验")
+_FORMAT_HINTS = (
+    "命名", "字符", "词法", "语法", "括号", "引号", "非法字符",
+    "常量", "标识符", "重复写", "表达式", "长度", "位数", "格式",
+    "空的", "未配置", "未添加", "数据类型不匹配", "无效的输入",
+)
+
+
+class CompileProgramError(RuntimeError):
+    """编译失败：含解析后的明细 errors（已查表中文）。"""
+
+    def __init__(self, message: str, *, response: dict, errors: list[dict]):
+        super().__init__(message)
+        self.response = response
+        self.errors = errors
+        self.code = response.get("code") if isinstance(response, dict) else None
+        self.msg = _response_msg(response) if isinstance(response, dict) else "未知错误"
+
+
+def _load_error_codes() -> dict[str, str]:
+    global _ERROR_CODES_CACHE
+    if _ERROR_CODES_CACHE is not None:
+        return _ERROR_CODES_CACHE
+    try:
+        with open(_ERROR_CODES_PATH, encoding="utf-8") as f:
+            raw = json.load(f)
+        _ERROR_CODES_CACHE = {str(k): str(v) for k, v in raw.items()}
+    except (OSError, ValueError, TypeError):
+        _ERROR_CODES_CACHE = {}
+    return _ERROR_CODES_CACHE
+
+
+def translate_message_code(message_code, message_object=None) -> str:
+    """messageCode → 中文；用 messageObject 填充 {0}/{1}/…。"""
+    key = str(message_code)
+    template = _load_error_codes().get(key)
+    if template is None:
+        return f"未知错误码 {key}"
+    args = list(message_object or [])
+    text = template
+    for i, arg in enumerate(args):
+        text = text.replace("{" + str(i) + "}", str(arg))
+    return text
+
+
+def _classify_zh(zh: str) -> str:
+    """返回 tag / format / unknown（混合时优先看是否含位号语义）。"""
+    if not zh:
+        return "unknown"
+    has_tag = any(h in zh for h in _TAG_HINTS)
+    has_fmt = any(h in zh for h in _FORMAT_HINTS)
+    if has_tag and not has_fmt:
+        return "tag"
+    if has_fmt and not has_tag:
+        return "format"
+    if has_tag and has_fmt:
+        return "mixed"
+    return "unknown"
+
+
+def _iter_compile_issue_items(response: dict):
+    """遍历 result.data.errors / warnings / infos。"""
+    result = response.get("result")
+    if not isinstance(result, dict):
+        return
+    data = result.get("data")
+    if not isinstance(data, dict):
+        return
+    for kind in ("errors", "warnings", "infos"):
+        items = data.get(kind)
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if isinstance(item, dict):
+                yield kind, item
+
+
+def parse_compile_issues(response: dict) -> list[dict]:
+    """解析编译响明细，查表得到中文。
+
+    结构：result.data.errors[] / warnings[] / infos[]
+    每项关键字段：messageCode、messageObject、procedureId/Name、stepId/Name、stepType…
+    """
+    if not isinstance(response, dict):
+        return []
+    out: list[dict] = []
+    seen: set[tuple] = set()
+    for kind, item in _iter_compile_issue_items(response):
+        code = item.get("messageCode")
+        objs = item.get("messageObject") or []
+        if not isinstance(objs, list):
+            objs = [objs]
+        dedupe_key = (
+            kind,
+            str(code),
+            tuple(str(x) for x in objs),
+            str(item.get("stepId") or ""),
+            str(item.get("procedureId") or ""),
+        )
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        zh = translate_message_code(code, objs)
+        out.append({
+            "kind": kind,  # errors | warnings | infos
+            "messageCode": code,
+            "messageObject": objs,
+            "zh": zh,
+            "category": _classify_zh(zh),
+            "procedureId": item.get("procedureId"),
+            "procedureName": item.get("procedureName"),
+            "stepId": item.get("stepId"),
+            "stepName": item.get("stepName"),
+            "stepType": item.get("stepType"),
+            "moduleName": item.get("moduleName"),
+            "sfcSequence": item.get("sfcSequence"),
+        })
+    return out
+
+
+def format_compile_issues(issues: list[dict]) -> str:
+    """多行可读摘要：供异常文案 / Step 6 报告。"""
+    if not issues:
+        return "(无明细 errors)"
+    lines = []
+    for i, e in enumerate(issues, 1):
+        loc = []
+        if e.get("procedureName"):
+            loc.append(f"程序={e['procedureName']}")
+        if e.get("stepName") or e.get("stepId"):
+            loc.append(f"步={e.get('stepName') or ''}({e.get('stepId') or ''})")
+        loc_s = "；".join(loc) if loc else ""
+        prefix = {"errors": "错误", "warnings": "警告", "infos": "信息"}.get(
+            e.get("kind"), e.get("kind")
+        )
+        cat = e.get("category") or "unknown"
+        line = (
+            f"{i}. [{prefix}] messageCode={e.get('messageCode')}；"
+            f"{e.get('zh')}；类别={cat}"
+        )
+        if loc_s:
+            line += f"；{loc_s}"
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def suggest_compile_fix(issue: dict) -> str:
+    """按类别给一条可操作建议（报告用，同一 messageCode 只给一条）。"""
+    cat = issue.get("category") or "unknown"
+    zh = str(issue.get("zh") or "")
+    if cat == "tag" or any(h in zh for h in _TAG_HINTS):
+        return "位号/别名问题：请用户核对并补全（确认存在且类型匹配）；不要自动重试、不要改拓扑。"
+    if cat == "format":
+        return "格式问题：只在原程序上改命名/表达式/字段后再编译（同 appid 最多 3 次）；禁止删节点或新建程序。"
+    if cat == "mixed":
+        return "混合问题：只修格式部分；位号留给用户确认，不要靠重试消掉。"
+    return "对照该中文原因检查对应步配置；不确定时不要删结构，把卡点交给用户。"
+
+
+def group_compile_issues(issues: list[dict]) -> list[dict]:
+    """按 messageCode（错误类型）合并。同一类型多条只保留一组合计与位置列表。"""
+    groups: list[dict] = []
+    index: dict[str, dict] = {}
+    for e in issues:
+        if e.get("kind") not in (None, "errors"):
+            continue
+        key = str(e.get("messageCode"))
+        g = index.get(key)
+        if g is None:
+            g = {
+                "messageCode": e.get("messageCode"),
+                "zh": e.get("zh"),
+                "zh_variants": [],
+                "category": e.get("category") or "unknown",
+                "count": 0,
+                "locations": [],
+                "objects": [],
+            }
+            index[key] = g
+            groups.append(g)
+        g["count"] += 1
+        zh = e.get("zh")
+        if zh and zh != g["zh"] and zh not in g["zh_variants"]:
+            g["zh_variants"].append(zh)
+        proc = e.get("procedureName") or ""
+        step = e.get("stepName") or e.get("stepId") or ""
+        label = f"{proc}/{step}" if proc and step else (step or proc)
+        if label and label not in g["locations"]:
+            g["locations"].append(label)
+        for obj in e.get("messageObject") or []:
+            s = str(obj)
+            if s and s not in g["objects"]:
+                g["objects"].append(s)
+    return groups
+
+
+def format_compile_report(issues: list[dict], *, location_limit: int = 8) -> str:
+    """Step 6 失败报告：按错误类型合并，每类一条原因 + 一条建议。
+
+    同一 messageCode 出现多次时不逐条展开；位置超过 location_limit 时截断并注明总数。
+    """
+    groups = group_compile_issues(issues)
+    if not groups:
+        return "(无明细错误)"
+    lines = ["编译失败原因（按错误类型合并）："]
+    for i, g in enumerate(groups, 1):
+        reason = g.get("zh") or f"未知错误码 {g.get('messageCode')}"
+        variants = g.get("zh_variants") or []
+        if variants:
+            reason = reason + "；另见：" + "；".join(variants[:3])
+        locs = g.get("locations") or []
+        shown = locs[:location_limit]
+        loc_s = "、".join(shown) if shown else "（无步定位）"
+        if len(locs) > location_limit:
+            loc_s += f" 等共 {len(locs)} 处"
+        objs = g.get("objects") or []
+        obj_s = ""
+        if objs:
+            shown_o = objs[:location_limit]
+            obj_s = "、".join(shown_o)
+            if len(objs) > location_limit:
+                obj_s += f" 等共 {len(objs)} 个"
+        lines.append(
+            f"{i}. 原因：{reason}（messageCode={g.get('messageCode')}，共 {g['count']} 条）"
+        )
+        lines.append(f"   位置：{loc_s}")
+        if obj_s:
+            lines.append(f"   涉及：{obj_s}")
+        lines.append(f"   建议：{suggest_compile_fix(g)}")
+    return "\n".join(lines)
+
+
+def summarize_compile_categories(issues: list[dict]) -> str:
+    """仅统计 errors 的类别：tag / format / mixed / unknown。"""
+    cats = {e.get("category") for e in issues if e.get("kind") == "errors"}
+    cats.discard(None)
+    if not cats:
+        return "none"
+    if cats <= {"tag"}:
+        return "tag_only"
+    if cats <= {"format"}:
+        return "format_only"
+    if "tag" in cats and "format" in cats:
+        return "format_and_tag"
+    if "mixed" in cats:
+        return "format_and_tag"
+    return "unknown"
+
+
 def _check_response_code(response: dict, action_name: str, *, require_code: bool = False):
     """按 code / msg 判定成败。
 
@@ -620,6 +877,38 @@ def _check_response_code(response: dict, action_name: str, *, require_code: bool
         raise RuntimeError(f"{action_name}失败: 响应缺少 code；msg={msg}")
     if code is not None and not _is_success_code(code):
         raise RuntimeError(f"{action_name}失败: code={code}；msg={msg}")
+
+
+def _check_compile_response(response: dict) -> None:
+    """编译专用：失败时解析 result.data.errors 并查表，抛 CompileProgramError。"""
+    if not isinstance(response, dict):
+        raise CompileProgramError(
+            "主程序编译失败: 响应非对象；msg=未知错误",
+            response={},
+            errors=[],
+        )
+    code = response.get("code")
+    msg = _response_msg(response)
+    if code is None:
+        raise CompileProgramError(
+            f"主程序编译失败: 响应缺少 code；msg={msg}",
+            response=response,
+            errors=[],
+        )
+    if _is_success_code(code):
+        return
+
+    issues = parse_compile_issues(response)
+    errors_only = [e for e in issues if e.get("kind") == "errors"]
+    top_zh = translate_message_code(code, [])
+    # 顶层多为「程序存在错误」类包装码；明细以 messageCode 为准
+    summary = summarize_compile_categories(errors_only)
+    detail = format_compile_issues(issues if issues else errors_only)
+    text = (
+        f"主程序编译失败: code={code}；msg={msg}；顶层释义={top_zh}；"
+        f"类别汇总={summary}\n{detail}"
+    )
+    raise CompileProgramError(text, response=response, errors=errors_only or issues)
 
 
 @_handle_api_errors
@@ -876,7 +1165,8 @@ class DirectPlatformClient:
         payload = {"ids": appid, "cmd": 1}
         url = BASE_URL + "vxdirect/procedureHead/cmd"
         response = make_request("POST", url, json=payload)
-        _check_response_code(response, "主程序编译", require_code=True)
+        # 失败时解析 result.data.errors[].messageCode → 查表中文（见 CompileProgramError）
+        _check_compile_response(response)
         return response
 
     # 获取主程序列表

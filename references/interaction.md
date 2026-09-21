@@ -145,7 +145,7 @@ type：取值见 `node_reference.md` §二（唯一来源：`1` / `3`）
 
 | 用户选择 | 动作 |
 |----------|------|
-| `1` / `确认编译` | 调用 `compile_program(主 appid)`（同样以 `code`/`msg` 判定） |
+| `1` / `确认编译` | 调用 `compile_program(主 appid)`；失败解析 `result.data.errors`（`messageCode` 查表），见 `SKILL.md` Step 5 / `CompileProgramError` |
 | `2` / `暂不编译` | 不编译，进入结果报告 |
 
 未收到上述选项之一前，禁止调用编译接口。  

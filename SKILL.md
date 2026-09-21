@@ -47,7 +47,7 @@ description: >-
 | 6 | 位号确认与格式 | `interaction.md` Step 2.5 + `node_reference.md` |
 | 7 | 拆分：主+全部子 XML，主含 `flow:subproc` | `subprocess.md` |
 | 8 | 禁止 `deploy_program`；保存自动；**仅编译**二选一交互 | `interaction.md` Step 3.5 |
-| 9 | 平台编译重试：同 appid ≤3；只修数据/格式，不改拓扑 | 本表 |
+| 9 | 平台编译失败处置：解析 `result.data.errors[].messageCode` 查表；**仅位号→不重试**；**仅格式→原程序修≤3**；**混合→只修格式**；禁止新增程序、禁止擅自删结构 | 本文件 Step 5 + `api_reference.py` |
 | 10 | **XML 生成失败禁止简化流程**（见下「失败处置」） | 本表 + `element_split.md` |
 | 11 | 保存前勾选清单 | `accuracy_checklist.md` |
 | 12 | 确认仅 1.5 / 2.5 / 3.5 **三轮**；**1.5 仅拆/不拆+唯一推荐**（子 name/描述自动生成）；**Step 2 无交互**；未确认 1.5 不得 create | `interaction.md` |
@@ -119,11 +119,39 @@ python scripts/validate_bpmn.py <out.xml>
 
 ### Step 5 — 编译（若用户选确认编译）
 
-失败：位号再问用户；格式可自修；同 appid ≤3 次；禁止新建、禁止改拓扑、**禁止简化流程**（同 Step 3 失败处置）。
+调用 `compile_program(主 appid)`。失败时**不要只看顶层 `code`/`msg`**（多为「程序存在错误」包装）；须解析：
+
+`result.data.errors[]`（及 warnings/infos）→ 每条用 **`messageCode`** 查 `direct_compile_error_codes.txt`，用 **`messageObject`** 填 `{0}`/`{1}`；脚本抛 `CompileProgramError`（含 `.errors` 明细与中文）。
+
+再**分类处置**：
+
+| 错误类别 | 判定（查表中文 / `category`） | 处置 |
+|----------|------------------------------|------|
+| **仅位号** | 明细均为位号/别名/TAG 类，且**无**格式类 | **不重试**；直接进入 Step 6，展示中文 + 步定位（stepName/stepId），请用户处理 |
+| **仅格式** | 命名/长度/非法字符/词法语法等可自修项 | 在**原程序**上改 IR→`ir_to_xml`→`validate_bpmn`→`save_program`→再 `compile`；**同 appid 最多 3 次**；**超次仍失败→停止重试，进 Step 6** |
+| **格式 + 位号并存** | 同一次失败明细同时含上两类 | **只修格式**；位号问题**不改、不重试消除**；格式修完仍失败或已达 3 次则出结果（报告中保留位号问题） |
+
+**硬禁止（与类别无关）**：
+
+- 仅允许在**原程序**（已有主/子 appid）上 `save_program` 更新；**禁止** `create_program` / 新建程序另存
+- **禁止**擅自删除结构（删节点、合并步、去分支、改拓扑等）；同 Step 3「失败处置」
+- 禁止为消错而简化 SOP 语义
+
+向用户展示失败时：过程中可看明细；**写入 Step 6 报告时必须用 `format_compile_report`**（按 `messageCode` 类型合并，每类一条原因 + 一条建议）。同一类型多条不逐条罗列；位置超过 8 处时只列前若干并注明总数。
+
+**修复超次数（格式类重试用尽仍失败）**：不得再 compile/save；进入 Step 6。报告规则见下。
 
 ### Step 6 — 报告
 
 程序名、appid、节点/连线数、编译结果、补充项。
+
+编译未成功时（仅位号不重试、格式超次、混合修格式后仍失败）**必须告知失败原因并给建议**，禁止只写「编译失败」或只甩顶层 `code`：
+
+1. 用 `format_compile_report(issues)`：按 **`messageCode` 类型合并**
+2. 每一类：**原因**（查表中文）、条数、位置（超过 8 处截断）、**一条修复建议**
+3. 同一类型多条不得逐条展开；不得省略建议
+
+编译成功则写「编译成功」，不必列错误。
 
 ## 参考索引（主题 → 唯一来源）
 
@@ -138,6 +166,7 @@ python scripts/validate_bpmn.py <out.xml>
 | 元件与 ext:data schema | `element_schema.json` |
 | 节点示例 / 位号路径 / type | `node_reference.md` |
 | 保存前勾选 | `accuracy_checklist.md`（只勾选，不写细则） |
+| 平台 API/`compile` 错误码 → 中文 | `direct_compile_error_codes.txt`（键=**messageCode**；由 `api_reference.parse_compile_issues` 查） |
 | IR→XML 编译 | `ir_to_xml.py` |
 | 布局组装实现 | `layout_generator.py` |
 | API | `api_reference.py` |
