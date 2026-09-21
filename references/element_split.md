@@ -47,6 +47,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 
 - ❌ 原文有「否则/不满足」双侧语义时，只画「是」或只画「否」
 - ❌ 把「确认」做成 `msg:guide`，或把「仅提示」做成 `msg:confirm`
 - ❌ 不是「是/否」两条路却用 `flow:or` / `flow:and`（多于两条路必须 `flow:branch`）
+- ❌ `flow:or` / `flow:and` / `timer:cond` 的是、否指向同一后续元件（平台会报重复输入/输出）；择一 `flow:branch` 汇合除外
 - ❌ 枚举 A、B、C 三台设备却只生成 1 个节点
 - ❌ 发明 schema 未定义的元件名
 - ❌ `flow:parallel1` / `parallel2`（见 R5）
@@ -110,7 +111,7 @@ SOP 解析目标：原文中每一个可执行语义点，都必须在编译 IR 
 | R8 | "弹窗提示XXX"（不等人） | `msg:guide` | |
 | R9 | "确认是否XXX，确认后继续" | `msg:confirm` → 下一步 | |
 | R10 | "若A则…"（无否则） | `flow:or` + 仅一条 `flows[].situation:"yes"` | 不硬凑否；出边 → `golden_xml_rules.md` §3 |
-| R11 | "若A则…否则…" | `flow:or`/`and` + `situation:"yes"` 与 `"no"` | 仅此时加 no 边；出边 → 同上 |
+| R11 | "若A则…否则…" | `flow:or`/`and`/`timer:cond` + `situation:"yes"` 与 `"no"` | 仅此时加 no；**是/否 target 必须不同**（禁指向同一元件）；出边 → `golden_xml_rules.md` §3 |
 | R12 | "分别判断多种情况/哪台运行" | `flow:branch`（N 支，不限 3；每支 `relation` 自定 `or`/`and`，可混用） | 都用择一；不要拆成多个 `flow:or`/`flow:and` |
 | R13 | "全部完成后提示" | 末端 `msg:guide` | |
 | R14 | "报警XXX"（不暂停） | `msg:alarm` | 与 guide 区分 |

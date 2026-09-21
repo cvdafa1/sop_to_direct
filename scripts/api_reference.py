@@ -773,6 +773,11 @@ def suggest_compile_fix(issue: dict) -> str:
             "element_schema.json + golden_xml_rules.md）检查本步与标准差异，"
             "只改不一致字段后再编译（同 appid 最多 3 次）；禁止删节点或新建程序。"
         )
+    if "重复的输入" in zh or "重复的输出" in zh:
+        return (
+            "若来自 flow:or / flow:and / timer:cond：是、否不得指向同一元件，"
+            "请把两路接到不同后续步。flow:branch 多路汇合到同一节点是允许的，勿按此改。"
+        )
     if cat == "mixed":
         return "混合问题：只修格式部分；位号留给用户确认，不要靠重试消掉。"
     return "对照该中文原因检查对应步配置；不确定时不要删结构，把卡点交给用户。"

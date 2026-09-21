@@ -243,6 +243,25 @@ def check_xml_text(text: str) -> list[str]:
                 errors.append(f"{tag} must have situation=yes outgoing: {nid_s}")
             if len(outs) == 2 and "no" not in situations:
                 errors.append(f"{tag} with 2 outgoing must include situation=no: {nid_s}")
+            # 是/否不得指向同一元件（平台：重复的输入/输出）；flow:branch 不适用
+            if len(outs) == 2:
+                targets = []
+                for fid in outs:
+                    fm = re.search(
+                        rf'<bpmn2:sequenceFlow\b[^>]*\bid="{re.escape(fid)}"[^>]*(?:/>|>(?:.*?)</bpmn2:sequenceFlow>)',
+                        text,
+                        re.DOTALL,
+                    )
+                    if not fm:
+                        continue
+                    tm = re.search(r'\btargetRef="([^"]+)"', fm.group(0))
+                    if tm:
+                        targets.append(tm.group(1))
+                if len(targets) == 2 and targets[0] == targets[1]:
+                    errors.append(
+                        f"{tag} yes/no must not target the same element "
+                        f"(duplicate input/output): {nid_s} → {targets[0]}"
+                    )
 
     errors.extend(_check_layout_geometry(text))
     errors.extend(_check_ext_cdata(text))

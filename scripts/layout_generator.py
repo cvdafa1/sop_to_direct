@@ -145,6 +145,8 @@ class LayoutGenerator:
         self._container_pend = {}
         # 水平走廊 lane 占用：mid_y → count
         self._lane_bucket = {}
+        # U 形绕行各自一条外侧通道，避免共用同一条竖线
+        self._u_lane = 0
 
     def add_node(self, node_id, node_type, name=""):
         w, h = self.NODE_SIZES.get(node_type, (200, 60))
@@ -183,14 +185,22 @@ class LayoutGenerator:
         decision = self.nodes[decision_id]
         decision.x = center_x - decision.w // 2
 
-        yes_x = center_x - col_gap - 100
-        no_x = center_x + col_gap - 100
+        side_w = max(
+            [decision.w]
+            + [self.nodes[nid].w for nid in yes_ids + no_ids]
+        )
+        # 列距是中心距，至少留出半宽之和，避免否分支贴上决策点
+        col_gap = max(col_gap, side_w + 80)
+        fan_room = 24 + self.LANE_SPACING + 24
+        row_gap = max(row_gap, fan_room)
+        yes_cx = center_x - col_gap
+        no_cx = center_x + col_gap
         start_y = decision.bottom + row_gap
 
         y = start_y
         for nid in yes_ids:
             n = self.nodes[nid]
-            n.x = yes_x - n.w // 2
+            n.x = int(yes_cx - n.w // 2)
             n.y = y
             y += n.h + row_gap
         yes_bottom = y
@@ -198,7 +208,7 @@ class LayoutGenerator:
         y = start_y
         for nid in no_ids:
             n = self.nodes[nid]
-            n.x = no_x - n.w // 2
+            n.x = int(no_cx - n.w // 2)
             n.y = y
             y += n.h + row_gap
         no_bottom = y
@@ -224,11 +234,17 @@ class LayoutGenerator:
 
         decision = self.nodes[decision_id]
         decision.x = center_x - decision.w // 2
-        # decision.y 由调用方先设好（或保持原值）
+        widths = [decision.w]
+        for group in branch_groups:
+            for nid in group:
+                widths.append(self.nodes[nid].w)
+        col_gap = max(col_gap, max(widths) + 80)
         start_y = decision.bottom + row_gap
 
         n = len(branch_groups)
-        # 以 center_x 为中心均分列
+        # 列距是中心距；分支正下方留出扇出通道，避免出边叠在中线上再横穿
+        fan_room = 24 + max(0, n - 1) * self.LANE_SPACING + 24
+        row_gap = max(row_gap, fan_room)
         total_span = (n - 1) * col_gap
         left_center = center_x - total_span / 2.0
 
@@ -533,17 +549,21 @@ class LayoutGenerator:
         if abs(sx - tx) < 10:
             return [(sx, sy), (tx, ty)]
 
-        # 目标在源上方或侧向汇合：外侧 U 形，减少交叉
+        # 目标在源上方：外侧 U 形。向下的汇合线走目标正上方空档，避免横穿较高的邻列
         if ty + 10 < sy:
             return self.calc_u_waypoints(src.id, tgt.id, side="right")
 
-        mid_y = (sy + ty) // 2
-        mid_y = self._avoid_nodes_on_band(mid_y, src.id, tgt.id)
-        mid_y = self._alloc_lane_y(mid_y)
+        if ty - sy >= self.WAYPOINT_MARGIN * 2:
+            mid_y = ty - self.WAYPOINT_MARGIN
+        else:
+            mid_y = (sy + ty) // 2
+        mid_y = self._avoid_nodes_on_band(mid_y, src.id, tgt.id, sx, tx, sy, ty)
+        mid_y = self._alloc_lane_y(mid_y, sy, ty)
         return [(sx, sy), (sx, mid_y), (tx, mid_y), (tx, ty)]
 
-    def _avoid_nodes_on_band(self, mid_y, src_id, tgt_id):
-        """若 mid_y 落在某节点带内，推到该节点下方走廊。"""
+    def _avoid_nodes_on_band(self, mid_y, src_id, tgt_id, x1, x2, y_lo, y_hi):
+        """水平段若穿过某节点，改到该节点上方或下方，并留在源底与目标顶之间。"""
+        lo_x, hi_x = (x1, x2) if x1 <= x2 else (x2, x1)
         changed = True
         guard = 0
         while changed and guard < 20:
@@ -554,21 +574,30 @@ class LayoutGenerator:
                     continue
                 if n.type in self.CONTAINER_TYPES:
                     continue
-                if n.y - self.EDGE_NODE_PAD < mid_y < n.bottom + self.EDGE_NODE_PAD:
-                    mid_y = n.bottom + self.WAYPOINT_MARGIN
-                    changed = True
+                if n.right < lo_x - self.EDGE_NODE_PAD or n.x > hi_x + self.EDGE_NODE_PAD:
+                    continue
+                if not (n.y - self.EDGE_NODE_PAD < mid_y < n.bottom + self.EDGE_NODE_PAD):
+                    continue
+                above = n.top - self.WAYPOINT_MARGIN
+                below = n.bottom + self.WAYPOINT_MARGIN
+                if y_lo + 8 < above < y_hi - 8:
+                    mid_y = above
+                elif y_lo + 8 < below < y_hi - 8:
+                    mid_y = below
+                else:
+                    mid_y = max(y_lo + 8, min(mid_y, y_hi - 8))
+                changed = True
         return mid_y
 
-    def _alloc_lane_y(self, mid_y):
-        """同层水平线错开 lane，避免粘连。"""
+    def _alloc_lane_y(self, mid_y, y_lo=None, y_hi=None):
+        """同层水平线向上错层，避免粘连；尽量留在 (y_lo, y_hi) 内。"""
         key = int(round(mid_y / max(self.LANE_SPACING, 1)))
         count = self._lane_bucket.get(key, 0)
         self._lane_bucket[key] = count + 1
-        if count == 0:
-            return mid_y
-        # 奇偶上下交替
-        offset = ((count + 1) // 2) * self.LANE_SPACING
-        return mid_y + offset if count % 2 else mid_y - offset
+        y = mid_y - count * self.LANE_SPACING
+        if y_lo is not None and y_hi is not None and y_hi - y_lo > self.LANE_SPACING * 2:
+            y = min(max(y, y_lo + 8), y_hi - 8)
+        return y
 
     def calc_u_waypoints(self, src_id, tgt_id, side="right"):
         """U 形绕行路径（复杂场景）"""
@@ -577,9 +606,11 @@ class LayoutGenerator:
         sx, sy = src.cx, src.bottom
         tx, ty = tgt.cx, tgt.top
         all_nodes = list(self.nodes.values())
-        max_right = max(n.right for n in all_nodes) + 50
+        self._u_lane += 1
+        lane = self._u_lane * (self.LANE_SPACING + 8)
+        max_right = max(n.right for n in all_nodes) + 50 + lane
         if side == "left":
-            outer_x = min(n.x for n in all_nodes) - 50
+            outer_x = min(n.x for n in all_nodes) - 50 - lane
         else:
             outer_x = max_right
         mid_y1 = sy + 30
@@ -598,10 +629,25 @@ class LayoutGenerator:
             by = sy + 40
         if by >= ty:
             by = max(sy + 20, ty - 40)
-        by = self._alloc_lane_y(by)
+        by = self._alloc_lane_y(by, sy, ty)
         if abs(sx - tx) < 10:
             return [(sx, sy), (tx, ty)]
         return [(sx, sy), (sx, by), (tx, by), (tx, ty)]
+
+    def calc_fan_out_waypoints(self, src_id, tgt_id, lane_y: int):
+        """同源多路向下：在源点正下方分道横出，再落到各列，避免沿中线叠在一起后横穿。"""
+        src = self.nodes[src_id]
+        tgt = self.nodes[tgt_id]
+        sx, sy = src.cx, src.bottom
+        tx, ty = tgt.cx, tgt.top
+        if abs(sx - tx) < 10:
+            return [(sx, sy), (tx, ty)]
+        y = int(lane_y)
+        if y <= sy + 4:
+            y = sy + 16
+        if y >= ty - 4:
+            y = max(sy + 16, ty - 16)
+        return [(sx, sy), (sx, y), (tx, y), (tx, ty)]
 
     # ──────────────────────────────────────────────
     # 验证方法
@@ -830,12 +876,15 @@ class LayoutGenerator:
         """按当前坐标重算全部边的 waypoints。"""
         force_u_for = force_u_for or set()
         self._lane_bucket = {}
+        self._u_lane = 0
         fan_in: dict = {}
+        fan_out: dict = {}
         for flow in self.flows:
             fan_in.setdefault(flow.target, []).append(flow)
+            fan_out.setdefault(flow.source, []).append(flow)
         bus_y_by_tgt = {}
         for tgt, fins in fan_in.items():
-            if len(fins) < 3 or tgt not in self.nodes:
+            if len(fins) < 2 or tgt not in self.nodes:
                 continue
             bottoms = [
                 self.nodes[f.source].bottom
@@ -845,10 +894,36 @@ class LayoutGenerator:
             if not bottoms:
                 continue
             top = self.nodes[tgt].top
-            bus_y_by_tgt[tgt] = (max(bottoms) + top) // 2
+            bus_y = top - self.WAYPOINT_MARGIN
+            if bus_y <= max(bottoms) + 8:
+                bus_y = (max(bottoms) + top) // 2
+            bus_y_by_tgt[tgt] = bus_y
+        fan_out_lane = {}
+        for src, outs in fan_out.items():
+            if src not in self.nodes or len(outs) < 2:
+                continue
+            src_n = self.nodes[src]
+            downs = []
+            for f in outs:
+                tgt = self.nodes.get(f.target)
+                if tgt and tgt.top + 10 >= src_n.bottom and f.id not in force_u_for:
+                    downs.append(f)
+            if len(downs) < 2:
+                continue
+            downs.sort(key=lambda f: self.nodes[f.target].cx)
+            ceiling = min(self.nodes[f.target].top for f in downs) - 8
+            for i, f in enumerate(downs):
+                lane = src_n.bottom + 16 + i * self.LANE_SPACING
+                if ceiling > src_n.bottom + 16:
+                    lane = min(lane, ceiling)
+                fan_out_lane[f.id] = lane
         for flow in self.flows:
             if flow.id in force_u_for:
                 flow.waypoints = self.calc_u_waypoints(flow.source, flow.target)
+            elif flow.id in fan_out_lane:
+                flow.waypoints = self.calc_fan_out_waypoints(
+                    flow.source, flow.target, fan_out_lane[flow.id]
+                )
             elif flow.target in bus_y_by_tgt:
                 flow.waypoints = self.calc_bus_waypoints(
                     flow.source, flow.target, bus_y_by_tgt[flow.target]
@@ -919,12 +994,13 @@ class LayoutGenerator:
             if not remaining:
                 self.shift_to_non_negative()
                 return []
-            for msg in crosses + edge_olaps:
-                if msg.startswith("edge_cross:") or msg.startswith("edge_overlap:"):
-                    force_u.update(msg.split(":", 1)[1].split("×"))
-            for msg in through:
-                if msg.startswith("edge_through:"):
-                    force_u.add(msg.split(":", 1)[1].split("→")[0])
+            if attempt >= 2:
+                for msg in crosses + edge_olaps:
+                    if msg.startswith("edge_cross:") or msg.startswith("edge_overlap:"):
+                        force_u.update(msg.split(":", 1)[1].split("×"))
+                for msg in through:
+                    if msg.startswith("edge_through:"):
+                        force_u.add(msg.split(":", 1)[1].split("→")[0])
             self.expand_spacing(
                 extra_v=35 + attempt * 30,
                 extra_h=50 + attempt * 55,
@@ -1211,6 +1287,19 @@ class LayoutGenerator:
                         issues.append(
                             f"条件节点 {nid}({node.type}) 两条 outgoing 时应含 situation=no"
                         )
+                    if len(out) == 2:
+                        targets = []
+                        for fid in out:
+                            for flow in self.flows:
+                                if flow.id == fid:
+                                    targets.append(flow.target)
+                                    break
+                        if len(targets) == 2 and targets[0] == targets[1]:
+                            issues.append(
+                                f"条件节点 {nid}({node.type}) 的是/否不得指向同一元件 "
+                                f"（平台重复输入/输出）: → {targets[0]}；"
+                                f"此限制仅适用于 and/or/cond，不适用于 flow:branch"
+                            )
 
         return issues
 

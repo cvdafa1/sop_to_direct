@@ -313,6 +313,24 @@ def compile_ir(ir: dict[str, Any]) -> str:
             name=flow.get("name"),
         )
 
+    # flow:or / and / cond：是、否不得指向同一元件（平台重复输入/输出）
+    # flow:branch 多路汇合允许同一 target，不在此限制
+    for nid, m in meta.items():
+        if m["layout_type"] not in DECISION_YN_TYPES:
+            continue
+        outs = [f for f in gen.flows if f.source == nid]
+        if len(outs) != 2:
+            continue
+        by_sit = {f.situation: f for f in outs}
+        yes_f, no_f = by_sit.get("yes"), by_sit.get("no")
+        if yes_f and no_f and yes_f.target == no_f.target:
+            raise ValueError(
+                f"{m['element']} {nid}: yes/no must not target the same element "
+                f"(duplicate input/output) → {yes_f.target}; "
+                f"this rule applies only to flow:or / flow:and / timer:cond, "
+                f"not flow:branch"
+            )
+
     layout_ops = ir.get("layout")
     if layout_ops:
         _apply_layout_ops(gen, layout_ops)
@@ -325,10 +343,12 @@ def compile_ir(ir: dict[str, Any]) -> str:
 
 
 def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:
+    mentioned: set[str] = set()
     for i, op in enumerate(ops):
         kind = op.get("op")
         if kind == "vertical":
             node_ids = op.get("nodes") or []
+            mentioned.update(node_ids)
             gen.layout_vertical(
                 node_ids,
                 center_x=op.get("center_x", 500),
@@ -339,10 +359,17 @@ def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:
             decision = op.get("decision")
             if not decision:
                 raise ValueError(f"layout[{i}] branch_columns missing decision")
+            yes_ids = op.get("yes") or []
+            no_ids = op.get("no") or []
+            mentioned.add(decision)
+            mentioned.update(yes_ids)
+            mentioned.update(no_ids)
+            if op.get("merge"):
+                mentioned.add(op["merge"])
             gen.layout_branch_columns(
                 decision_id=decision,
-                yes_ids=op.get("yes") or [],
-                no_ids=op.get("no") or [],
+                yes_ids=yes_ids,
+                no_ids=no_ids,
                 merge_id=op.get("merge"),
                 center_x=op.get("center_x", 500),
                 col_gap=op.get("col_gap"),
@@ -353,6 +380,11 @@ def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:
             groups = op.get("branches") or op.get("branch_groups") or []
             if not decision:
                 raise ValueError(f"layout[{i}] multi_columns missing decision")
+            mentioned.add(decision)
+            for group in groups:
+                mentioned.update(group or [])
+            if op.get("merge"):
+                mentioned.add(op["merge"])
             gen.layout_multi_columns(
                 decision_id=decision,
                 branch_groups=groups,
@@ -366,6 +398,8 @@ def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:
             node_ids = op.get("nodes") or []
             if not after or after not in gen.nodes:
                 raise ValueError(f"layout[{i}] vertical_continue bad after={after}")
+            mentioned.add(after)
+            mentioned.update(node_ids)
             gap = op.get("gap") or gen.VERTICAL_GAP
             start_y = gen.nodes[after].bottom + gap
             gen.layout_vertical(
@@ -381,6 +415,18 @@ def _apply_layout_ops(gen: LayoutGenerator, ops: list[dict[str, Any]]) -> None:
             )
         else:
             raise ValueError(f"unknown layout op: {kind}")
+
+    missing = [nid for nid in gen.node_order if nid not in mentioned]
+    if not missing:
+        return
+    placed = [gen.nodes[nid] for nid in gen.node_order if nid in mentioned]
+    if placed:
+        right = max(n.right for n in placed)
+        cx = int(right + gen.HORIZONTAL_GAP + 100)
+        top = min(n.y for n in placed)
+    else:
+        cx, top = 500, 60
+    gen.layout_vertical(missing, center_x=cx, start_y=top)
 
 
 def _auto_layout(gen: LayoutGenerator, meta: dict[str, dict[str, Any]]) -> None:
