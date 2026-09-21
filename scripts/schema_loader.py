@@ -281,7 +281,35 @@ def validate_ext(
     for e in _cross_cutting_string_errors(ext):
         errors.append(e)
 
+    if element == "flow:branch":
+        errors.extend(_check_branch_rows(ext))
+
     return [f"{prefix}: {e}" for e in errors]
+
+
+def _check_branch_rows(ext: dict[str, Any]) -> list[str]:
+    """flow:branch：branch[i].row 必须为 0..N-1（与下标一致，按分支个数递增）。"""
+    branches = ext.get("branch")
+    if not isinstance(branches, list) or not branches:
+        return []
+    errors: list[str] = []
+    n = len(branches)
+    for i, b in enumerate(branches):
+        if not isinstance(b, dict):
+            continue
+        row = b.get("row")
+        try:
+            row_i = int(row)
+        except (TypeError, ValueError):
+            errors.append(
+                f"ext.branch[{i}].row must be integer 0..{n - 1}, got {row!r}"
+            )
+            continue
+        if row_i != i:
+            errors.append(
+                f"ext.branch[{i}].row must be {i} (0-based by branch count), got {row_i}"
+            )
+    return errors
 
 
 def _cross_cutting_string_errors(obj: Any, path: str = "ext") -> list[str]:
