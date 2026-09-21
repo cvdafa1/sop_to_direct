@@ -14,4 +14,4 @@
 | C timers | 若用 start/stop/pause/restart/cond：`sfc.timers` 已声明 | `subprocess.md` §timers |
 | C variables | 若用程序变量（如 io:var）：`sfc.variables` 已声明且 dataType 正确 | `subprocess.md` §variables |
 | D 门禁 | 3.5 save 已成功（code=0）；编译已选；未 deploy | `interaction.md` / `SKILL.md` |
-| E 生成/编译重试 | 未简化流程；仅位号不重试；仅格式同 appid≤3；混合只修格式；未新建程序、未擅自删结构；**失败报告按 messageCode 合并，含原因+建议** | `SKILL.md` Step 5–6 / §9 |
+| E 生成/编译重试 | 未简化流程；仅位号不重试；格式须对照标准 XML 自查后再修≤3；混合只修格式；失败报告按 messageCode 合并含原因+建议 | `SKILL.md` Step 5–6 / §9 |

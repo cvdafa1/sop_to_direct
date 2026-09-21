@@ -768,7 +768,11 @@ def suggest_compile_fix(issue: dict) -> str:
     if cat == "tag" or any(h in zh for h in _TAG_HINTS):
         return "位号/别名问题：请用户核对并补全（确认存在且类型匹配）；不要自动重试、不要改拓扑。"
     if cat == "format":
-        return "格式问题：只在原程序上改命名/表达式/字段后再编译（同 appid 最多 3 次）；禁止删节点或新建程序。"
+        return (
+            "格式问题：先对照标准 XML（node_reference.md 同类型片段 + "
+            "element_schema.json + golden_xml_rules.md）检查本步与标准差异，"
+            "只改不一致字段后再编译（同 appid 最多 3 次）；禁止删节点或新建程序。"
+        )
     if cat == "mixed":
         return "混合问题：只修格式部分；位号留给用户确认，不要靠重试消掉。"
     return "对照该中文原因检查对应步配置；不确定时不要删结构，把卡点交给用户。"
