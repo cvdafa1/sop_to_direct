@@ -25,6 +25,7 @@
 
 # 标准库导入
 import json
+import math
 
 # 第三方库导入 (无)
 
@@ -90,6 +91,9 @@ class LayoutGenerator:
     CONTAINER_EXIT_GAP = 50  # 容器边界外连线弯折间距
     LANE_SPACING = 18  # 同层水平走线错层间距
     EDGE_NODE_PAD = 4  # 连线与节点矩形的最小间隙
+    LABEL_OFFSET_X = 60  # BPMNLabel 相对首个 waypoint 向左
+    LABEL_OFFSET_Y = 15  # BPMNLabel 相对首个 waypoint 向上
+    COORD_MIN = 45  # 节点、拐点、标签的 x/y 均不得小于该值
 
     NODE_SIZES = {
         "start": (54, 54),
@@ -913,6 +917,7 @@ class LayoutGenerator:
             remaining.extend(crosses)
             remaining.extend(edge_olaps)
             if not remaining:
+                self.shift_to_non_negative()
                 return []
             for msg in crosses + edge_olaps:
                 if msg.startswith("edge_cross:") or msg.startswith("edge_overlap:"):
@@ -924,7 +929,49 @@ class LayoutGenerator:
                 extra_v=35 + attempt * 30,
                 extra_h=50 + attempt * 55,
             )
+        self.shift_to_non_negative()
         return remaining
+
+    def shift_to_non_negative(self):
+        """若 x/y 小于 COORD_MIN（45），整图向右、向下平移，使最小坐标为 45。
+
+        不把单个节点钳回边界（那会重叠）。左侧超出时图向右变宽。
+        含节点、拐点，以及条件边标签（相对首个拐点向左/向上的偏移）。
+        """
+        if any(f.waypoints is None for f in self.flows):
+            self.recompute_waypoints()
+
+        xs = []
+        ys = []
+        for n in self.nodes.values():
+            xs.append(n.x)
+            ys.append(n.y)
+        for f in self.flows:
+            wps = f.waypoints or []
+            for x, y in wps:
+                xs.append(x)
+                ys.append(y)
+            if wps and (f.situation is not None or f.name):
+                xs.append(wps[0][0] - self.LABEL_OFFSET_X)
+                ys.append(wps[0][1] - self.LABEL_OFFSET_Y)
+        if not xs:
+            return
+
+        min_x = min(xs)
+        min_y = min(ys)
+        floor = self.COORD_MIN
+        dx = math.ceil(floor - min_x) if min_x < floor else 0
+        dy = math.ceil(floor - min_y) if min_y < floor else 0
+        if dx == 0 and dy == 0:
+            return
+
+        for n in self.nodes.values():
+            n.x += dx
+            n.y += dy
+        for f in self.flows:
+            if not f.waypoints:
+                continue
+            f.waypoints = [(x + dx, y + dy) for x, y in f.waypoints]
 
     def check_id_match(self, sequence_flow_ids, node_ids):
         mismatches = []
@@ -971,6 +1018,7 @@ class LayoutGenerator:
         return edges
 
     def get_shape_xml(self):
+        self.shift_to_non_negative()
         lines = []
         for nid in self.node_order:
             n = self.nodes[nid]
@@ -992,6 +1040,7 @@ class LayoutGenerator:
     def get_edge_xml(self):
         if any(f.waypoints is None for f in self.flows):
             self.recompute_waypoints()
+        self.shift_to_non_negative()
         lines = []
         for flow in self.flows:
             waypoints = flow.waypoints or self.calc_waypoints(flow.source, flow.target)
@@ -1012,8 +1061,8 @@ class LayoutGenerator:
                     else:
                         label_name = str(flow.situation)
                 # Label 放在首个 waypoint 附近
-                lx = waypoints[0][0] - 60 if waypoints else 0
-                ly = waypoints[0][1] - 15 if waypoints else 0
+                lx = waypoints[0][0] - self.LABEL_OFFSET_X if waypoints else 0
+                ly = waypoints[0][1] - self.LABEL_OFFSET_Y if waypoints else 0
                 lines.append("      <bpmndi:BPMNLabel>")
                 lines.append(
                     f'        <dc:Bounds x="{lx}" y="{ly}" width="120" height="12" />'
