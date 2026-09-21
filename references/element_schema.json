@@ -420,8 +420,8 @@
     {
       "name": "择一分支",
       "category": "流程控制",
-      "purpose": "多选一分支步，创建选择结构，沿最先满足条件的分支执行。",
-      "usage_scenario": "多个互斥条件中需选择一条路径继续执行时（如不同配方选择、A/B泵选择）。",
+      "purpose": "择一分支步。N 路（N≥2，不限 3），沿最先满足的一支执行。每个分支的 relation 独立：or 或 and，同一节点可混用，不必全部同一种。",
+      "usage_scenario": "多路选择。一支内任一成立用 relation=or，一支内须同时成立用 relation=and；各支可以不同。",
       "xml": {
         "status": "confirmed",
         "element": "flow:branch",
@@ -509,7 +509,7 @@
                       "and",
                       "or"
                     ],
-                    "description": "分支内条件关系"
+                    "description": "该分支自己的条件关系。各分支独立，同一节点可混用 and 与 or，不必全部同一种"
                   },
                   "desc": {
                     "type": "string",

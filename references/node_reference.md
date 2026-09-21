@@ -166,11 +166,11 @@
 **字段说明**：
 - `tabKey`：`"basic.branch_N"`（N=分支数）
 - `branch[]`：分支数组
-  - `relation`：`"and"`（分支内条件关系）
+  - `relation`：该支自己的条件关系。`"or"` = 该支内任一成立；`"and"` = 该支内须同时成立。**各支独立，可混用，不必整步只有一种**
   - `desc`：分支描述
   - `data[]`：条件数组
   - `row`：分支序号（0, 1, 2...）
-- 出边 N 条：`{"situation":"0"}`, `{"situation":"1"}`, ..., `{"situation":"N-1"}`
+- 出边 **N** 条（与 `branch` 长度一致，**不限 3**）：`{"situation":"0"}` … `{"situation":"N-1"}`
 
 ### 7. timer:start（开始计时器）
 
